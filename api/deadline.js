@@ -1,6 +1,8 @@
 // Breaks a deadline into pickable task options. Prompt and key stay server-side.
+import { guard, askJSON } from './_ai.js'
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end()
+  if (!(await guard(req, res))) return
   const { goals, deadline, asked = 0 } = req.body || {}
   if (!Array.isArray(goals) || goals.length > 50 || !deadline?.title || !/^\d{4}-\d\d-\d\d$/.test(deadline.date)
       || JSON.stringify(req.body).length > 30_000)
@@ -16,17 +18,9 @@ Decide:
 - If hours are unknown AND the context is too thin to estimate them AND you have asked fewer than 2 questions so far (asked so far: ${asked}), reply with ONLY {"question": "<one short question that would help most, e.g. topics covered, current readiness, past experience>"}.
 - Otherwise reply with ONLY {"hours": <total hours needed, use the user's number if given>, "summary": "<1 sentence on how you got there>", "options": [{"title": "<specific action>", "hours": <number>, "due": "<yyyy-mm-dd between today and the deadline>"}]}
 Give 4 to 6 concrete, distinct options, e.g. one per topic or milestone, ordered by due date, hours adding up to roughly the total, with weaker areas getting more time. The last option should land at least a day before the deadline when possible.`
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
-  })
-  const data = await r.json()
-  if (!r.ok) return res.status(502).json({ error: data.error?.message || 'AI request failed' })
-  const text = data.content.find((b) => b.type === 'text')?.text
   try {
-    res.json(JSON.parse(text.match(/\{[\s\S]*\}/)[0]))
-  } catch {
-    res.status(502).json({ error: `No usable answer from model (${data.stop_reason})` })
+    res.json(await askJSON({ messages: [{ role: 'user', content: prompt }] }))
+  } catch (err) {
+    res.status(502).json({ error: err.message })
   }
 }

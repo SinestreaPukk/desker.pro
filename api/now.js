@@ -1,6 +1,8 @@
 // Suggests what to do right now, by three different methods. Prompt and key stay server-side.
+import { guard, askJSON } from './_ai.js'
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end()
+  if (!(await guard(req, res))) return
   const { goals, tasks, hobbies, deadlines = [], minutes, energy, mood, freeToday, busy = [], now } = req.body || {}
   if (![goals, tasks, hobbies, deadlines].every(Array.isArray) || tasks.length > 50 || goals.length > 50
       || JSON.stringify(req.body).length > 50_000)
@@ -20,17 +22,9 @@ Offer exactly 3 options, one per method, each a different item when possible:
 2. method "Best fit now": what fits their minutes, energy and time of day (low energy = lighter or familiar work, high energy = demanding work) and readiness.
 3. method "Balance": what keeps work and happiness balanced, e.g. a happiness-goal task or a hobby if they have been grinding.
 Reply with ONLY JSON: {"options": [{"method": "<name>", "taskId": <task id, or null for a hobby or something not in the list>, "title": "<the task's exact title if taskId is set; otherwise the hobby or activity>", "minutes": <session length, at most their free minutes>, "why": "<1 short sentence, may name the concrete first step>"}]}`
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
-  })
-  const data = await r.json()
-  if (!r.ok) return res.status(502).json({ error: data.error?.message || 'AI request failed' })
-  const text = data.content.find((b) => b.type === 'text')?.text
   try {
-    res.json(JSON.parse(text.match(/\{[\s\S]*\}/)[0]))
-  } catch {
-    res.status(502).json({ error: `No usable answer from model (${data.stop_reason})` })
+    res.json(await askJSON({ messages: [{ role: 'user', content: prompt }] }))
+  } catch (err) {
+    res.status(502).json({ error: err.message })
   }
 }

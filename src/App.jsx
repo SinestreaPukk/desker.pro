@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
+import { post, uid, stateUrl } from './api.js'
+import { addTasks } from './tasks.js'
+import { migrate } from './storage.js'
+import { METHODS } from './methods.js'
+import { Icon } from './icons.jsx'
 
 const Q = [
   { name: 'Do First', hint: 'Urgent + Important', cls: 'bg-[#ff3b30]/15' },
   { name: 'Schedule', hint: 'Not Urgent + Important', cls: 'bg-[#007aff]/15' },
-  { name: 'Delegate', hint: 'Urgent + Not Important', cls: 'bg-[#ff9500]/20' },
+  { name: 'Batch / minimize', hint: 'Urgent but not important: do quickly in one batch, or hand off', cls: 'bg-[#ff9500]/20' },
   { name: 'Eliminate', hint: 'Not Urgent + Not Important', cls: 'bg-[#8e8e93]/15' },
 ]
 // Goals pyramid, narrowest (top) to widest (base)
@@ -17,19 +22,10 @@ const LEVELS = [
 const quadrant = (t) => t.important === undefined ? undefined : (t.important ? 0 : 2) + (t.urgent ? 0 : 1)
 
 async function prioritise(goals, tasks) {
-  const res = await fetch('/api/prioritise', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })), tasks: tasks.map(({ id, title, due }) => ({ id, title, due })) }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || res.statusText)
-  return data
+  const out = await post('/api/prioritise', { goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })), tasks: tasks.map(({ id, title, due }) => ({ id, title, due })) })
+  if (!Array.isArray(out)) throw new Error('The AI gave an unreadable answer. Please try again.')
+  return out
 }
-
-// Anonymous per-browser id: scopes saved data without accounts.
-const uid = localStorage.uid || (localStorage.uid = crypto.randomUUID())
-const stateUrl = `/api/state?uid=${uid}`
 
 // Photos, PDFs, text files and web pages -> plain notes the planner can use.
 const TEXT_FILE = /\.(txt|md|markdown|csv|json|ics)$/i
@@ -48,10 +44,7 @@ async function readSource({ file, url }) {
     const data = await new Promise((ok, no) => { const f = new FileReader(); f.onload = () => ok(f.result.split(',')[1]); f.onerror = no; f.readAsDataURL(file) })
     body = { name: file.name, mediaType: 'application/pdf', data }
   } else throw new Error('Supported: photos, PDFs, text files')
-  const res = await fetch('/api/read', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-  const out = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(out.error || 'Could not read that')
-  return out.text
+  return (await post('/api/read', body)).text
 }
 
 // Imported calendar events: { t: title, d: 'yyyy-mm-dd' } (all-day) or { t, s, e } (epoch ms).
@@ -65,18 +58,18 @@ function busyForAI(busy = []) {
     .map((e) => (e.d ? { date: e.d, allDay: true, title: e.t } : { date: evDay(e), start: hm24(e.s), end: hm24(e.e), title: e.t }))
 }
 async function importCalendar(body) {
-  const res = await fetch('/api/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
-  const out = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(out.error || 'Could not read that calendar')
-  return out.events
+  return (await post('/api/import', body)).events
 }
 
-function Happy({ value = 50, onChange }) {
+function Happy({ value = 50, onChange, label = 'How do you feel about this task?' }) {
   return (
-    <label className="flex items-center gap-1 text-xs" title={`Happiness: ${value}`}>
-      <span>😞</span>
-      <input type="range" aria-label="Happiness" min="0" max="100" className="w-24" value={value} onChange={(e) => onChange(+e.target.value)} />
-      <span>😊</span>
+    <label className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600" title={`Feeling: ${value} of 100`}>
+      {label}
+      <span className="flex items-center gap-1">
+        <span aria-hidden="true">😞</span>
+        <input type="range" aria-label="How do you feel about this task? Left is dreading it, right is looking forward to it" min="0" max="100" className="w-24" value={value} onChange={(e) => onChange(+e.target.value)} />
+        <span aria-hidden="true">😊</span>
+      </span>
     </label>
   )
 }
@@ -103,7 +96,7 @@ function Row({ t, onToggle, onHappy, onEdit, onDelete }) {
           <button className={`${btn} text-[#d70015] hover:bg-white`} onClick={onDelete} aria-label={`Delete ${t.title}`}>Delete</button>
         </span>
       </div>
-      <div className="pl-6"><Happy value={t.happy} onChange={onHappy} /></div>
+      <div className="pl-6"><Happy value={t.happy} onChange={onHappy} label="Feeling about it" /></div>
     </li>
   )
 }
@@ -201,15 +194,10 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove }) {
   const plan = async (context = dl.context) => {
     setBusy(true); setError('')
     try {
-      const r = await fetch('/api/deadline', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-          deadline: { title: dl.title, date: dl.date, hours: dl.hours ?? null, context }, asked,
-        }),
+      const out = await post('/api/deadline', {
+        goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
+        deadline: { title: dl.title, date: dl.date, hours: dl.hours ?? null, context }, asked,
       })
-      const out = await r.json()
-      if (!r.ok) throw new Error(out.error || r.statusText)
       if (out.question) { setAsked(asked + 1); setRes({ question: out.question }) }
       else if (Array.isArray(out.options)) {
         setRes(out); setPicked(out.options.map((_, i) => i))
@@ -235,10 +223,10 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove }) {
   }
   const add = () => {
     const ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && d <= dl.date
-    setTasks([...tasks, ...picked.map((i, n) => {
+    setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
-      return { id: Date.now() + n, title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, done: false, happy: 50, deadlineId: dl.id }
-    })])
+      return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, deadlineId: dl.id }
+    })))
     setRes(null)
   }
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
@@ -363,9 +351,8 @@ function fromCalendar(tasks) {
     why: due.length ? (dateKey(best) < todayStr() ? 'Overdue on your calendar.' : 'Planned for today on your calendar.') : 'Top of your priority list.', minutes: best.hours ? Math.round(best.hours * 60) : undefined }
 }
 
-function Hero({ tasks, setTasks, focus, setFocus, go }) {
-  const sug = fromCalendar(tasks)
-  const cur = focus || sug
+function Hero({ tasks, setTasks, focus, pick, setFocus, go }) {
+  const cur = focus || pick || fromCalendar(tasks)
   const finish = () => {
     if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
     setFocus(null)
@@ -376,7 +363,7 @@ function Hero({ tasks, setTasks, focus, setFocus, go }) {
       {cur ? (
         <>
           <p className="mt-1 break-words text-2xl font-semibold leading-tight tracking-tight">{cur.title}</p>
-          <p className="mt-1 text-sm text-slate-300">{cur.method}{cur.minutes ? ` · ${cur.minutes} min` : ''} · {cur.why}</p>
+          <p className="mt-1 text-sm text-slate-300">{pick && !focus ? `You picked: ${cur.method}` : cur.method}{cur.minutes ? ` · ${cur.minutes} min` : ''} · {cur.why}</p>
         </>
       ) : (
         <p className="mt-1 text-2xl font-semibold leading-tight tracking-tight">Nothing pending. Add a task or enjoy a hobby.</p>
@@ -390,7 +377,7 @@ function Hero({ tasks, setTasks, focus, setFocus, go }) {
   )
 }
 
-function DoNow({ data, tasks, setFocus }) {
+function DoNow({ data, tasks, setFocus, setPick }) {
   const [minutes, setMinutes] = useState(60)
   const [energy, setEnergy] = useState('medium')
   const [opts, setOpts] = useState(null)
@@ -400,53 +387,73 @@ function DoNow({ data, tasks, setFocus }) {
   const ask = async () => {
     setBusy(true); setError('')
     try {
-      const res = await fetch('/api/now', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-          tasks: tasks.filter((t) => !t.done).map(({ id, title, due, when, hours, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, readiness, important, urgent, fun })),
-          hobbies: (data.hobbies || []).map((h) => h.title),
-          deadlines: (data.deadlines || []).map(({ title, date, hours }) => ({ title, date, hours })),
-          minutes, energy, mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
-        }),
+      const out = await post('/api/now', {
+        goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
+        tasks: tasks.filter((t) => !t.done).map(({ id, title, due, when, hours, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, readiness, important, urgent, fun })),
+        hobbies: (data.hobbies || []).map((h) => h.title),
+        deadlines: (data.deadlines || []).map(({ title, date, hours }) => ({ title, date, hours })),
+        minutes, energy, mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
       })
-      const out = await res.json()
-      if (!res.ok) throw new Error(out.error || res.statusText)
-      if (!Array.isArray(out.options)) throw new Error('Unexpected answer from AI')
+      if (!Array.isArray(out.options)) throw new Error('The AI gave an unreadable answer. Please try again.')
       setOpts(out.options)
     } catch (err) { setError(err.message) }
     setBusy(false)
   }
+  const top = () => window.scrollTo({ top: 0, behavior: 'smooth' })
   const start = (o) => {
     setFocus({ taskId: tasks.some((t) => t.id === o.taskId) ? o.taskId : null, title: o.title, method: o.method, why: o.why, minutes: o.minutes, at: Date.now() })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    top()
+  }
+  const choose = (m, t, why) => {
+    setPick({ taskId: t.id, title: t.title, method: m.name, why, minutes: t.hours ? Math.round(t.hours * 60) : undefined })
+    top()
   }
   const cards = [...(cal ? [cal] : []), ...(opts || [])]
+  const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy }) }))
+  const card = 'flex flex-col justify-between rounded-2xl bg-white p-3 ring-1 ring-black/5'
   return (
     <>
-      <p className="mb-2 text-sm text-slate-600">The calendar picks your schedule for you. Here, tell us how much time and energy you have right now and compare different ways to choose what to do. You pick.</p>
       <div className="mb-4 flex flex-wrap items-end gap-3 rounded-2xl bg-white p-3 ring-1 ring-black/5">
-        <label className="flex flex-col gap-1 text-sm">Minutes free
-          <input type="number" min="5" step="5" className={`${input} w-24`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
+        <label className="flex flex-col gap-1 text-sm">Minutes free right now
+          <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">Energy
+        <label className="flex flex-col gap-1 text-sm">Your energy
           <select className={input} value={energy} onChange={(e) => setEnergy(e.target.value)}>
             <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
           </select>
         </label>
-        <button className={`${btn} bg-[#007aff] text-white hover:bg-[#0a84ff]`} disabled={busy} onClick={ask}>{busy ? 'Thinking…' : opts ? 'Ask again' : 'What should I do now?'}</button>
-        {error && <span className="text-sm text-[#d70015]">{error}</span>}
       </div>
-      {!cards.length && <p className="text-sm text-slate-600">Add a task first.</p>}
+      <h2 className="mb-1 font-semibold">Compare ways to choose</h2>
+      <p className="mb-2 text-sm text-slate-600">Each method picks a different task from your list. Pick the one that feels right and it becomes your "Right now, try" at the top.</p>
+      <ul className="mb-6 grid gap-3 sm:grid-cols-2">
+        {picks.map(({ m, r }) => (
+          <li key={m.name} className={card}>
+            <div>
+              <p className="text-xs font-medium text-[#0066d6]">{m.name} <span className="font-normal text-slate-600">· {m.how}</span></p>
+              {r ? <>
+                <p className="mt-1 break-words font-semibold">{r.t.title}</p>
+                <p className="mt-1 text-sm text-slate-600">{r.t.hours ? `${r.t.hours}h · ` : ''}{r.why}</p>
+              </> : <p className="mt-1 text-sm text-slate-600">{tasks.some((t) => !t.done && !t.fun) ? 'Nothing fits your minutes. Try more time.' : 'No open tasks yet. Add some in Tasks.'}</p>}
+            </div>
+            {r && <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => choose(m, r.t, r.why)}>Pick this</button>}
+          </li>
+        ))}
+      </ul>
+      <h2 className="mb-1 font-semibold">Or ask the AI</h2>
+      <p className="mb-2 text-sm text-slate-600">It also considers your mood, calendar and hobbies. The calendar plan is what your schedule says to do now.</p>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <button className={`${btn} ${BLUE}`} disabled={busy} onClick={ask}>{busy ? 'Thinking…' : opts ? 'Ask again' : 'What should I do now?'}</button>
+        {error && <span role="alert" className="text-sm text-[#d70015]">{error}</span>}
+      </div>
       <ul className="grid gap-3 sm:grid-cols-2">
         {cards.map((o, i) => (
-          <li key={i} className="flex flex-col justify-between rounded-2xl bg-white p-3 ring-1 ring-black/5">
+          <li key={i} className={card}>
             <div>
               <p className="text-xs font-medium text-[#0066d6]">{o.method}</p>
               <p className="mt-1 break-words font-semibold">{o.title}</p>
               <p className="mt-1 text-sm text-slate-600">{o.minutes ? `${o.minutes} min · ` : ''}{o.why}</p>
             </div>
-            <button className={`${btn} mt-3 self-start bg-[#007aff] text-white hover:bg-[#0a84ff]`} onClick={() => start(o)}>Do this now</button>
+            <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => start(o)}>Do this now</button>
           </li>
         ))}
       </ul>
@@ -454,11 +461,13 @@ function DoNow({ data, tasks, setFocus }) {
   )
 }
 
-function Tasks({ goals, tasks, setTasks }) {
+function Tasks({ goals, tasks, setTasks, goTab }) {
   const blank = { title: '', due: '', happy: 50, hours: '' }
   const [d, setD] = useState(blank)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [dump, setDump] = useState('')
+  const [added, setAdded] = useState(0) // how many tasks the dump box just added, to offer sorting them
 
   const submit = (e) => {
     e.preventDefault()
@@ -471,13 +480,20 @@ function Tasks({ goals, tasks, setTasks }) {
           const { important, urgent, goalId, reason, ...keep } = t // keeps hours, planned date, readiness, deadline link
           return { ...keep, title: d.title, due: d.due, happy: d.happy ?? 50, hours: hours }
         })
-      : [...tasks, { ...d, hours, id: Date.now(), done: false }])
+      : addTasks(tasks, [{ ...d, hours }]))
     setD(blank)
   }
   const update = (id, patch) => setTasks(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+  const lines = dump.split('\n').map((l) => l.trim()).filter(Boolean)
+  const addDump = (e) => {
+    e.preventDefault()
+    if (!lines.length) return
+    setTasks(addTasks(tasks, lines.slice(0, 50).map((title) => ({ title }))))
+    setAdded(lines.length); setDump('')
+  }
 
   const run = async () => {
-    setBusy(true); setError('')
+    setAdded(0); setBusy(true); setError('')
     try {
       const open = tasks.filter((t) => !t.done && !t.fun)
       const ranks = await prioritise(goals, open)
@@ -501,8 +517,23 @@ function Tasks({ goals, tasks, setTasks }) {
 
   return (
     <>
+      <p className="mb-2 text-sm text-slate-600">The Eisenhower Matrix sorts tasks by what is urgent and what is important.</p>
+      {!all.length && (
+        <form className="mb-3 rounded-2xl bg-white p-4 ring-1 ring-black/5" onSubmit={addDump}>
+          <label className="mb-2 block font-semibold" htmlFor="dump">What's on your mind? Dump everything here</label>
+          <textarea id="dump" className={`${input} w-full`} rows={5} placeholder={'One task per line, e.g.\nStudy for statics quiz\nCall the dentist\nBuy a birthday gift'} value={dump} onChange={(e) => setDump(e.target.value)} />
+          <button className={`${btn} mt-2 ${BLUE}`} disabled={!lines.length}>{lines.length > 1 ? `Add ${lines.length} tasks` : 'Add task'}</button>
+        </form>
+      )}
+      {added > 0 && (
+        <div role="status" className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-black/5">
+          <span>Added {added} task{added === 1 ? '' : 's'}. Sort them into the matrix?</span>
+          <button className={`${btn} ${BLUE}`} disabled={busy} onClick={run}>{busy ? 'Sorting…' : 'Sort with AI'}</button>
+          <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={() => setAdded(0)}>Later</button>
+        </div>
+      )}
       <form className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-black/5" onSubmit={submit}>
-        <input className={`${input} min-w-48 flex-1`} placeholder="Task" value={d.title}
+        <input className={`${input} min-w-48 flex-1`} placeholder="Task" aria-label="Task" value={d.title}
           onChange={(e) => setD({ ...d, title: e.target.value })} />
         <input type="date" className={input} value={d.due} onChange={(e) => setD({ ...d, due: e.target.value })} />
         <input type="number" min="0" step="0.5" aria-label="Hours needed" className={`${input} w-36`} placeholder="Hours (opt.)" value={d.hours ?? ''} onChange={(e) => setD({ ...d, hours: e.target.value })} />
@@ -513,15 +544,15 @@ function Tasks({ goals, tasks, setTasks }) {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <button className={`${btn} bg-[#007aff] text-white hover:bg-[#0a84ff] disabled:opacity-50`}
-          disabled={busy || !goals.length || !all.some((t) => !t.done)} onClick={run}>
+          disabled={busy || !all.some((t) => !t.done)} onClick={run}>
           {busy ? 'Prioritising…' : 'Prioritise with AI'}
         </button>
-        {!goals.length && <span className="text-sm text-slate-600">Add a goal first.</span>}
+        {!goals.length && <button className="text-sm text-[#0066d6] underline" onClick={() => goTab('Goals')}>Link goals for better ranking.</button>}
         {error && <span className="text-sm text-[#d70015]">{error}</span>}
       </div>
 
       <h2 className="mb-2 font-semibold">Priority List</h2>
-      {!all.length && <p className="mb-6 text-sm text-slate-600">No tasks yet. Add one above, then let the AI rank it.</p>}
+      {!all.length && <p className="mb-6 text-sm text-slate-600">No tasks yet.</p>}
       <ol className="mb-6 space-y-1">
         {sorted.map((t) => (
           <li key={t.id} className={`${t.q === undefined ? 'bg-white' : Q[t.q].cls} rounded p-1`}>
@@ -590,7 +621,7 @@ function Detail({ t, goals, deadlines, update, remove, close }) {
         {!t.fun && <label className={lbl}>Readiness: {t.readiness ?? '?'}{t.readiness != null && '%'}
           <input type="range" min="0" max="100" value={t.readiness ?? 50} onChange={(e) => update(t.id, { readiness: +e.target.value })} />
         </label>}
-        <div className={lbl}>Happiness <Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
+        <div className={lbl}><Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
         <label className="flex items-center gap-2 self-end text-sm">
           <input type="checkbox" checked={t.done} onChange={() => update(t.id, { done: !t.done })} /> Done
         </label>
@@ -621,7 +652,7 @@ function CalendarSync({ data, setData }) {
     } catch (err) { setMsg(err.message) }
     setLoading(false)
   }
-  const link = `${btn} bg-slate-100 hover:bg-slate-200`
+  const link = `${btn} inline-flex items-center bg-slate-100 hover:bg-slate-200`
   return (
     <details className="mb-4 rounded-2xl bg-white p-3 ring-1 ring-black/5">
       <summary className="cursor-pointer font-semibold">
@@ -677,7 +708,7 @@ function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, set
   const update = (id, patch) => setTasks(tasks.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   const chip = (t) => (
     <button key={t.id} title={t.title} onClick={() => setSel(t.id)}
-      className={`block w-full truncate rounded px-1 text-left text-xs ${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? 'ring-2 ring-slate-800' : ''}`}>
+      className={`chip block w-full truncate rounded px-1 text-left text-xs ${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? 'ring-2 ring-slate-800' : ''}`}>
       {t.title}
     </button>
   )
@@ -766,9 +797,9 @@ function applyPlan(d, o) {
 }
 
 const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToday.hours : undefined)
-const QUICK = ['Help me plan my day', "I'm feeling stressed", "I'm low on energy"]
+const QUICK = ['Help me plan my day', 'Help me set my goals', "I'm feeling stressed", "I'm low on energy"]
 
-function Chat({ data, setData }) {
+function Chat({ data, setData, onClose }) {
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -779,19 +810,17 @@ function Chat({ data, setData }) {
     const next = [...msgs, { role: 'user', content, label }]
     setMsgs(next); setText(''); setBusy(true); setError('')
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-          tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, fun, deadlineId }) => ({ id, title, due, readiness, hours, when, fun, deadlineId })),
-          deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
-          hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
-        }),
+      const out = await post('/api/chat', {
+        goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
+        tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, fun, deadlineId }) => ({ id, title, due, readiness, hours, when, fun, deadlineId })),
+        deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
+        hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
       })
-      const out = await res.json()
-      if (!res.ok) throw new Error(out.error || res.statusText)
+      if (typeof out.reply !== 'string') throw new Error('The AI gave an unreadable answer. Please try again.')
       setData((d) => applyPlan(d, out))
-      setMsgs([...next, { role: 'assistant', content: out.reply }])
+      const goals = (Array.isArray(out.goals) ? out.goals : []).filter((g) => g?.title && LEVELS.some((l) => l.name === g.level)).slice(0, 8)
+        .map((g) => ({ title: String(g.title).slice(0, 120), level: LEVELS.findIndex((l) => l.name === g.level), happiness: !!g.happiness }))
+      setMsgs([...next, { role: 'assistant', content: out.reply, goals }])
     } catch (err) { setError(err.message) }
     setBusy(false)
   }
@@ -817,20 +846,38 @@ function Chat({ data, setData }) {
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
+  const addGoals = (mi, ks) => {
+    const picked = ks.map((k) => msgs[mi].goals[k])
+    setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
+    setMsgs(msgs.map((m, i) => (i === mi ? { ...m, goals: m.goals.map((g, k) => (ks.includes(k) ? { ...g, added: true } : g)) } : m)))
+  }
   const bubble = 'max-w-[80%] break-words px-3.5 py-2 text-[0.9375rem] leading-snug'
   return (
-    <div className="flex flex-col">
-      <header className="border-b border-black/5 py-2 text-center">
+    <div className="flex min-h-0 flex-1 flex-col md:flex-none">
+      <header className="relative border-b border-black/5 py-2 text-center">
+        {onClose && <button className="absolute right-2 top-2 flex min-h-11 items-center rounded-full px-3 text-[#007aff] md:hidden" onClick={onClose}>Done</button>}
         <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-b from-[#a5a5ad] to-[#85858d] text-sm font-semibold text-white" aria-hidden="true">C</div>
         <h2 className="mt-0.5 text-xs font-medium">Coach</h2>
       </header>
-      <div role="log" aria-live="polite" className="flex h-80 flex-col gap-1.5 overflow-y-auto p-3">
+      <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3 md:h-80 md:flex-none">
         <div className={`${bubble} mr-auto rounded-[1.25rem] rounded-bl-md bg-[#e9e9eb] text-black`}>
           Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?
         </div>
         {msgs.map((m, i) => (
           <div key={i} className={`${bubble} ${m.role === 'user' ? 'ml-auto rounded-[1.25rem] rounded-br-md bg-[#007aff] text-white' : 'mr-auto rounded-[1.25rem] rounded-bl-md bg-[#e9e9eb] text-black'}`}>
             {m.label ?? m.content}
+            {m.goals?.length > 0 && (
+              <ul className="mt-2 space-y-1.5">
+                {m.goals.map((g, k) => (
+                  <li key={k} className="rounded-xl bg-white p-2 text-sm">
+                    <span className="text-xs text-slate-600">{LEVELS[g.level].name}{g.happiness ? ' · happiness' : ''}</span><br />{g.title}
+                    <button className={`${btn} mt-1 block !px-3 !py-1 ${g.added ? 'bg-slate-100 text-slate-600' : BLUE}`} disabled={g.added}
+                      onClick={() => addGoals(i, [k])}>{g.added ? 'Added' : 'Add goal'}</button>
+                  </li>
+                ))}
+                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE} !py-1.5`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
+              </ul>
+            )}
           </div>
         ))}
         {busy && (
@@ -849,14 +896,15 @@ function Chat({ data, setData }) {
         </div>
       )}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-black/5 px-3 pt-2 text-xs text-slate-600">
-        <label className="flex items-center gap-2">Free hours today
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder="?" value={freeTodayOf(data) ?? ''}
+        <label className="flex items-center gap-2">Free time today (hours)
+          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
         </label>
-        <label className="flex items-center gap-2">per day
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder="?" value={data.freeHours ?? ''}
+        <label className="flex items-center gap-2">Free time per day (hours)
+          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder="4" value={data.freeHours ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeHours: e.target.value === '' ? undefined : +e.target.value }))} />
         </label>
+        <p className="w-full">Leave today blank to use your daily number.</p>
       </div>
       <form className="flex items-center gap-2 p-3" onSubmit={submit}>
         <label className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-slate-200 text-slate-700 transition hover:bg-slate-300 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
@@ -877,12 +925,13 @@ function Chat({ data, setData }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState('Goals')
+  const [tab, setTab] = useState('Tasks')
+  const [coachOpen, setCoachOpen] = useState(false)
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState(false)
   useEffect(() => {
-    fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then(setData).catch((e) => setLoadError(e.message))
+    fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then((d) => setData(migrate(d))).catch((e) => setLoadError(e.message))
   }, [])
   // keep an imported calendar fresh (at most hourly)
   const stale = data?.sync?.url && Date.now() - data.sync.at > 36e5 ? data.sync.url : null
@@ -901,36 +950,50 @@ export default function App() {
   const { goals, tasks } = data
   // drop a focus whose task was deleted or finished elsewhere
   const focus = data.focus && (!data.focus.taskId || tasks.some((t) => t.id === data.focus.taskId && !t.done)) ? data.focus : null
+  const pick = data.pick && (!data.pick.taskId || tasks.some((t) => t.id === data.pick.taskId && !t.done)) ? data.pick : null
   const hobbies = data.hobbies || []
   const deadlines = data.deadlines || []
   const setDeadlines = (deadlines) => setData((d) => ({ ...d, deadlines }))
-  const setFocus = (focus) => setData((d) => ({ ...d, focus }))
+  const setFocus = (focus) => setData((d) => ({ ...d, focus, pick: null }))
+  const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
   const setTasks = (tasks) => setData((d) => ({ ...d, tasks }))
+  const TABS = ['Goals', 'Deadlines', 'Tasks', 'Do now', 'Calendar']
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 lg:flex-row">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 pb-28 md:pb-4 lg:flex-row">
       <main className="min-w-0 flex-1">
-        <h1 className="mb-4 text-3xl font-semibold leading-tight tracking-tight">Eisenhower Matrix</h1>
+        <h1 className="mb-4 text-3xl font-semibold leading-tight tracking-tight">Desker <span className="text-lg font-normal text-slate-600">Eisenhower Matrix</span></h1>
         {saveError && <p role="alert" className="mb-3 rounded bg-[#ff3b30]/15 p-2 text-sm text-[#d70015]">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
-        <Hero tasks={tasks} setTasks={setTasks} focus={focus} setFocus={setFocus} go={() => setTab('Do now')} />
-        <nav className="glass sticky top-3 z-10 mb-4 flex flex-wrap gap-1 rounded-2xl bg-slate-200/70 p-1 ring-1 ring-black/5 backdrop-blur-xl backdrop-saturate-150">
-          {['Goals', 'Deadlines', 'Tasks', 'Do now', 'Calendar'].map((t) => (
-            <button key={t} className={`${btn} ${tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+        <Hero tasks={tasks} setTasks={setTasks} focus={focus} pick={pick} setFocus={setFocus} go={() => setTab('Do now')} />
+        <nav className="glass sticky top-3 z-10 mb-4 hidden gap-1 rounded-2xl bg-slate-200/70 p-1 ring-1 ring-black/5 backdrop-blur-xl backdrop-saturate-150 md:flex">
+          {TABS.map((t) => (
+            <button key={t} className={`${btn} !transition-none ${tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{t}</button>
           ))}
         </nav>
         <div key={tab} className="enter">
         {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} />}
         {tab === 'Deadlines' && <Deadlines goals={goals} deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} />}
-        {tab === 'Do now' && <DoNow data={data} tasks={tasks} setFocus={setFocus} />}
-        {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} />}
+        {tab === 'Do now' && <DoNow data={data} tasks={tasks} setFocus={setFocus} setPick={setPick} />}
+        {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} />}
         {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} />}
         </div>
       </main>
-      <aside className="w-full overflow-hidden rounded-3xl bg-[#f9f9fb] ring-1 ring-black/5 lg:sticky lg:top-4 lg:w-80 lg:self-start">
-        <Chat data={data} setData={setData} />
+      <aside className={`${coachOpen ? 'fixed inset-x-0 top-0 z-30 flex h-dvh flex-col bg-[#f9f9fb]' : 'hidden'} w-full overflow-hidden ring-black/5 md:static md:z-auto md:block md:h-auto md:rounded-3xl md:ring-1 lg:sticky lg:top-4 lg:w-80 lg:self-start`}>
+        <Chat data={data} setData={setData} onClose={() => setCoachOpen(false)} />
       </aside>
+      <nav className="glass fixed inset-x-0 bottom-0 z-20 flex border-t border-black/10 bg-[#f9f9fb]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden" aria-label="Sections">
+        {[...TABS, 'Coach'].map((t) => {
+          const on = t === 'Coach' ? coachOpen : tab === t
+          return (
+            <button key={t} className={`flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-[0.6875rem] font-medium ${on ? 'text-[#007aff]' : 'text-slate-600'}`}
+              aria-current={on ? 'page' : undefined} onClick={() => (t === 'Coach' ? setCoachOpen(true) : setTab(t))}>
+              <Icon name={t} />{t}
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }

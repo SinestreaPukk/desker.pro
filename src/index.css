@@ -44,3 +44,9 @@ input[type='range']:active::-webkit-slider-thumb { transform: scale(1.1); }
 .dot { width: 7px; height: 7px; border-radius: 9999px; background: #8e8e93; animation: blink 1s infinite ease-in-out; }
 @keyframes blink { 0%, 80%, 100% { opacity: 0.35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) { .dot { animation: none; opacity: 0.7; } }
+
+/* Phones: 44px touch targets (calendar day chips stay compact) */
+@media (max-width: 767px) {
+  button:not(.chip), a.inline-flex, select, textarea, input:not([type='checkbox']):not([type='range']):not([type='file']), summary { min-height: 44px; }
+  label:has(> input[type='checkbox']), label:has(input[type='range']), summary { min-height: 44px; display: flex; align-items: center; }
+}
