@@ -1,26 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
 import { post, uid, stateUrl } from './api.js'
-import { addTasks, settle, doneStats } from './tasks.js'
+import { addTasks, settle, doneStats, isMissed, timeRatio } from './tasks.js'
+import { applyPlan as applyReplan } from './replan.js'
+import { logEnergy, energyProfile, ranges } from './energy.js'
+import { weekReview } from './review.js'
+import { encodeFile } from './files.js'
+import Replan from './Replan.jsx'
+import Review from './Review.jsx'
+import Syllabus from './Syllabus.jsx'
+import Focus from './Focus.jsx'
 import { migrate } from './storage.js'
 import { METHODS } from './methods.js'
 import { Icon } from './icons.jsx'
-import { BLUE, btn, input } from './ui.js'
+import { BLUE, btn, input, Q, LEVELS } from './ui.js'
 import TimeGrid from './TimeGrid.jsx'
 import Settings from './Settings.jsx'
 
-const Q = [
-  { name: 'Do First', hint: 'Urgent + Important', cls: 'bg-[#ff3b30]/15' },
-  { name: 'Schedule', hint: 'Not Urgent + Important', cls: 'bg-[#007aff]/15' },
-  { name: 'Batch / minimize', hint: 'Urgent but not important: do quickly in one batch, or hand off', cls: 'bg-[#ff9500]/20' },
-  { name: 'Eliminate', hint: 'Not Urgent + Not Important', cls: 'bg-[#8e8e93]/15' },
-]
-// Goals pyramid, narrowest (top) to widest (base)
-const LEVELS = [
-  { name: 'Vision', hint: 'Life purpose / who you want to be', w: 'w-1/3', cls: 'bg-[#af52de]/20' },
-  { name: 'Long-term', hint: '5+ years', w: 'w-1/2', cls: 'bg-[#5856d6]/20' },
-  { name: 'Mid-term', hint: '1-3 years', w: 'w-3/4', cls: 'bg-[#007aff]/20' },
-  { name: 'Short-term', hint: 'This quarter', w: 'w-full', cls: 'bg-[#5ac8fa]/25' },
-]
 // undefined until the AI has ranked the task
 const quadrant = (t) => t.important === undefined ? undefined : (t.important ? 0 : 2) + (t.urgent ? 0 : 1)
 
@@ -31,22 +26,12 @@ async function prioritise(goals, tasks) {
 }
 
 // Photos, PDFs, text files and web pages -> plain notes the planner can use.
-const TEXT_FILE = /\.(txt|md|markdown|csv|json|ics)$/i
 async function readSource({ file, url }) {
-  let body
-  if (url) body = { url }
-  else if (file.type.startsWith('text/') || TEXT_FILE.test(file.name)) return (await file.text()).slice(0, 6000)
-  else if (file.type.startsWith('image/')) {
-    const bmp = await createImageBitmap(file).catch(() => { throw new Error('This photo format is not supported. Try JPEG or PNG.') })
-    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height))
-    const c = Object.assign(document.createElement('canvas'), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) })
-    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height)
-    body = { name: file.name, mediaType: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.85).split(',')[1] }
-  } else if (file.type === 'application/pdf') {
-    if (file.size > 3e6) throw new Error('That PDF is over 3 MB')
-    const data = await new Promise((ok, no) => { const f = new FileReader(); f.onload = () => ok(f.result.split(',')[1]); f.onerror = no; f.readAsDataURL(file) })
-    body = { name: file.name, mediaType: 'application/pdf', data }
-  } else throw new Error('Supported: photos, PDFs, text files')
+  let body = { url }
+  if (!url) {
+    body = await encodeFile(file)
+    if (body.text !== undefined) return body.text.slice(0, 6000)
+  }
   return (await post('/api/read', body)).text
 }
 
@@ -79,7 +64,7 @@ function Happy({ value = 50, onChange, label = 'How do you feel about this task?
 
 const REPEATS = [['', 'Never'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', 'Weekly'], ['monthly', 'Monthly']]
 
-function Row({ t, update, onEdit, onDelete, move }) {
+function Row({ t, update, onEdit, onDelete, move, onStart }) {
   const [open, setOpen] = useState(false)
   const [sub, setSub] = useState('')
   const subs = t.subs || []
@@ -101,9 +86,12 @@ function Row({ t, update, onEdit, onDelete, move }) {
             {t.hours > 0 && <span className="ml-2 text-xs text-slate-500">{t.hours}h</span>}
             {subs.length > 0 && <span className="ml-2 text-xs text-slate-500">{subs.filter((x) => x.done).length}/{subs.length} steps</span>}
             {t.repeat && <span className="ml-2 text-xs text-slate-500">repeats {t.repeat}</span>}
+            {t.spent > 0 && <span className="ml-2 text-xs text-slate-500">{t.spent < 1 / 120 ? '<1' : Math.round(t.spent * 60)} min focused</span>}
+            {isMissed(t) && <span className="ml-2 rounded bg-[#ff3b30]/15 px-1.5 text-xs text-[#d70015]">missed</span>}
           </span>
         </label>
         <span className="flex shrink-0 flex-wrap justify-end gap-1">
+          {!t.done && <button className={`${btn} text-[#0066d6] hover:bg-white`} onClick={() => onStart(t)} aria-label={`Start focus on ${t.title}`}>Start</button>}
           <button className={`${btn} hover:bg-white`} onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Details for ${t.title}`}>{open ? 'Hide' : 'Details'}</button>
           <button className={`${btn} hover:bg-white`} onClick={onEdit} aria-label={`Edit ${t.title}`}>Edit</button>
           <button className={`${btn} text-[#d70015] hover:bg-white`} onClick={onDelete} aria-label={`Delete ${t.title}`}>Delete</button>
@@ -179,7 +167,7 @@ function Hobbies({ hobbies, setHobbies }) {
   )
 }
 
-function Goals({ goals, setGoals, hobbies, setHobbies }) {
+function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onReview }) {
   const blank = { title: '', level: 3, happiness: false }
   const [d, setD] = useState(blank)
   const submit = (e) => {
@@ -190,6 +178,7 @@ function Goals({ goals, setGoals, hobbies, setHobbies }) {
   }
   return (
     <>
+      <Review tasks={tasks} goals={goals} onCoach={onReview} />
       <p className="mb-2 text-sm text-slate-600">Build your goals pyramid. The AI links each task to a goal and uses its level to judge importance.</p>
       <form className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-black/5" onSubmit={submit}>
         <input className={`${input} min-w-48 flex-1`} placeholder="Goal" value={d.title}
@@ -227,7 +216,7 @@ function Goals({ goals, setGoals, hobbies, setHobbies }) {
   )
 }
 
-function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove }) {
+function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -245,7 +234,7 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove }) {
     try {
       const out = await post('/api/deadline', {
         goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-        deadline: { title: dl.title, date: dl.date, hours: dl.hours ?? null, context }, asked,
+        deadline: { title: dl.title, date: dl.date, hours: dl.hours ?? null, context }, asked, ratio,
       })
       if (out.question) { setAsked(asked + 1); setRes({ question: out.question }) }
       else if (Array.isArray(out.options)) {
@@ -299,6 +288,7 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove }) {
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+        {ratio && ratio !== 1 && <span className="text-xs text-slate-600">Your timed tasks take about {ratio}x your estimates; the AI allows for that.</span>}
         <label className="flex items-center gap-1">Hours I need
           <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
             onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
@@ -373,6 +363,7 @@ function Deadlines({ goals, deadlines, setDeadlines, tasks, setTasks }) {
   return (
     <>
       <p className="mb-2 text-sm text-slate-600">Add anything with a due date: an exam, a project, a trip. The AI works out the hours and suggests tasks to pick from.</p>
+      <Syllabus deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} />
       <form className="mb-4 flex flex-wrap items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-black/5" onSubmit={submit}>
         <input className={`${input} min-w-48 flex-1`} placeholder="Deadline, e.g. Statics quiz" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
         <input type="date" aria-label="Date" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
@@ -385,7 +376,7 @@ function Deadlines({ goals, deadlines, setDeadlines, tasks, setTasks }) {
       {!deadlines.length && <p className="text-sm text-slate-600">No deadlines yet.</p>}
       <ul className="space-y-3">
         {[...deadlines].sort((a, b) => a.date.localeCompare(b.date)).map((dl) => (
-          <DeadlineCard key={dl.id} dl={dl} goals={goals} tasks={tasks} setTasks={setTasks} patch={patch(dl.id)}
+          <DeadlineCard key={dl.id} dl={dl} goals={goals} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(dl.id)}
             remove={() => setDeadlines(deadlines.filter((x) => x.id !== dl.id))} />
         ))}
       </ul>
@@ -393,6 +384,9 @@ function Deadlines({ goals, deadlines, setDeadlines, tasks, setTasks }) {
   )
 }
 
+// Learned energy hours and the user's real-vs-estimated time, passed to the AI so plans can use them.
+const patternOf = (d) => { const p = energyProfile(d.energyLog); return p.enough && (p.high.length || p.low.length) ? { high: p.high, low: p.low } : undefined }
+const ratioOf = (tasks) => timeRatio(tasks)?.ratio
 const todayStr = () => new Date().toLocaleDateString('sv')
 // Calendar-based suggestion: what the schedule says to do now.
 function fromCalendar(tasks) {
@@ -404,7 +398,7 @@ function fromCalendar(tasks) {
     why: due.length ? (dateKey(best) < todayStr() ? 'Overdue on your calendar.' : 'Planned for today on your calendar.') : 'Top of your priority list.', minutes: best.hours ? Math.round(best.hours * 60) : undefined }
 }
 
-function Hero({ tasks, setTasks, focus, pick, setFocus, go }) {
+function Hero({ tasks, setTasks, focus, pick, setFocus, go, openTimer }) {
   const cur = focus || pick || fromCalendar(tasks)
   const finish = () => {
     if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
@@ -423,6 +417,7 @@ function Hero({ tasks, setTasks, focus, pick, setFocus, go }) {
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         {cur && <button className={`${btn} bg-white text-slate-900 hover:bg-slate-100`} onClick={focus ? finish : () => setFocus({ ...cur, at: Date.now() })}>{focus ? 'Done' : 'Start'}</button>}
+        {focus && <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={openTimer}>Open timer</button>}
         {focus && <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={() => setFocus(null)}>Stop</button>}
         <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={go}>Compare other ways</button>
       </div>
@@ -430,7 +425,33 @@ function Hero({ tasks, setTasks, focus, pick, setFocus, go }) {
   )
 }
 
-function DoNow({ data, tasks, setFocus, setPick }) {
+function EnergyPanel({ log, reset }) {
+  const [sure, setSure] = useState(false)
+  const p = energyProfile(log)
+  return (
+    <section className="mb-4 rounded-2xl bg-white p-3 text-sm ring-1 ring-black/5" aria-label="Your energy pattern">
+      <h2 className="font-semibold">Your energy pattern</h2>
+      {p.enough
+        ? <p className="mt-1 text-slate-700">Usually high energy: {ranges(p.high) || 'no clear hours yet'}. Usually low: {ranges(p.low) || 'no clear hours yet'}. The coach and Replan put demanding work in your high hours.</p>
+        : <p className="mt-1 text-slate-600">Tap your energy level a few times a day. After {8 - p.n > 0 ? `${8 - p.n} more` : 'a few more'} check-ins, Desker learns when you do your best work.</p>}
+      {log.length > 0 && (
+        <>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-[#0066d6]">View check-ins ({log.length})</summary>
+            <ul className="mt-1 max-h-40 overflow-y-auto text-slate-700">
+              {[...log].reverse().slice(0, 50).map((e) => <li key={e.at}>{new Date(e.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}: {e.level}</li>)}
+            </ul>
+          </details>
+          {sure
+            ? <p className="mt-2" role="alert">Delete all {log.length} check-ins? <button className={`${btn} text-[#d70015] hover:bg-slate-100`} onClick={() => { reset(); setSure(false) }}>Delete</button><button className={`${btn} hover:bg-slate-100`} onClick={() => setSure(false)}>Cancel</button></p>
+            : <button className={`${btn} mt-2 bg-slate-100 hover:bg-slate-200`} onClick={() => setSure(true)}>Reset energy data</button>}
+        </>
+      )}
+    </section>
+  )
+}
+
+function DoNow({ data, tasks, setFocus, setPick, setData }) {
   const [minutes, setMinutes] = useState(60)
   const [energy, setEnergy] = useState('medium')
   const [opts, setOpts] = useState(null)
@@ -445,7 +466,7 @@ function DoNow({ data, tasks, setFocus, setPick }) {
         tasks: tasks.filter((t) => !t.done).map(({ id, title, due, when, hours, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, readiness, important, urgent, fun })),
         hobbies: (data.hobbies || []).map((h) => h.title),
         deadlines: (data.deadlines || []).map(({ title, date, hours }) => ({ title, date, hours })),
-        minutes, energy, mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
+        minutes, energy, pattern: patternOf(data), mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
       })
       if (!Array.isArray(out.options)) throw new Error('The AI gave an unreadable answer. Please try again.')
       setOpts(out.options)
@@ -470,12 +491,17 @@ function DoNow({ data, tasks, setFocus, setPick }) {
         <label className="flex flex-col gap-1 text-sm">Minutes free right now
           <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
         </label>
-        <label className="flex flex-col gap-1 text-sm">Your energy
-          <select className={input} value={energy} onChange={(e) => setEnergy(e.target.value)}>
-            <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
-          </select>
-        </label>
+        <div className="flex flex-col gap-1 text-sm">
+          <span id="energy-label">Your energy right now</span>
+          <div role="group" aria-labelledby="energy-label" className="flex gap-1 rounded-full bg-slate-200/70 p-1">
+            {['low', 'medium', 'high'].map((l) => (
+              <button key={l} aria-pressed={energy === l} className={`${btn} !px-3 !py-1 capitalize !transition-none ${energy === l ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+                onClick={() => { setEnergy(l); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }}>{l}</button>
+            ))}
+          </div>
+        </div>
       </div>
+      <EnergyPanel log={data.energyLog || []} reset={() => setData((d) => ({ ...d, energyLog: [] }))} />
       <h2 className="mb-1 font-semibold">Compare ways to choose</h2>
       <p className="mb-2 text-sm text-slate-600">Each method picks a different task from your list. Pick the one that feels right and it becomes your "Right now, try" at the top.</p>
       <ul className="mb-6 grid gap-3 sm:grid-cols-2">
@@ -514,7 +540,8 @@ function DoNow({ data, tasks, setFocus, setPick }) {
   )
 }
 
-function Tasks({ goals, tasks, setTasks, goTab }) {
+function Tasks({ goals, tasks, setTasks, goTab, setFocus }) {
+  const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const blank = { title: '', due: '', happy: 50, hours: '', repeat: '' }
   const [d, setD] = useState(blank)
   const [over, setOver] = useState(null) // quadrant under a dragged task
@@ -569,7 +596,7 @@ function Tasks({ goals, tasks, setTasks, goTab }) {
   const stats = doneStats(tasks)
   const sorted = [...open].sort((a, b) => (a.q ?? 9) - (b.q ?? 9) || (a.due || '9').localeCompare(b.due || '9'))
   const row = (t) => (
-    <Row key={t.id} t={t} update={update} move={move} onEdit={() => setD({ ...t, repeat: t.repeat || '' })}
+    <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => setD({ ...t, repeat: t.repeat || '' })}
       onDelete={() => setTasks(tasks.filter((x) => x.id !== t.id))} />
   )
   const unranked = open.filter((t) => t.q === undefined)
@@ -669,7 +696,7 @@ function Tasks({ goals, tasks, setTasks, goTab }) {
 const dateKey = (t) => t.when || t.due
 const color = (t) => (t.fun ? 'bg-[#34c759]/20' : quadrant(t) === undefined ? 'bg-white border' : Q[quadrant(t)].cls)
 
-function Detail({ t, goals, deadlines, update, remove, close }) {
+function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
   const goal = goals.find((g) => g.id === t.goalId)
   const dl = deadlines.find((x) => x.id === t.deadlineId)
   const lbl = 'flex flex-col gap-1 text-sm'
@@ -708,11 +735,13 @@ function Detail({ t, goals, deadlines, update, remove, close }) {
           <input type="checkbox" checked={t.done} onChange={() => update(t.id, { done: !t.done })} /> Done
         </label>
       </div>
+      {t.spent > 0 && <p className="mt-3 text-sm">Focused so far: {Math.round(t.spent * 60)} min{t.hours ? ` of ${Math.round(t.hours * 60)} min estimated` : ''}</p>}
       {dl && <p className="mt-3 text-sm">For deadline: <b>{dl.title}</b> ({dl.date})</p>}
       {!t.fun && t.reason && (
         <p className="mt-3 text-sm"><b>{Q[quadrant(t)].name}</b>
           <span className="text-slate-600"> · {goal ? `${LEVELS[goal.level].name} goal: ${goal.title}` : 'No matching goal'}</span><br />{t.reason}</p>
       )}
+      {!t.done && <button className={`${btn} mt-3 mr-2 ${BLUE}`} onClick={() => onStart(t)}>Start focus</button>}
       <button className={`${btn} mt-3 text-[#d70015] hover:bg-white`} onClick={() => { remove(t.id); close() }}>Delete</button>
     </section>
   )
@@ -781,7 +810,7 @@ const minutes = (ms) => { const d = new Date(ms); return d.getHours() * 60 + d.g
 const HM = /^(\d\d):(\d\d)$/
 const VIEWS = ['month', 'week', 'day']
 
-function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, setDeadlines, data, setData }) {
+function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, setDeadlines, data, setData, onStart, onReplan }) {
   const [adding, setAdding] = useState(null) // date being given a deadline
   const [dl, setDl] = useState({ title: '', hours: '' })
   const [view, setView] = useState('month')
@@ -845,7 +874,10 @@ function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, set
             <button key={v} className={`${btn} !px-3 !py-1 capitalize !transition-none ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>
           ))}
         </div>
-        <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={() => setAnchor(new Date())}>Today</button>
+        <span className="flex gap-2">
+          <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={onReplan}>Replan my week</button>
+          <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={() => setAnchor(new Date())}>Today</button>
+        </span>
       </div>
       {view !== 'month' && (
         <>
@@ -908,7 +940,7 @@ function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, set
           <div className="flex flex-wrap gap-1">{undated.map((t) => <div key={t.id} className="w-40">{chip(t)}</div>)}</div>
         </section>
       )}
-      {selected && <Detail t={selected} goals={goals} deadlines={deadlines} update={update} remove={(id) => setTasks(tasks.filter((x) => x.id !== id))} close={() => setSel(null)} />}
+      {selected && <Detail t={selected} goals={goals} deadlines={deadlines} update={update} remove={(id) => setTasks(tasks.filter((x) => x.id !== id))} close={() => setSel(null)} onStart={onStart} />}
     </>
   )
 }
@@ -934,9 +966,9 @@ function applyPlan(d, o) {
 }
 
 const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToday.hours : undefined)
-const QUICK = ['Help me plan my day', 'Help me set my goals', "I'm feeling stressed", "I'm low on energy"]
+const QUICK = ['Help me plan my day', 'Replan my week', 'Weekly review', 'Help me set my goals', "I'm feeling stressed", "I'm low on energy"]
 
-function Chat({ data, setData, onClose }) {
+function Chat({ data, setData, onClose, onReplan, reviewReq }) {
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -950,6 +982,7 @@ function Chat({ data, setData, onClose }) {
       const out = await post('/api/chat', {
         goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
         tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, start, fun, deadlineId }) => ({ id, title, due, readiness, hours, when, start, fun, deadlineId })),
+        pattern: patternOf(data), ratio: ratioOf(data.tasks),
         deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
         hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
       })
@@ -983,6 +1016,9 @@ function Chat({ data, setData, onClose }) {
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
+  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
+  useEffect(() => { if (reviewReq) review() }, [reviewReq])
+  const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : send(q))
   const addGoals = (mi, ks) => {
     const picked = ks.map((k) => msgs[mi].goals[k])
     setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
@@ -1028,7 +1064,7 @@ function Chat({ data, setData, onClose }) {
       {!msgs.length && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
           {QUICK.map((q) => (
-            <button key={q} className="rounded-full bg-white px-3 py-1.5 text-sm text-[#007aff] ring-1 ring-[#007aff]/40 transition hover:bg-[#007aff]/10 disabled:opacity-50" disabled={busy} onClick={() => send(q)}>{q}</button>
+            <button key={q} className="rounded-full bg-white px-3 py-1.5 text-sm text-[#007aff] ring-1 ring-[#007aff]/40 transition hover:bg-[#007aff]/10 disabled:opacity-50" disabled={busy} onClick={() => chipClick(q)}>{q}</button>
           ))}
         </div>
       )}
@@ -1064,6 +1100,11 @@ function Chat({ data, setData, onClose }) {
 export default function App() {
   const [tab, setTab] = useState('Tasks')
   const [coachOpen, setCoachOpen] = useState(false)
+  const [replanOpen, setReplanOpen] = useState(false)
+  const [focusOpen, setFocusOpen] = useState(false)
+  const [reviewReq, setReviewReq] = useState(0)
+  const [, tick] = useState(0) // re-render each minute so "missed" flags stay current
+  useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [toast, setToast] = useState(null) // { text, undo } after finishing a task
   useEffect(() => {
     if (!toast) return
@@ -1097,7 +1138,12 @@ export default function App() {
   const hobbies = data.hobbies || []
   const deadlines = data.deadlines || []
   const setDeadlines = (deadlines) => setData((d) => ({ ...d, deadlines }))
-  const setFocus = (focus) => setData((d) => ({ ...d, focus, pick: null }))
+  const setFocus = (focus) => { setData((d) => ({ ...d, focus, pick: null })); setFocusOpen(!!focus) } // starting something opens the timer
+  const addSpent = (id, hours) => hours > 0 && setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t.id === id ? { ...t, spent: Math.round(((t.spent || 0) + hours) * 1000) / 1000 } : t)) }))
+  const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it yourself.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
+  const focusTask = focus && tasks.find((t) => t.id === focus.taskId)
+  const missed = tasks.filter((t) => isMissed(t))
+  const openReplan = () => { setCoachOpen(false); setReplanOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
@@ -1120,24 +1166,37 @@ export default function App() {
           <Settings data={data} setData={setData} />
         </div>
         {saveError && <p role="alert" className="mb-3 rounded bg-[#ff3b30]/15 p-2 text-sm text-[#d70015]">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
-        <Hero tasks={tasks} setTasks={setTasks} focus={focus} pick={pick} setFocus={setFocus} go={() => setTab('Do now')} />
+        <Hero tasks={tasks} setTasks={setTasks} focus={focus} pick={pick} setFocus={setFocus} go={() => setTab('Do now')} openTimer={() => setFocusOpen(true)} />
         <nav className="glass sticky top-3 z-10 mb-4 hidden gap-1 rounded-2xl bg-slate-200/70 p-1 ring-1 ring-black/5 backdrop-blur-xl backdrop-saturate-150 md:flex">
           {TABS.map((t) => (
             <button key={t} className={`${btn} !transition-none ${tab === t ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
               aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{t}</button>
           ))}
         </nav>
+        {missed.length > 0 && !replanOpen && (
+          <div role="status" className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl bg-[#ff3b30]/10 p-3 text-sm">
+            <span><b>{missed.length} planned task{missed.length === 1 ? '' : 's'}</b> slipped past {missed.length === 1 ? 'its' : 'their'} time: {missed.slice(0, 3).map((t) => t.title).join(', ')}{missed.length > 3 ? '…' : ''}</span>
+            <button className={`${btn} ${BLUE}`} onClick={openReplan}>Replan my week</button>
+          </div>
+        )}
+        {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
         <div key={tab} className="enter">
-        {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} />}
+        {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={() => { setCoachOpen(true); setReviewReq((n) => n + 1) }} />}
         {tab === 'Deadlines' && <Deadlines goals={goals} deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} />}
-        {tab === 'Do now' && <DoNow data={data} tasks={tasks} setFocus={setFocus} setPick={setPick} />}
-        {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} />}
-        {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} />}
+        {tab === 'Do now' && <DoNow data={data} tasks={tasks} setFocus={setFocus} setPick={setPick} setData={setData} />}
+        {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} />}
+        {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
         </div>
       </main>
       <aside className={`${coachOpen ? 'fixed inset-x-0 top-0 z-30 flex h-dvh flex-col bg-[#f9f9fb]' : 'hidden'} w-full overflow-hidden ring-black/5 md:static md:z-auto md:block md:h-auto md:rounded-3xl md:ring-1 lg:sticky lg:top-4 lg:w-80 lg:self-start`}>
-        <Chat data={data} setData={setData} onClose={() => setCoachOpen(false)} />
+        <Chat data={data} setData={setData} onClose={() => setCoachOpen(false)} onReplan={openReplan} reviewReq={reviewReq} />
       </aside>
+      {focus && focusOpen && (
+        <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask}
+          onLog={(h) => focusTask && addSpent(focusTask.id, h)}
+          onDone={(h) => { if (focusTask) setTasks(tasks.map((t) => (t.id === focusTask.id ? { ...t, done: true, spent: Math.round(((t.spent || 0) + h) * 1000) / 1000 } : t))); setFocus(null) }}
+          onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
+      )}
       {toast && (
         <div role="status" className="fixed inset-x-4 bottom-20 z-40 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-[#1c1c1e] px-4 py-2 text-sm text-white shadow-lg md:bottom-4">
           <span className="min-w-0 break-words">{toast.text}</span>

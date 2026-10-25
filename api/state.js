@@ -3,7 +3,7 @@ import { neon } from '@neondatabase/serverless'
 const sql = neon(process.env.DATABASE_URL)
 const UID = /^[0-9a-f-]{36}$/
 // Document keys that are persisted; anything else in a PUT is dropped.
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
 const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'busy']
 
 export default async function handler(req, res) {

@@ -55,3 +55,20 @@ export function doneStats(tasks, now = Date.now()) {
   while (days.has(day(d))) { streak++; d.setDate(d.getDate() - 1) }
   return { week: stamps.filter((s) => s >= monday).length, streak }
 }
+
+// A planned task whose day (or start + length, when it has a start time) has passed without being done.
+export function isMissed(t, now = Date.now()) {
+  if (t.done || t.fun || !t.when) return false
+  const n = new Date(now)
+  if (t.when < day(n)) return true
+  if (t.when > day(n) || !/^\d\d:\d\d$/.test(t.start || '')) return false
+  return new Date(`${t.when}T${t.start}:00`).getTime() + (t.hours || 1) * 36e5 <= now
+}
+
+// How long tasks really take compared with the user's estimates, from tasks finished with a timer. null until 3 samples.
+export function timeRatio(tasks) {
+  const s = tasks.filter((t) => t.done && t.spent > 0 && t.hours > 0)
+  if (s.length < 3) return null
+  const r = s.reduce((a, t) => a + t.spent, 0) / s.reduce((a, t) => a + t.hours, 0)
+  return { ratio: Math.round(Math.min(3, Math.max(0.5, r)) * 100) / 100, n: s.length }
+}

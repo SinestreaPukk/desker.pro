@@ -3,7 +3,7 @@ import { guard, askJSON } from './_ai.js'
 
 export default async function handler(req, res) {
   if (!(await guard(req, res))) return
-  const { goals, tasks, hobbies, deadlines = [], minutes, energy, mood, freeToday, busy = [], now } = req.body || {}
+  const { goals, tasks, hobbies, deadlines = [], minutes, energy, mood, freeToday, busy = [], now, pattern } = req.body || {}
   if (![goals, tasks, hobbies, deadlines].every(Array.isArray) || tasks.length > 50 || goals.length > 50
       || JSON.stringify(req.body).length > 50_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 How they said they feel: ${JSON.stringify(mood ?? null)} (let this tilt the choice, e.g. stressed means lighter work or a hobby).
 Free hours they said they have today: ${freeToday ?? 'unknown'}.
 Fixed commitments on their calendar (local time): ${JSON.stringify(busy.slice(0, 60))}. Do not suggest something that overlaps one that is happening or starts soon.
-Free time they have now: ${Number(minutes) || 60} minutes. Their energy: ${energy || 'medium'}.
+${pattern?.high?.length || pattern?.low?.length ? `Learned energy pattern (24h hours): high ${JSON.stringify(pattern.high)}, low ${JSON.stringify(pattern.low)}.\n` : ''}Free time they have now: ${Number(minutes) || 60} minutes. Their energy: ${energy || 'medium'}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Deadlines: ${JSON.stringify(deadlines)}
 Open tasks (important/urgent = Eisenhower ranking if known, readiness 0-100, hours = effort, when = planned date, fun = hobby session): ${JSON.stringify(tasks)}
