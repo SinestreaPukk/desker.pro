@@ -77,7 +77,7 @@ function ProjectCard({ p, goals, tasks, setTasks, patch, remove, ratio }) {
 
       <ul className="mt-3 space-y-1">
         {mine.map((t) => (
-          <li key={t.id} className="flex items-center gap-2 text-sm">
+          <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
             <span className={`min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
             <span className="shrink-0 text-xs text-slate-600">{t.hours ? `${t.hours}h` : ''}{t.due ? ` · ${fmtDate(t.due)}` : ''}</span>

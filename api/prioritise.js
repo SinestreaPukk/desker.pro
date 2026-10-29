@@ -22,7 +22,7 @@ For each task decide:
 - urgent: does it need doing soon (due date close/overdue, or time-sensitive)? Anything due within 3 days (or overdue) is urgent regardless of importance.
 Reply with ONLY a JSON array: [{"id": <id>, "goalId": <goal id or null>, "important": true|false, "urgent": true|false, "reason": "<ONE short sentence, max 20 words: why it sits in this box, naming the goal if any>"}]`
   try {
-    res.json(await askJSON({ messages: [{ role: 'user', content: prompt }], shape: 'array' }))
+    res.json(await askJSON({ req, messages: [{ role: 'user', content: prompt }], shape: 'array' }))
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

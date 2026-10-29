@@ -5,7 +5,7 @@ import { isMissed } from '../tasks.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
 
 // One task: checkbox, title, one line of facts, a Start action and a menu for the rest.
-export default function Row({ t, update, onEdit, onDelete, move, onStart, cover }) {
+export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project }) {
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
   const [sub, setSub] = useState('')
@@ -21,6 +21,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover 
   const tag = 'rounded-full px-2 py-0.5 text-xs'
   const facts = [
     q !== undefined && !cover && <span key="q" className={`${tag} ${Q[q].cls}`}>{Q[q].name}</span>,
+    project && <span key="p" className={`${tag} bg-panel text-slate-700`}>{project}</span>,
     t.due && <span key="d" className={`${tag} bg-pale text-accent-dark`}>Due {fmtDate(t.due)}</span>,
     t.when && <span key="w" className={`${tag} bg-[#e3f4ec] text-[#1f6b4a]`}>{fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
     t.hours > 0 && <span key="h" className={`${tag} bg-panel text-slate-700`}>{t.hours}h</span>,
@@ -37,13 +38,12 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover 
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>
           <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor"><circle cx="5" cy="4" r="1.2" /><circle cx="11" cy="4" r="1.2" /><circle cx="5" cy="8" r="1.2" /><circle cx="11" cy="8" r="1.2" /><circle cx="5" cy="12" r="1.2" /><circle cx="11" cy="12" r="1.2" /></svg>
         </span>
-        <label className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} aria-label={`Mark ${t.title} done`} />
-          <span className="min-w-0">
+          <button className="min-h-11 min-w-0 flex-1 text-left" onClick={onEdit} aria-label={`Open ${t.title}`}>
             <span className={`block break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}{isMissed(t) && <span className="ml-2 rounded-full bg-[#f6d5cf] px-2 text-xs text-[#7a1a14]">missed</span>}</span>
-            
-          </span>
-        </label>
+          </button>
+        </div>
         <span className="relative flex shrink-0 items-center gap-1">
           {!t.done && <button className={`${btn} text-accent hover:bg-pale`} onClick={() => onStart(t)} aria-label={`Start focus on ${t.title}`}>Start</button>}
           <button className="flex h-11 w-11 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" onClick={() => setMenu(!menu)} aria-haspopup="menu" aria-expanded={menu} aria-label={`More actions for ${t.title}`}>
@@ -52,7 +52,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover 
           {menu && (
             <div role="menu" className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-line bg-white p-1 shadow-md" onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
               <button role="menuitem" className={item} onClick={() => { setOpen(!open); setMenu(false) }}>{open ? 'Hide details' : 'Details'}</button>
-              <button role="menuitem" className={item} onClick={() => { onEdit(); setMenu(false) }}>Edit</button>
+              <button role="menuitem" className={item} onClick={() => { onEdit(); setMenu(false) }}>Open</button>
               <button role="menuitem" className={`${item} text-danger`} onClick={() => { onDelete(); setMenu(false) }}>Delete</button>
             </div>
           )}

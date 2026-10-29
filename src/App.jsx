@@ -12,7 +12,6 @@ import { isMissed } from './tasks.js'
 import Today from './screens/Today.jsx'
 import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
-import Deadlines from './screens/Deadlines.jsx'
 import Projects from './screens/Projects.jsx'
 import { unlink } from './projects.js'
 import Calendar from './screens/Calendar.jsx'
@@ -21,9 +20,9 @@ import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
-const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Deadlines: '/deadlines', Calendar: '/calendar' }
+const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
 const TABS = Object.keys(PATHS)
-const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || 'Today'
+const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
 
 export default function App() {
   const [tab, setTabState] = useState(tabOf)
@@ -152,10 +151,9 @@ export default function App() {
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
-            {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} />}
+            {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} />}
-            {tab === 'Deadlines' && <Deadlines goals={goals} deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} />}
             {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>
         </main>

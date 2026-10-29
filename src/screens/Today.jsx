@@ -53,6 +53,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [quick, setQuick] = useState('')
+  const [guide, setGuide] = useState(() => { try { return !localStorage.guideSeen } catch { return true } }) // shown once, over the dashboard
+  const closeGuide = () => { setGuide(false); try { localStorage.guideSeen = '1' } catch { /* storage blocked: it shows again next visit */ } }
+  const go = (tab) => { closeGuide(); goTab(tab) }
 
   const today = todayStr()
   const open = tasks.filter((t) => !t.done && !t.fun)
@@ -110,15 +113,18 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       <PageHead title={`${greeting()}.`} v={0} icon={<span className="scale-150"><Icon name="Today" /></span>}
         sub={<>{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{missed.length > 0 && <button className="ml-2 text-accent underline" onClick={onReplan}>Replan my week</button>}</>} />
 
-      {!goals.length && !tasks.length && !deadlines.length && (
-        <section className={`${panel} mb-4`} aria-label="Getting started">
-          <h2 className="text-lg font-semibold">Start in three steps</h2>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
-            <li>Add one goal you care about. <button className="text-accent underline" onClick={() => goTab('Goals')}>Goals</button></li>
-            <li>Add a deadline, or import a syllabus. <button className="text-accent underline" onClick={() => goTab('Deadlines')}>Deadlines</button></li>
-            <li>Ask the <button className="text-accent underline" onClick={openAgent}>AI agent</button> to plan your week.</li>
-          </ol>
-        </section>
+      {guide && !goals.length && !tasks.length && !deadlines.length && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
+          <section role="dialog" aria-modal="true" aria-label="Getting started" className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-semibold">Start in three steps</h2>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+              <li>Add one goal you care about. <button className="text-accent underline" onClick={() => go('Goals')}>Goals</button></li>
+              <li>Add a task with a date, or import a syllabus. <button className="text-accent underline" onClick={() => go('Tasks')}>Tasks</button></li>
+              <li>Ask the <button className="text-accent underline" onClick={() => { closeGuide(); openAgent() }}>AI agent</button> to plan your week.</li>
+            </ol>
+            <button autoFocus className={`${btn} ${BLUE} mt-4 w-full`} onClick={closeGuide}>Got it</button>
+          </section>
+        </div>
       )}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-12 lg:gap-4">
         <Tile label="Do first" caption={doFirst.length ? 'Urgent and important' : 'Nothing urgent'}><button className="tabular-nums hover:text-accent" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
@@ -209,7 +215,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <section className={`${panel} lg:col-span-3`} aria-label="Coming up">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Coming up <span className="ml-1 rounded-full bg-white px-2 text-xs font-normal">{soon.length}</span></h2>
-            <button className="text-sm text-accent underline" onClick={() => goTab('Deadlines')}>View all</button>
+            <button className="text-sm text-accent underline" onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <ul className="mt-3 space-y-2">
             {soon.slice(0, 5).map((x) => (

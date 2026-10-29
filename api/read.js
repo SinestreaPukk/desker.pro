@@ -1,6 +1,6 @@
 // Turns a photo, PDF or web page into short planning notes. Key and prompt stay server-side.
 import { fetchPage } from './_fetchPage.js'
-import { guard } from './_ai.js'
+import { guard, record, MODEL } from './_ai.js'
 
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'])
 
@@ -25,11 +25,12 @@ export default async function handler(req, res) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 4000, messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }),
     signal: AbortSignal.timeout(45_000),
   }).catch(() => null)
   const out = await r?.json().catch(() => ({}))
   if (!r?.ok) return res.status(502).json({ error: 'The AI is unavailable or took too long. Please try again.' })
+  await record(req, MODEL, out.usage)
   const text = out.content?.find((b) => b.type === 'text')?.text
   if (!text) return res.status(502).json({ error: 'No usable answer from model' })
   res.json({ text: text.trim().slice(0, 3500) })

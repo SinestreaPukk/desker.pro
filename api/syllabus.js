@@ -18,7 +18,7 @@ Today is ${new Date().toISOString().slice(0, 10)}.
 Extract EVERY graded or due item: exams, midterms, finals, quizzes, assignments, labs, projects, presentations, papers. For each, give the due date as yyyy-mm-dd (if the year is missing, use the next such date after today; skip items with no date at all), a short specific title (include the course name when clear), a type, and the hours of preparation or work a typical student needs (exams 6-15 depending on weight, quizzes 2-4, assignments 2-8, projects 8-20).${ratio ? ` This student's tasks really take about ${ratio}x their own estimates, so scale the hours by that.` : ''}
 Reply with ONLY JSON: {"items": [{"title": "<title>", "date": "<yyyy-mm-dd>", "type": "exam|quiz|assignment|project|other", "hours": <number>}]}. At most 40 items, ordered by date.`
   try {
-    res.json(await askJSON({ messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }))
+    res.json(await askJSON({ req, messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }))
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

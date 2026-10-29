@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
-import Syllabus from '../Syllabus.jsx'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
-import { quadrant, ratioOf, todayStr, fmtDate, readSource } from '../shared.jsx'
+import { ratioOf, fmtDate, readSource } from '../shared.jsx'
 
-function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
+export function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -16,7 +15,9 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
   const [link, setLink] = useState('')
   const [reading, setReading] = useState(false)
   const days = Math.ceil((new Date(dl.date) - new Date(new Date().toLocaleDateString('sv'))) / 864e5)
-  const linked = tasks.filter((t) => t.deadlineId === dl.id).length
+  const mine = tasks.filter((t) => t.deadlineId === dl.id)
+  const linked = mine.length
+  const [own, setOwn] = useState('')
 
   const plan = async (context = dl.context) => {
     setBusy(true); setError('')
@@ -56,6 +57,12 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
     })))
     setRes(null)
   }
+  const addOwn = (e) => {
+    e.preventDefault()
+    if (!own.trim()) return
+    setTasks(addTasks(tasks, [{ title: own, due: dl.date, deadlineId: dl.id }]))
+    setOwn('')
+  }
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
 
   return (
@@ -70,11 +77,25 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
         </div>
         <span className="flex gap-1">
           <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
-            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : 'Plan with AI'}
+            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : 'Split with AI'}
           </button>
           <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
         </span>
       </div>
+
+      <ul className="mt-3 space-y-1">
+        {mine.map((t) => (
+          <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
+            <span className={`min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
+            <span className="shrink-0 text-xs text-slate-600">{t.hours ? `${t.hours}h` : ''}{t.due ? ` · ${fmtDate(t.due)}` : ''}</span>
+          </li>
+        ))}
+      </ul>
+      <form className="mt-2 flex gap-2" onSubmit={addOwn}>
+        <input className={`${input} min-w-0 flex-1`} aria-label={`New task for ${dl.title}`} placeholder="Add your own task for this deadline" value={own} onChange={(e) => setOwn(e.target.value)} />
+        <button className={`${btn} ${ghost}`}>Add</button>
+      </form>
 
       <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
         {ratio && ratio !== 1 && <span className="text-xs text-slate-600">Your timed tasks take about {ratio}x your estimates; the AI allows for that.</span>}
@@ -119,7 +140,7 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
       )}
       {res?.options && (
         <div className="mt-3">
-          <p className="mb-2 text-sm text-slate-600">{res.summary} Pick the tasks to add.</p>
+          <p className="mb-2 text-sm text-slate-600">{res.summary} {res.options.length > 1 ? `This needs ${res.options.length} tasks. Split the work?` : 'One task is enough.'}</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {res.options.map((o, i) => (
               <li key={i}>
@@ -131,45 +152,11 @@ function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
             ))}
           </ul>
           <button className={`${btn} mt-3 ${BLUE}`} disabled={!picked.length} onClick={add}>
-            Add {picked.length} task{picked.length === 1 ? '' : 's'}
+            Split into {picked.length} task{picked.length === 1 ? '' : 's'}
           </button>
+          <button className={`${btn} ml-2 ${ghost}`} onClick={() => setRes(null)}>Keep as is</button>
         </div>
       )}
     </li>
   )
 }
-
-export default function Deadlines({ goals, deadlines, setDeadlines, tasks, setTasks }) {
-  const blank = { title: '', date: '', time: '', hours: '', context: '' }
-  const [d, setD] = useState(blank)
-  const submit = (e) => {
-    e.preventDefault()
-    if (!d.title.trim() || !d.date) return
-    setDeadlines([...deadlines, { id: Date.now(), title: d.title.trim(), date: d.date, time: d.time || undefined, hours: d.hours === '' ? null : +d.hours, context: d.context }])
-    setD(blank)
-  }
-  const patch = (id) => (p) => setDeadlines(deadlines.map((x) => (x.id === id ? { ...x, ...p } : x)))
-  return (
-    <>
-      <Syllabus deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} />
-      <form className="mb-4 flex flex-wrap items-start gap-3 rounded-2xl bg-panel p-4" onSubmit={submit}>
-        <input className={`${input} min-w-48 flex-1`} placeholder="Deadline, e.g. Statics quiz" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
-        <input type="date" aria-label="Date" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
-        <input type="time" aria-label="Time (optional)" title="Time (optional)" className={input} value={d.time} onChange={(e) => setD({ ...d, time: e.target.value })} />
-        <input type="number" min="0" step="0.5" aria-label="Hours needed" className={`${input} w-36`} placeholder="Hours (opt.)" value={d.hours} onChange={(e) => setD({ ...d, hours: e.target.value })} />
-        <textarea className={`${input} w-full`} rows={2} aria-label="Context" placeholder="Not sure about the hours? Add syllabus, topics, or how ready you feel (optional)"
-          value={d.context} onChange={(e) => setD({ ...d, context: e.target.value })} />
-        <button className={`${btn} ${BLUE}`}>Add deadline</button>
-      </form>
-      {!deadlines.length && <p className="text-sm text-slate-600">No deadlines yet.</p>}
-      <ul className="space-y-3">
-        {[...deadlines].sort((a, b) => a.date.localeCompare(b.date)).map((dl) => (
-          <DeadlineCard key={dl.id} dl={dl} goals={goals} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(dl.id)}
-            remove={() => setDeadlines(deadlines.filter((x) => x.id !== dl.id))} />
-        ))}
-      </ul>
-    </>
-  )
-}
-
-// Learned energy hours and the user's real-vs-estimated time, passed to the AI so plans can use them.

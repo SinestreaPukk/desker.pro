@@ -64,9 +64,13 @@ input[type='range']::-moz-range-thumb { width: 16px; height: 16px; border: 2px s
 @keyframes blink { 0%, 80%, 100% { opacity: 0.35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) { .dot { animation: none; opacity: 0.7; } }
 
+/* Touch: no double-tap zoom delay, no grey tap flash, no rubber-band scroll chaining out of the app */
+html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+
 /* Phones: 44px touch targets (calendar day chips stay compact) */
 @media (max-width: 767px) {
   button:not(.chip), a.inline-flex, select, textarea, input:not([type='checkbox']):not([type='range']):not([type='file']), summary { min-height: 44px; }
   input:not([type='checkbox']):not([type='range']):not([type='file']), select, textarea { font-size: 16px; } /* no iOS zoom on focus */
+  input[type='checkbox'] { width: 22px; height: 22px; flex-shrink: 0; } /* thumb-sized ticks */
   label:has(> input[type='checkbox']), label:has(input[type='range']), summary { min-height: 44px; display: flex; align-items: center; }
 }

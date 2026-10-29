@@ -41,10 +41,8 @@ export function Cover({ seed = 0, className = '' }) {
 }
 
 const BANNERS = {
-  Tasks: ['Your board', 'Drag a card between boxes, or let the AI place everything.'],
   Goals: ['Goals', 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.'],
   Projects: ['Projects', 'Something bigger than a task: an investment, an exam, a launch. It owns the tasks that get it done.'],
-  Deadlines: ['Deadlines', 'An exam, a project, a trip. The AI works out the hours and suggests tasks.'],
   Calendar: ['Calendar', 'Planned tasks, deadlines and your calendar events in one place.'],
 }
 

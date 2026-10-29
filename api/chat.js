@@ -28,7 +28,7 @@ Reply with ONLY JSON: {"reply": "<your message, max 2 sentences, ends with your 
 If the user asks for a weekly review, their message contains their week's numbers (planned and done hours by goal level, fun, and work with no goal): in at most 3 sentences say what the split shows, name one good thing, and suggest exactly ONE concrete change for next week. Omit "updates" and "fun" from your JSON entirely.
 "fun" lists the COMPLETE set of hobby sessions for the next 14 days (replaces earlier ones); at most 1 per day, only if hobbies exist. Omit tasks you did not change from updates. Whenever you set "when" also set "start": a sensible clock time (08:00-21:00) that does not overlap calendar commitments or other planned tasks that day.`
   try {
-    res.json(await askJSON({ system, messages: messages.length ? messages : [{ role: 'user', content: 'Hi, help me plan.' }] }))
+    res.json(await askJSON({ req, system, messages: messages.length ? messages : [{ role: 'user', content: 'Hi, help me plan.' }] }))
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

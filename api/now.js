@@ -23,7 +23,7 @@ Offer exactly 3 options, one per method, each a different item when possible:
 3. method "Balance": what keeps work and happiness balanced, e.g. a happiness-goal task or a hobby if they have been grinding.
 Reply with ONLY JSON: {"options": [{"method": "<name>", "taskId": <task id, or null for a hobby or something not in the list>, "title": "<the task's exact title if taskId is set; otherwise the hobby or activity>", "minutes": <session length, at most their free minutes>, "why": "<1 short sentence, may name the concrete first step>"}]}`
   try {
-    res.json(await askJSON({ messages: [{ role: 'user', content: prompt }] }))
+    res.json(await askJSON({ req, messages: [{ role: 'user', content: prompt }] }))
   } catch (err) {
     res.status(502).json({ error: err.message })
   }

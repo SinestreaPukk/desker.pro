@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { post, uid } from '../api.js'
 import { BLUE, btn, input, ghost, panel, Q } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
+import { addTasks } from '../tasks.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
 
 function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
@@ -199,7 +200,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           <TimeGrid cols={days.map(column)} onHead={(k) => { setAnchor(new Date(`${k}T12:00:00`)); setView('day') }} />
           <p className="mt-2 text-xs text-slate-500">Tasks with a start time (set it in the task's details) appear as blocks. Others sit in the Anytime row.</p>
           <Key />
-          {view === 'day' && <button className={`${btn} mt-2 ${ghost}`} onClick={() => setAdding(anchor.toLocaleDateString('sv'))}>Add deadline on this day</button>}
+          {view === 'day' && <button className={`${btn} mt-2 ${ghost}`} onClick={() => setAdding(anchor.toLocaleDateString('sv'))}>Add task on this day</button>}
         </>
       )}
       {view === 'month' && (
@@ -217,7 +218,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
             <div key={i} className={`min-h-16 rounded p-1 ${d ? 'border border-line bg-white' : ''} ${d && key(d) === today ? 'ring-2 ring-accent' : ''}`}>
               {d && (
                 <div className="mb-1 flex justify-between text-xs text-slate-500">
-                  <button className="chip -m-1 rounded px-1 py-0.5 hover:bg-slate-100" aria-label={`Add deadline on ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
+                  <button className="chip -m-1 rounded px-1 py-0.5 hover:bg-slate-100" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
                   {hrs > 0 && <span className={limit && hrs > limit ? 'font-medium text-danger' : ''}>{hrs}h</span>}
                 </div>
               )}
@@ -231,24 +232,24 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           )
         })}
       </div>
-      <p className="mt-2 text-xs text-slate-500">Tasks show on their planned date, or their due date if not planned. Click a task for details, or a date to add a deadline.</p>
+      <p className="mt-2 text-xs text-slate-500">Tasks show on their planned date, or their due date if not planned. Click a task for details, or a date to add a task due then.</p>
       <Key />
         </>
       )}
       {adding && (
-        <form className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl bg-panel p-4" aria-label="Add deadline"
+        <form className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl bg-panel p-4" aria-label="Add task"
           onSubmit={(e) => {
             e.preventDefault()
             if (!dl.title.trim()) return
-            setDeadlines([...deadlines, { id: Date.now(), title: dl.title.trim(), date: adding, hours: dl.hours === '' ? null : +dl.hours, context: '' }])
+            setTasks(addTasks(tasks, [{ title: dl.title, due: adding, hours: dl.hours === '' ? undefined : +dl.hours }]))
             setDl({ title: '', hours: '' }); setAdding(null)
           }}>
-          <h2 className="w-full font-semibold">Add deadline on {adding}</h2>
-          <input className={`${input} min-w-48 flex-1`} autoFocus aria-label="Deadline title" placeholder="e.g. Statics quiz" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
+          <h2 className="w-full font-semibold">Add a task due {adding}</h2>
+          <input className={`${input} min-w-48 flex-1`} autoFocus aria-label="Task title" placeholder="e.g. Statics quiz" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
           <input type="number" min="0" step="0.5" aria-label="Hours needed" className={`${input} w-36`} placeholder="Hours (opt.)" value={dl.hours} onChange={(e) => setDl({ ...dl, hours: e.target.value })} />
-          <button className={`${btn} ${BLUE}`}>Add deadline</button>
+          <button className={`${btn} ${BLUE}`}>Add task</button>
           <button type="button" className={`${btn} ${ghost}`} onClick={() => setAdding(null)}>Cancel</button>
-          <p className="w-full text-xs text-slate-600">Plan it with AI from the Deadlines tab.</p>
+          <p className="w-full text-xs text-slate-600">Open it in Tasks to split big work into smaller tasks with AI.</p>
         </form>
       )}
       {undated.length > 0 && (

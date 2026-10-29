@@ -24,7 +24,7 @@ Give EVERY listed task a new day and start time within the next 14 days, so that
 Keep a task's current day and time if it is already fine.
 Reply with ONLY JSON: {"plan": [{"id": <task id>, "when": "<yyyy-mm-dd>", "start": "<HH:MM>"}], "note": "<one or two sentences on the main trade-off you made>"}`
   try {
-    res.json(await askJSON({ messages: [{ role: 'user', content: prompt }] }))
+    res.json(await askJSON({ req, messages: [{ role: 'user', content: prompt }] }))
   } catch (err) {
     res.status(502).json({ error: err.message })
   }
