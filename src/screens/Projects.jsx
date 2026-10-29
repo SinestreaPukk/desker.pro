@@ -22,7 +22,7 @@ function ProjectCard({ p, goals, tasks, setTasks, patch, remove, ratio }) {
   const plan = async (context = p.context) => {
     setBusy(true); setError('')
     try {
-      const out = await post('/api/project', {
+      const out = await post('/api/deadline', {
         goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
         project: { title: p.title, kind: p.kind, date: p.date, hours: p.hours ?? null, context },
         tasks: mine.map(({ title, done }) => ({ title, done })), asked, ratio,

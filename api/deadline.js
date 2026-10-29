@@ -1,7 +1,9 @@
 // Breaks a deadline into pickable task options. Prompt and key stay server-side.
 import { guard, askJSON } from './_ai.js'
+import project from './_project.js'
 
 export default async function handler(req, res) {
+  if (req.body?.project) return project(req, res) // project breakdown shares this endpoint
   if (!(await guard(req, res))) return
   const { goals, deadline, asked = 0, ratio } = req.body || {}
   if (!Array.isArray(goals) || goals.length > 50 || !deadline?.title || !/^\d{4}-\d\d-\d\d$/.test(deadline.date)
