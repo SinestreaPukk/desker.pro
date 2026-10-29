@@ -58,7 +58,7 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">People and content</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data · ${c.active7} active in 7 days`} />
+        <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data · ${c.active7} active in 7 days · anonymous browsers`} />
         <Tile label="Tasks" value={n(c.tasks)} sub={`${n(c.doneTasks)} done`} />
         <Tile label="Projects" value={n(c.projects)} />
         <Tile label="Deadlines" value={n(c.deadlines)} />

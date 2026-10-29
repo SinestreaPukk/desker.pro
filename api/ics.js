@@ -1,8 +1,7 @@
 // Subscribable calendar feed of the user's tasks, deadlines and fun sessions (iCalendar).
 // Works with Google Calendar, Apple Calendar, Outlook and anything that can subscribe to a URL.
-import { neon } from '@neondatabase/serverless'
+import { loadDoc } from './_store.js'
 
-const sql = neon(process.env.DATABASE_URL)
 const UID = /^[0-9a-f-]{36}$/
 const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
 const fold = (l) => l.match(/.{1,70}/gu).join('\r\n ')
@@ -12,8 +11,7 @@ const next = (d) => ymd(new Date(Date.parse(d) + 864e5).toISOString().slice(0, 1
 export default async function handler(req, res) {
   const { uid, download } = req.query
   if (!UID.test(uid)) return res.status(400).send('bad uid')
-  const [row] = await sql`select data from workspaces where uid = ${uid}`
-  const { tasks = [], deadlines = [] } = row?.data ?? {}
+  const { tasks, deadlines } = await loadDoc(uid)
   const stamp = new Date().toISOString().replace(/[-:]|\.\d+/g, '')
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Desker//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Desker', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H']
   const add = (id, date, title, desc) => {

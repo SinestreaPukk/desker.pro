@@ -15,7 +15,9 @@ Layout:
 
 Sections (Today opens first): **Today** (greeting, key numbers, "Right now" with ways to choose, coming up, your tasks, weekly review), **Tasks** (add, Eisenhower matrix or list, AI prioritise), **Projects** (something bigger than a task: an investment, exam or test; it owns tasks via `projectId`, shows progress, and the AI breaks it into tasks), **Goals** (pyramid, happiness goals, hobbies), **Calendar**. Every page opens with a Notion-style head (cover art, an icon on its edge, a big serif title). On the Tasks board each card has cover art and tag chips (box, due date, hours, steps, repeat). Screens live in `src/screens/`, shared pieces in `src/components/` and `src/shared.jsx`. The previous UI is kept in `legacy/`.
 
-Env vars (see `.env.example`): `ANTHROPIC_API_KEY`, `DATABASE_URL` (Neon Postgres, `workspaces` table). Data is stored per anonymous browser id; there is no login.
+Env vars (see `.env.example`): `ANTHROPIC_API_KEY`, `DATABASE_URL` (Neon Postgres), `DSB_PASSWORD` (owner dashboard at `/dsb`). Data is stored per anonymous browser id; there is no login yet.
+
+**Database** (`db/schema.sql`): `users`, `goals`, `hobbies`, `projects`, `deadlines`, `tasks` and `ai_calls`, linked by real foreign keys (a task's project, deadline and goal; deleting a project unlinks its tasks, deleting a user removes everything of theirs). A visitor only gets a `users` row once they have content or use the AI. `users.email` and `users.auth_id` are ready for accounts. `api/_store.js` maps the app's one document to these tables, unknown fields land in each row's `extra` jsonb. Apply or re-run with `set -a; . ./.env.local; set +a; node scripts/migrate.mjs` (also copies the old `workspaces` / `usage` tables, which are kept as a backup).
 
 Tasks: done section with undo and weekly count, drag between boxes (or "Move to" in Details), steps, repeats. Calendar has month, week and day views; give a task a start time to see it as a block. Settings (gear): reminders (browser notifications, only while a tab is open) and JSON backup export/import.
 
