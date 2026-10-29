@@ -90,7 +90,9 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
     if (!parsed) return
     // a new task lands where you are looking: in the open project, or dated today on the Today list
     const base = list.startsWith('p:') ? { projectId: Number(list.slice(2)) } : list === 'today' ? { due: today } : {}
-    setTasks(addTasks(tasks, [{ ...base, ...parsed }]))
+    const d = deadlines.find((x) => x.id === +pickDl)
+    const link = d ? { deadlineId: d.id, due: d.date, projectId: d.projectId } : pickProj ? { projectId: +pickProj } : {}
+    setTasks(addTasks(tasks, [{ ...base, ...link, ...Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined)) }]))
     setText('')
   }
   const update = (id, patch) => setTasks(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -98,12 +100,16 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const move = (id, qi) => update(id, qi === ''
     ? { important: undefined, urgent: undefined, goalId: undefined, reason: undefined, manual: false }
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
-  const [dl, setDl] = useState({ title: '', date: '', projectId: '' })
+  const [mode, setMode] = useState('Task') // the add box makes either; both get the same weight
+  const [pickDl, setPickDl] = useState('') // task mode: deadline the new task belongs to
+  const [pickProj, setPickProj] = useState('')
+  const [dl, setDl] = useState({ title: '', date: '', time: '', hours: '', projectId: '' })
   const addDeadline = (e) => {
     e.preventDefault()
     if (!dl.title.trim() || !dl.date) return
-    setDeadlines([...deadlines, { id: Date.now(), title: dl.title.trim(), date: dl.date, projectId: dl.projectId === '' ? undefined : +dl.projectId }])
-    setDl({ title: '', date: '', projectId: '' })
+    setDeadlines([...deadlines, { id: Date.now(), title: dl.title.trim(), date: dl.date, time: dl.time || undefined, hours: dl.hours === '' ? undefined : +dl.hours, projectId: dl.projectId === '' ? undefined : +dl.projectId }])
+    setDl({ title: '', date: '', time: '', hours: '', projectId: '' })
+    setList('all') // a deadline outside Today would otherwise vanish from view
   }
   const lines = dump.split('\n').map((l) => l.trim()).filter(Boolean)
   const addDump = (e) => {
@@ -186,7 +192,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       <div className="min-w-0">
         {shownDeadlines.length > 0 && (
           <details open className="mb-4">
-            <summary className="cursor-pointer text-sm font-semibold">Deadlines with several tasks <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
+            <summary className="cursor-pointer text-sm font-semibold">Deadlines <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
             <ul className="mt-2 space-y-3">
               {shownDeadlines.map((dl) => (
                 <DeadlineCard key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
@@ -213,30 +219,54 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
 
   return (
     <>
-      <form className={`${panel} mb-4`} onSubmit={submit}>
-        <div className="flex gap-2">
-          <input ref={quickRef} className={`${input} min-w-0 flex-1`} placeholder='Add a task, e.g. "Call dentist tomorrow 3pm #taxes"' aria-label="Add a task" value={text} onChange={(e) => setText(e.target.value)} />
-          <button className={`${btn} ${BLUE}`} disabled={!parsed}>Add</button>
+      <form className={`${panel} mb-4`} onSubmit={mode === 'Task' ? submit : addDeadline}>
+        <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 rounded-full bg-panel p-1">
+          {['Task', 'Deadline'].map((m) => (
+            <button key={m} type="button" aria-pressed={mode === m} className={`${btn} !py-1 ${mode === m ? 'bg-white font-medium text-ink' : 'text-slate-600'}`} onClick={() => setMode(m)}>{m}</button>
+          ))}
         </div>
-        {parsed && (parsed.due || parsed.start || parsed.hours || parsed.projectId) && (
-          <p className="mt-2 text-sm text-slate-600" aria-live="polite">
-            {[parsed.due && fmtDate(parsed.due), parsed.start, parsed.hours && `${parsed.hours}h`, parsed.projectId && projects.find((p) => p.id === parsed.projectId)?.title].filter(Boolean).join(' · ')}
-          </p>
-        )}
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm text-accent">Add a deadline</summary>
-          <div className="mt-3 flex flex-wrap gap-2">
+        {mode === 'Task' ? (
+          <>
+            <div className="flex gap-2">
+              <input ref={quickRef} className={`${input} min-w-0 flex-1`} placeholder='Add a task, e.g. "Call dentist tomorrow 3pm #taxes"' aria-label="Add a task" value={text} onChange={(e) => setText(e.target.value)} />
+              <button className={`${btn} ${BLUE}`} disabled={!parsed}>Add</button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-sm">
+              {deadlines.length > 0 && (
+                <select className={input} aria-label="For deadline" value={pickDl} onChange={(e) => setPickDl(e.target.value)}>
+                  <option value="">No deadline</option>
+                  {[...deadlines].filter((d) => !d.done).sort((a, b) => a.date.localeCompare(b.date)).map((d) => <option key={d.id} value={d.id}>For {d.title} · {fmtDate(d.date)}</option>)}
+                </select>
+              )}
+              {projects.length > 0 && !pickDl && (
+                <select className={input} aria-label="Project" value={pickProj} onChange={(e) => setPickProj(e.target.value)}>
+                  <option value="">No project</option>
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              )}
+            </div>
+            {parsed && (parsed.due || parsed.start || parsed.hours || parsed.projectId) && (
+              <p className="mt-2 text-sm text-slate-600" aria-live="polite">
+                {[parsed.due && fmtDate(parsed.due), parsed.start, parsed.hours && `${parsed.hours}h`, parsed.projectId && projects.find((p) => p.id === parsed.projectId)?.title].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-wrap items-end gap-2">
             <input className={`${input} min-w-48 flex-1`} aria-label="Deadline name" placeholder="Deadline, e.g. Statics midterm" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
-            <input type="date" className={input} aria-label="Deadline date" value={dl.date} onChange={(e) => setDl({ ...dl, date: e.target.value })} />
+            <label className="flex flex-col gap-1 text-xs text-slate-600">Date<input type="date" className={input} value={dl.date} onChange={(e) => setDl({ ...dl, date: e.target.value })} /></label>
+            <label className="flex flex-col gap-1 text-xs text-slate-600">Time<input type="time" className={input} value={dl.time} onChange={(e) => setDl({ ...dl, time: e.target.value })} /></label>
+            <label className="flex flex-col gap-1 text-xs text-slate-600">Hours needed<input type="number" min="0" step="0.5" className={`${input} w-24`} placeholder="Not sure" value={dl.hours} onChange={(e) => setDl({ ...dl, hours: e.target.value })} /></label>
             {projects.length > 0 && (
               <select className={input} aria-label="Project" value={dl.projectId} onChange={(e) => setDl({ ...dl, projectId: e.target.value })}>
                 <option value="">No project</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
               </select>
             )}
-            <button type="button" className={`${btn} ${BLUE}`} disabled={!dl.title.trim() || !dl.date} onClick={addDeadline}>Add deadline</button>
+            <button className={`${btn} ${BLUE}`} disabled={!dl.title.trim() || !dl.date}>Add deadline</button>
+            <p className="w-full text-xs text-slate-600">Then press Split with AI on its card to break it into tasks.</p>
           </div>
-        </details>
+        )}
         <details className="mt-3">
           <summary className="cursor-pointer text-sm text-accent">Add many at once</summary>
           <div className="mt-3">
