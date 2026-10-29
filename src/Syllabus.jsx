@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { post } from './api.js'
-import { btn, input, BLUE } from './ui.js'
+import { btn, input, BLUE, ghost } from './ui.js'
 import { encodeFile } from './files.js'
 import { addTasks } from './tasks.js'
 import { validItems, spreadBlocks } from './syllabus.js'
@@ -38,7 +38,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
     setItems(null); setText('')
   }
   return (
-    <details className="mb-4 rounded-2xl bg-white p-3 ring-1 ring-black/5">
+    <details className="mb-4 rounded-2xl bg-panel p-4">
       <summary className="cursor-pointer font-semibold">Import a syllabus or course outline</summary>
       {!items && (
         <div className="mt-3 space-y-2">
@@ -46,7 +46,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
           <textarea className={`${input} w-full`} rows={4} aria-label="Course outline" placeholder="Paste the course outline here" value={text} onChange={(e) => setText(e.target.value)} />
           <div className="flex flex-wrap items-center gap-2">
             <button className={`${btn} ${BLUE}`} disabled={busy || !text.trim()} onClick={() => find({ text })}>{busy ? 'Reading…' : 'Find deadlines'}</button>
-            <label className={`${btn} inline-flex cursor-pointer items-center bg-slate-100 hover:bg-slate-200 ${busy ? 'pointer-events-none opacity-50' : ''}`}>Upload PDF or photo
+            <label className={`${btn} inline-flex cursor-pointer items-center ${ghost} ${busy ? 'pointer-events-none opacity-50' : ''}`}>Upload PDF or photo
               <input type="file" className="sr-only" accept="application/pdf,image/*,.txt,.md" disabled={busy} onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) upload(f) }} />
             </label>
           </div>
@@ -70,11 +70,11 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
             <button className={`${btn} ${BLUE}`} disabled={!items.some((i) => i.on)} onClick={create}>Add {items.filter((i) => i.on).length} deadline{items.filter((i) => i.on).length === 1 ? '' : 's'} with study blocks</button>
-            <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={() => setItems(null)}>Start over</button>
+            <button className={`${btn} ${ghost}`} onClick={() => setItems(null)}>Start over</button>
           </div>
         </div>
       )}
-      {error && <p role="alert" className="mt-2 text-sm text-[#d70015]">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
       {made && <p role="status" className="mt-2 text-sm">{made}</p>}
     </details>
   )

@@ -3,16 +3,17 @@ import { guard, askJSON } from './_ai.js'
 
 export default async function handler(req, res) {
   if (!(await guard(req, res))) return
-  const { goals, tasks, hobbies, deadlines = [], freeHours, freeToday, mood, busy = [], messages, pattern, ratio } = req.body || {}
-  if (![goals, tasks, hobbies, deadlines, busy, messages].every(Array.isArray) || tasks.length > 50 || goals.length > 50 || messages.length > 40
+  const { goals, tasks, hobbies, deadlines = [], projects = [], freeHours, freeToday, mood, busy = [], messages, pattern, ratio } = req.body || {}
+  if (![goals, tasks, hobbies, deadlines, projects, busy, messages].every(Array.isArray) || tasks.length > 50 || goals.length > 50 || messages.length > 40
       || JSON.stringify(req.body).length > 50_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
   const today = new Date().toISOString().slice(0, 10)
-  const system = `You are a friendly planning coach inside a task app. Today is ${today}.
+  const system = `You are a friendly planning agent inside a task app. Today is ${today}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Hobbies / things the user wants to do for fun: ${JSON.stringify(hobbies)}
 Tasks (readiness 0-100 = how prepared they feel, hours = effort needed, when = planned date yyyy-mm-dd, start = planned start time HH:MM, fun = a hobby session): ${JSON.stringify(tasks)}
 Deadlines (tasks with a deadlineId belong to one): ${JSON.stringify(deadlines)}
+Projects (bigger efforts such as an investment, exam or test; tasks with a projectId belong to one; spread a project's tasks so it finishes by its date): ${JSON.stringify(projects)}
 Free hours per day the user said they have: ${freeHours ?? 'unknown'}
 Fixed commitments from the user's own calendar (local time; do not schedule tasks over them, and they reduce free time): ${JSON.stringify(busy)}
 Free hours TODAY (overrides the per-day number for today only): ${freeToday ?? 'unknown'}

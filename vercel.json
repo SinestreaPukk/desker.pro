@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/(today|tasks|goals|projects|deadlines|calendar|do-now)", "destination": "/index.html" }
+  ]
+}

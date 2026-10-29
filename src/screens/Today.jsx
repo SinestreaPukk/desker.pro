@@ -1,0 +1,245 @@
+import { useState } from 'react'
+import { post } from '../api.js'
+import { addTasks, doneStats, isMissed } from '../tasks.js'
+import { logEnergy, energyProfile, ranges } from '../energy.js'
+import { METHODS } from '../methods.js'
+import { PageHead } from '../art.jsx'
+import { Icon } from '../icons.jsx'
+import Review from '../Review.jsx'
+import Row from '../components/Row.jsx'
+import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
+import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
+
+const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
+
+function Energy({ log, reset }) {
+  const [sure, setSure] = useState(false)
+  const p = energyProfile(log)
+  return (
+    <div className="text-sm">
+      {p.enough
+        ? <p className="text-slate-700">Usually high energy: {ranges(p.high) || 'no clear hours yet'}. Usually low: {ranges(p.low) || 'no clear hours yet'}. The AI agent and Replan put demanding work in your high hours.</p>
+        : <p className="text-slate-600">Tap your energy level a few times a day. After {8 - p.n > 0 ? `${8 - p.n} more` : 'a few more'} check-ins, Desker learns when you do your best work.</p>}
+      {log.length > 0 && (
+        <>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-accent">View check-ins ({log.length})</summary>
+            <ul className="mt-1 max-h-40 overflow-y-auto text-slate-700">
+              {[...log].reverse().slice(0, 50).map((e) => <li key={e.at}>{new Date(e.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}: {e.level}</li>)}
+            </ul>
+          </details>
+          {sure
+            ? <p className="mt-2" role="alert">Delete all {log.length} check-ins? <button className={`${btn} text-danger hover:bg-white`} onClick={() => { reset(); setSure(false) }}>Delete</button><button className={`${btn} hover:bg-white`} onClick={() => setSure(false)}>Cancel</button></p>
+            : <button className={`${btn} mt-2 ${ghost}`} onClick={() => setSure(true)}>Reset energy data</button>}
+        </>
+      )}
+    </div>
+  )
+}
+
+const Tile = ({ label, caption, children }) => (
+  <div className={`${panel} !p-4 lg:col-span-3`}>
+    <p className="text-sm text-slate-600">{label}</p>
+    <div className="mt-1 text-3xl leading-tight">{children}</div>
+    <p className="mt-1 text-sm text-slate-600">{caption}</p>
+  </div>
+)
+
+// Today: one question, "what should I do right now?", with the week around it.
+export default function Today({ data, setData, tasks, goals, deadlines, focus, pick, setFocus, setPick, setTasks, goTab, openTimer, deleteTask, openAgent, onReplan, onReview }) {
+  const [minutes, setMinutes] = useState(60)
+  const [energy, setEnergy] = useState('medium')
+  const [opts, setOpts] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [quick, setQuick] = useState('')
+
+  const today = todayStr()
+  const open = tasks.filter((t) => !t.done && !t.fun)
+  const doFirst = open.filter((t) => quadrant(t) === 0)
+  const missed = tasks.filter((t) => isMissed(t))
+  const stats = doneStats(tasks)
+  const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
+  const soon = [
+    ...deadlines.map((d) => ({ id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline' })),
+    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task' })),
+  ].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))
+  const thisWeek = soon.filter((x) => x.date <= weekEnd)
+  const finding = missed.length
+    ? `${missed.length} planned task${missed.length === 1 ? '' : 's'} slipped past ${missed.length === 1 ? 'its' : 'their'} time.`
+    : thisWeek.length ? `${thisWeek[0].title} is due ${thisWeek[0].date === today ? 'today' : fmtDate(thisWeek[0].date)}.`
+    : doFirst.length ? `${doFirst.length} thing${doFirst.length === 1 ? '' : 's'} to do first.`
+    : open.length ? `${open.length} open task${open.length === 1 ? '' : 's'}, none urgent.` : 'Nothing on your list yet. Add a task to begin.'
+
+  const cal = fromCalendar(tasks)
+  const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy }) }))
+  const lead = picks.find((p) => p.r)
+  const cur = focus || pick || cal || (lead && { taskId: lead.r.t.id, title: lead.r.t.title, method: lead.m.name, why: lead.r.why, minutes: lead.r.t.hours ? Math.round(lead.r.t.hours * 60) : undefined })
+  const finish = () => {
+    if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
+    setFocus(null)
+  }
+  const choose = (m, t, why) => setPick({ taskId: t.id, title: t.title, method: m.name, why, minutes: t.hours ? Math.round(t.hours * 60) : undefined })
+  const ask = async () => {
+    setBusy(true); setError('')
+    try {
+      const out = await post('/api/now', {
+        goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
+        tasks: tasks.filter((t) => !t.done).map(({ id, title, due, when, hours, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, readiness, important, urgent, fun })),
+        hobbies: (data.hobbies || []).map((h) => h.title),
+        deadlines: deadlines.map(({ title, date, hours }) => ({ title, date, hours })),
+        minutes, energy, pattern: patternOf(data), mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
+      })
+      if (!Array.isArray(out.options)) throw new Error('The AI gave an unreadable answer. Please try again.')
+      setOpts(out.options)
+    } catch (err) { setError(err.message) }
+    setBusy(false)
+  }
+  const startOpt = (o) => setFocus({ taskId: tasks.some((t) => t.id === o.taskId) ? o.taskId : null, title: o.title, method: o.method, why: o.why, minutes: o.minutes, at: Date.now() })
+  const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
+  const update = (id, patch) => setTasks(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+  const move = (id, qi) => update(id, qi === ''
+    ? { important: undefined, urgent: undefined, goalId: undefined, reason: undefined, manual: false }
+    : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
+  const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
+  const todays = [...open].sort((a, b) => (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9')).slice(0, 5)
+  const card = 'rounded-xl border border-line bg-white p-4'
+
+  return (
+    <>
+      <PageHead title={`${greeting()}.`} v={0} icon={<span className="scale-150"><Icon name="Today" /></span>}
+        sub={<>{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{missed.length > 0 && <button className="ml-2 text-accent underline" onClick={onReplan}>Replan my week</button>}</>} />
+
+      {!goals.length && !tasks.length && !deadlines.length && (
+        <section className={`${panel} mb-4`} aria-label="Getting started">
+          <h2 className="text-lg font-semibold">Start in three steps</h2>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
+            <li>Add one goal you care about. <button className="text-accent underline" onClick={() => goTab('Goals')}>Goals</button></li>
+            <li>Add a deadline, or import a syllabus. <button className="text-accent underline" onClick={() => goTab('Deadlines')}>Deadlines</button></li>
+            <li>Ask the <button className="text-accent underline" onClick={openAgent}>AI agent</button> to plan your week.</li>
+          </ol>
+        </section>
+      )}
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-12 lg:gap-4">
+        <Tile label="Do first" caption={doFirst.length ? 'Urgent and important' : 'Nothing urgent'}><button className="tabular-nums hover:text-accent" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
+        <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span className="tabular-nums">{thisWeek.length}</span></Tile>
+        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span className="tabular-nums">{stats.week}</span></Tile>
+        <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
+          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className="w-24 rounded-lg bg-transparent tabular-nums placeholder:text-slate-500 focus:bg-white" placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+            onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
+        </Tile>
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-12">
+        <section className={`${panel} lg:col-span-9`} aria-label="Right now">
+          <h2 className="text-sm font-semibold">Right now</h2>
+          {cur ? (
+            <div className={`${card} mt-3`}>
+              <p className="text-sm text-slate-600">{focus ? 'You are doing' : pick ? 'You picked' : 'Try'}</p>
+              <p className="mt-1 break-words text-2xl font-medium leading-tight">{cur.title}</p>
+              <p className="mt-1 text-sm text-slate-700">{cur.method}{cur.minutes ? ` · ${cur.minutes} min` : ''} · {cur.why}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => setFocus({ ...cur, at: Date.now() })}>{focus ? 'Done' : 'Start'}</button>
+                {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
+                {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
+              </div>
+            </div>
+          ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
+
+          <div className="mt-4 flex flex-wrap items-end gap-4">
+            <label className="flex flex-col gap-1 text-sm">Minutes free right now
+              <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
+            </label>
+            <div className="flex flex-col gap-1 text-sm">
+              <span id="energy-label">Your energy right now</span>
+              <div role="group" aria-labelledby="energy-label" className="flex gap-1 rounded-full bg-white p-1">
+                {['low', 'medium', 'high'].map((l) => (
+                  <button key={l} aria-pressed={energy === l} className={`${btn} !py-1 capitalize !transition-none ${energy === l ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`}
+                    onClick={() => { setEnergy(l); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <button className={`${btn} ${ghost}`} onClick={openAgent}>Ask the AI agent to plan my day</button>
+          </div>
+
+          <details className="mt-4">
+            <summary className="cursor-pointer text-sm text-accent">More ways to choose</summary>
+            <div className="mt-3 space-y-4">
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {picks.map(({ m, r }) => (
+                  <li key={m.name} className={`${card} flex flex-col justify-between`}>
+                    <div>
+                      <p className="text-sm font-medium text-accent">{m.name} <span className="font-normal text-slate-700">· {m.how}</span></p>
+                      {r ? <>
+                        <p className="mt-1 break-words font-medium">{r.t.title}</p>
+                        <p className="mt-1 text-sm text-slate-700">{r.t.hours ? `${r.t.hours}h · ` : ''}{r.why}</p>
+                      </> : <p className="mt-1 text-sm text-slate-600">{open.length ? 'Nothing fits your minutes.' : 'No open tasks yet.'}</p>}
+                    </div>
+                    {r && <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => choose(m, r.t, r.why)}>Pick this</button>}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex flex-wrap items-center gap-3">
+                <button className={`${btn} ${ghost}`} disabled={busy} onClick={ask}>{busy ? 'Thinking…' : opts ? 'Ask the AI again' : 'Ask the AI for a second opinion'}</button>
+                <span className="text-sm text-slate-600">It also weighs your mood, calendar and hobbies.</span>
+                {error && <span role="alert" className="text-sm text-danger">{error}</span>}
+              </div>
+              {opts && (
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {opts.map((o, i) => (
+                    <li key={i} className={`${card} flex flex-col justify-between`}>
+                      <div>
+                        <p className="text-sm font-medium text-accent">{o.method}</p>
+                        <p className="mt-1 break-words font-medium">{o.title}</p>
+                        <p className="mt-1 text-sm text-slate-700">{o.minutes ? `${o.minutes} min · ` : ''}{o.why}</p>
+                      </div>
+                      <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => startOpt(o)}>Do this now</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div>
+                <p className="mb-1 text-sm font-medium">Your energy pattern</p>
+                <Energy log={data.energyLog || []} reset={() => setData((d) => ({ ...d, energyLog: [] }))} />
+              </div>
+            </div>
+          </details>
+        </section>
+
+        <section className={`${panel} lg:col-span-3`} aria-label="Coming up">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Coming up <span className="ml-1 rounded-full bg-white px-2 text-xs font-normal">{soon.length}</span></h2>
+            <button className="text-sm text-accent underline" onClick={() => goTab('Deadlines')}>View all</button>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {soon.slice(0, 5).map((x) => (
+              <li key={x.id} className={card + ' !p-3'}>
+                <p className="break-words text-sm">{x.title}</p>
+                <p className="text-xs text-slate-600">{x.kind} · {x.date === today ? 'Today' : fmtDate(x.date)}</p>
+              </li>
+            ))}
+            {!soon.length && <li className="text-sm text-slate-600">Nothing due soon.</li>}
+          </ul>
+        </section>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-12">
+        <section className={`${panel} lg:col-span-6`} aria-label="Your tasks">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Your tasks <span className="ml-1 rounded-full bg-white px-2 text-xs font-normal">{open.length}</span></h2>
+            <button className="text-sm text-accent underline" onClick={() => goTab('Tasks')}>View all</button>
+          </div>
+          <form className="mt-3 flex gap-2" onSubmit={addQuick}>
+            <input className={`${input} min-w-0 flex-1`} placeholder="Add a task" aria-label="Task" value={quick} onChange={(e) => setQuick(e.target.value)} />
+            <button className={`${btn} ${BLUE}`}>Add</button>
+          </form>
+          <ul className="mt-3 space-y-2">
+            {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
+            {!todays.length && <li className="text-sm text-slate-600">No open tasks. Add one above.</li>}
+          </ul>
+        </section>
+        <div className="lg:col-span-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>
+      </div>
+    </>
+  )
+}

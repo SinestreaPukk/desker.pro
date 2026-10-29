@@ -48,16 +48,16 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
   const total = (phase === 'work' ? cfg.work : cfg.brk) * 6e4
   const field = 'w-16 rounded-xl bg-white/10 px-2 py-1 text-white'
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 overflow-y-auto bg-[#1c1c1e] p-6 text-center text-white" role="dialog" aria-label="Focus timer">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 overflow-y-auto bg-ink p-6 text-center text-white" role="dialog" aria-label="Focus timer">
       <p className="text-sm text-slate-300">{phase === 'work' ? 'Focus' : 'Break'}{cycles ? ` · ${cycles} done` : ''}</p>
       <h2 className="max-w-md break-words text-2xl font-semibold leading-tight tracking-tight">{title}</h2>
       <p className="text-7xl font-semibold tabular-nums tracking-tight" role="timer" aria-live="off">{mmss(left)}</p>
-      <div className="h-1.5 w-64 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-[#0a84ff]" style={{ width: `${(1 - left / total) * 100}%` }} /></div>
+      <div className="h-1.5 w-64 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-slate-200" style={{ width: `${(1 - left / total) * 100}%` }} /></div>
       {logged && <p className="text-sm text-slate-300">Logged on this task: {Math.round((spent + session / 36e5) * 60)} min{estimate ? ` of ${Math.round(estimate * 60)} min estimated` : ''}</p>}
       <div className="flex flex-wrap justify-center gap-2">
         <button className={`${btn} bg-white text-slate-900 hover:bg-slate-100`} onClick={pause}>{running ? 'Pause' : 'Resume'}</button>
         <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={() => { flush(); setPhase(phase === 'work' ? 'break' : 'work'); setLeft((phase === 'work' ? cfg.brk : cfg.work) * 6e4) }}>{phase === 'work' ? 'Skip to break' : 'Skip break'}</button>
-        <button className={`${btn} bg-[#34c759] text-slate-900 hover:bg-[#30d158]`} onClick={leave(onDone)}>Done</button>
+        <button className={`${btn} bg-leaf text-slate-900 hover:bg-leaf`} onClick={leave(onDone)}>Done</button>
         <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={leave(onStop)}>Stop</button>
       </div>
       <div className="flex gap-4 text-sm text-slate-300">

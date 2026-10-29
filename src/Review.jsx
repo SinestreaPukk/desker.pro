@@ -15,13 +15,13 @@ function Bar({ label, values }) {
 }
 
 // Weekly goal-alignment card for the Goals tab.
-export default function Review({ tasks, goals, onCoach }) {
+export default function Review({ tasks, goals, onAgent }) {
   const r = weekReview(tasks, goals)
   return (
-    <section className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-black/5" aria-label="This week">
+    <section className="mb-4 rounded-2xl bg-panel p-4" aria-label="This week">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">This week {r.alignment !== null && <span className="text-sm font-normal text-slate-600">· {r.alignment}% of planned work links to a goal</span>}</h2>
-        <button className="text-sm text-[#0066d6] underline" onClick={onCoach}>Discuss with the coach</button>
+        <button className="text-sm text-accent-dark underline" onClick={onAgent}>Discuss with the AI agent</button>
       </div>
       {r.empty ? <p className="text-sm text-slate-600">Plan a few tasks for this week (give them a planned day) and you will see how your time splits across your goals.</p> : (
         <>

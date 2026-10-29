@@ -1,14 +1,16 @@
 import { neon } from '@neondatabase/serverless'
+import { limit } from './_rate.js'
 
 const sql = neon(process.env.DATABASE_URL)
 const UID = /^[0-9a-f-]{36}$/
 // Document keys that are persisted; anything else in a PUT is dropped.
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
-const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'busy']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
+const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy']
 
 export default async function handler(req, res) {
   const { uid } = req.query
   if (!UID.test(uid)) return res.status(400).json({ error: 'bad uid' })
+  if (!(await limit(req, res, { scope: 'state', max: 600 }))) return // autosave PUTs are frequent
   if (req.method === 'GET') {
     const [row] = await sql`select data from workspaces where uid = ${uid}`
     return res.json(row?.data ?? { goals: [], tasks: [], hobbies: [], deadlines: [] })

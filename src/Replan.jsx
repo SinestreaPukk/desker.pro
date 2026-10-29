@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { post } from './api.js'
-import { btn, BLUE } from './ui.js'
+import { btn, BLUE, ghost } from './ui.js'
 import { isMissed } from './tasks.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
 
@@ -29,7 +29,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
   useEffect(() => { run() }, [])
   const { loading, error, plan, d, note, risk } = state
   return (
-    <section className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-black/5" aria-label="Replan my week" aria-busy={loading}>
+    <section className="mb-4 rounded-2xl bg-panel p-4" aria-label="Replan my week" aria-busy={loading}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="font-semibold">Replan my week</h2>
         <button className={`${btn} hover:bg-slate-100`} onClick={onClose}>Close</button>
@@ -37,9 +37,9 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
       {loading && <p className="text-sm text-slate-600">Looking at your deadlines, free time and calendar…</p>}
       {error && (
         <div role="alert" className="text-sm">
-          <p className="text-[#d70015]">{error}</p>
+          <p className="text-danger">{error}</p>
           <p className="text-slate-600">Nothing was changed.</p>
-          <button className={`${btn} mt-2 bg-slate-100 hover:bg-slate-200`} onClick={run}>Try again</button>
+          <button className={`${btn} mt-2 ${ghost}`} onClick={run}>Try again</button>
         </div>
       )}
       {plan && (
@@ -53,7 +53,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
                   <li key={m.t.id} className="rounded-xl bg-slate-50 px-3 py-1.5">
                     <b>{m.t.title}</b>{' '}
                     <span className="text-slate-600">{m.fresh ? 'new:' : `${when(m.t.when, m.t.start)} →`}</span> {when(m.to.when, m.to.start)}
-                    {m.pushedBack && <span className="ml-2 rounded bg-[#ff9500]/20 px-1.5 text-xs">pushed back</span>}
+                    {m.pushedBack && <span className="ml-2 rounded bg-amber/20 px-1.5 text-xs">pushed back</span>}
                   </li>
                 ))}
               </ul>
@@ -61,14 +61,14 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
           )}
           {d.pushedBack.length > 0 && <p className="mb-3 text-sm text-slate-600">{d.pushedBack.length} task{d.pushedBack.length === 1 ? ' was' : 's were'} pushed to a later day to make room.</p>}
           {risk.length > 0 ? (
-            <div className="mb-3 rounded-xl bg-[#ff3b30]/10 p-3 text-sm">
-              <h3 className="font-semibold text-[#d70015]">At risk of missing a deadline</h3>
+            <div className="mb-3 rounded-xl bg-danger/10 p-3 text-sm">
+              <h3 className="font-semibold text-danger">At risk of missing a deadline</h3>
               <ul className="mt-1 list-disc pl-5">{risk.map((r, i) => <li key={i}><b>{r.title}</b>: {r.why}</li>)}</ul>
             </div>
           ) : <p className="mb-3 text-sm text-[#1e7d32]">No deadline looks at risk with this plan.</p>}
           <div className="flex flex-wrap gap-2">
             {d.moved.length > 0 && <button className={`${btn} ${BLUE}`} onClick={() => onApply(plan)}>Apply plan</button>}
-            <button className={`${btn} bg-slate-100 hover:bg-slate-200`} onClick={onClose}>{d.moved.length ? 'Keep my schedule' : 'Close'}</button>
+            <button className={`${btn} ${ghost}`} onClick={onClose}>{d.moved.length ? 'Keep my schedule' : 'Close'}</button>
           </div>
         </>
       )}
