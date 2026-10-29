@@ -12,7 +12,8 @@ const digest = (s) => createHash('sha256').update(String(s)).digest()
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
   if (!process.env.DSB_PASSWORD) return res.status(503).json({ error: 'Dashboard is not configured' })
-  if (!(await limit(req, res, { scope: 'dsb', max: 10 }))) return // 9-digit password: slow down guessing
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+  if (!(await limit(req, res, { scope: 'dsb', max: 30, id: ip }))) return // per visitor; 30 guesses an hour is nothing against 9 digits
   if (!timingSafeEqual(digest(req.body?.password ?? ''), digest(process.env.DSB_PASSWORD))) return res.status(401).json({ error: 'Wrong password' })
 
   await sql`create table if not exists usage (uid text, kind text, model text, input_tokens int, output_tokens int, ts timestamptz default now())`

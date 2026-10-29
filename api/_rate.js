@@ -9,17 +9,16 @@ let ready
 export const idOf = (req) =>
   String(req.headers['x-uid'] || req.headers.authorization?.replace(/^Bearer /i, '') || req.query?.uid || '').slice(0, 40)
 
-export async function limit(req, res, { scope, max }) {
+export async function limit(req, res, { scope, max, id = idOf(req) }) {
   // one retry: a Neon cold start can fail the first query
   for (let attempt = 0; attempt < 2; attempt++) {
-    try { return await count(req, res, { scope, max }) } catch { ready = null }
+    try { return await count(req, res, { scope, max, id }) } catch { ready = null }
   }
   res.status(503).json({ error: 'Temporarily unavailable. Please try again.' })
   return false
 }
 
-async function count(req, res, { scope, max }) {
-  const id = idOf(req)
+async function count(req, res, { scope, max, id }) {
   const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
   const w = Math.floor(Date.now() / HOUR)
   await (ready ||= sql`create table if not exists rate (k text, w bigint, n int, primary key (k, w))`)
