@@ -10,6 +10,7 @@ export function dueReminders(now, tasks, deadlines) {
     if (now >= s && now < s + 10 * MIN) out.push({ key: `t:${t.id}:${t.when}:${t.start}`, title: t.title, body: `Starts now (${t.start}).` })
   }
   for (const d of deadlines) {
+    if (d.done) continue
     const m = at(d.date, d.time || '09:00') // no time given: the start of the day
     for (const [name, lead, end] of [['1 day', 24 * HOUR, HOUR], ['1 hour', HOUR, 0]]) { // windows do not overlap
       if (now >= m - lead && now < m - end) out.push({ key: `d:${d.id}:${d.date}:${d.time || ''}:${name}`, title: d.title, body: `Due in about ${name}${d.time ? ` (${d.time})` : ''}.` })

@@ -6,7 +6,7 @@ const { toRows, fromRow, hasContent } = await import('../api/_store.js')
 const doc = {
   goals: [{ id: 1, title: 'Fit', level: 1, happiness: true }],
   projects: [{ id: 2, title: 'Portfolio', kind: 'Investment', date: '2026-12-01', goalId: 1, hours: 8, custom: 'keep me' }],
-  deadlines: [{ id: 3, title: 'Quiz', date: '2026-11-05', hours: 6 }],
+  deadlines: [{ id: 3, title: 'Quiz', date: '2026-11-05', hours: 6, projectId: 2 }, { id: 4, title: 'Lost', date: '2026-11-06', projectId: 999 }],
   tasks: [
     { id: 10, title: 'Read', due: '2026-11-02', projectId: 2, deadlineId: 3, hours: 2, done: false, subs: [{ id: 1, title: 's', done: false }], extraField: { a: 1 } },
     { id: 11, title: 'Orphan', projectId: 999, deadlineId: 888, goalId: 777, important: true },
@@ -27,6 +27,7 @@ test('toRows drops bad rows, keeps order and nulls dangling links', () => {
   assert.equal(orphan.project_id, null); assert.equal(orphan.deadline_id, null); assert.equal(orphan.goal_id, null)
   assert.equal(r.tasks[0].project_id, 2) // real links survive
   assert.equal(r.goals[0].level, 1)
+  assert.equal(r.deadlines[0].project_id, 2); assert.equal(r.deadlines[1].project_id, null) // deadline -> project link
 })
 
 test('a row survives the round trip, including unknown fields', () => {

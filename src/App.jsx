@@ -153,7 +153,7 @@ export default function App() {
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} />}
-            {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} />}
+            {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
             {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>
         </main>

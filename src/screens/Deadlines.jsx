@@ -4,7 +4,7 @@ import { addTasks, timeRatio } from '../tasks.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
 
-export function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio }) {
+export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -53,14 +53,14 @@ export function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio 
     const ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && d <= dl.date
     setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
-      return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, deadlineId: dl.id }
+      return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, deadlineId: dl.id, projectId: dl.projectId }
     })))
     setRes(null)
   }
   const addOwn = (e) => {
     e.preventDefault()
     if (!own.trim()) return
-    setTasks(addTasks(tasks, [{ title: own, due: dl.date, deadlineId: dl.id }]))
+    setTasks(addTasks(tasks, [{ title: own, due: dl.date, deadlineId: dl.id, projectId: dl.projectId }]))
     setOwn('')
   }
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
@@ -69,13 +69,14 @@ export function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio 
     <li className="rounded-xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="break-words font-semibold">{dl.title}</h3>
+          <h3 className={`break-words font-semibold ${dl.done ? 'text-slate-500 line-through' : ''}`}>{dl.title}</h3>
           <p className="text-sm text-slate-600">
-            {dl.date} · {days < 0 ? 'passed' : days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`}
+            {dl.date} · {dl.done ? 'done' : days < 0 ? 'passed' : days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`}
             {dl.hours != null && ` · ${dl.hours}h needed`}{linked > 0 && ` · ${linked} task${linked === 1 ? '' : 's'} added`}
           </p>
         </div>
         <span className="flex gap-1">
+          <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
           <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
             {busy ? 'Thinking…' : res?.options ? 'Re-plan' : 'Split with AI'}
           </button>
@@ -102,6 +103,15 @@ export function DeadlineCard({ dl, goals, tasks, setTasks, patch, remove, ratio 
         <label className="flex items-center gap-1">Hours I need
           <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
             onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
+        </label>
+        <label className="flex items-center gap-1">Project
+          <select className={input} value={dl.projectId ?? ''} onChange={(e) => {
+            const projectId = e.target.value === '' ? undefined : +e.target.value
+            patch({ projectId }); setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, projectId } : t))) // its tasks follow
+          }}>
+            <option value="">None</option>
+            {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
         </label>
         <label className="flex items-center gap-1">Date
           <input type="date" className={input} value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />

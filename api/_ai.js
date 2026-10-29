@@ -15,7 +15,13 @@ export async function record(req, model, usage, kind = new URL(req.url, 'http://
   } catch { /* logging only */ }
 }
 
-export const MODEL = 'claude-haiku-5-5'
+// 60 AI calls per id per hour
+export async function guard(req, res) {
+  if (req.method !== 'POST') return void res.status(405).end()
+  return limit(req, res, { scope: 'ai', max: 60 })
+}
+
+export const MODEL ='claude-haiku-5-5'
 const SHAPE = { object: /\{[\s\S]*\}/, array: /\[[\s\S]*\]/ }
 // Calls Claude and parses the JSON in its answer. Throws an Error whose message is safe to show.
 export async function askJSON({ req, kind, system, messages, shape = 'object', max_tokens = 8000 }) {

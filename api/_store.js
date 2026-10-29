@@ -10,7 +10,7 @@ export const SPEC = {
   goals: [['title', 'title', 'text'], ['level', 'level', 'int'], ['happiness', 'happiness', 'bool']],
   hobbies: [['title', 'title', 'text']],
   projects: [['title', 'title', 'text'], ['kind', 'kind', 'text'], ['date', 'end_date', 'date'], ['hours', 'hours', 'num'], ['context', 'context', 'text'], ['goalId', 'goal_id', 'id']],
-  deadlines: [['title', 'title', 'text'], ['date', 'due_date', 'date'], ['time', 'due_time', 'text'], ['hours', 'hours', 'num'], ['context', 'context', 'text']],
+  deadlines: [['title', 'title', 'text'], ['date', 'due_date', 'date'], ['time', 'due_time', 'text'], ['hours', 'hours', 'num'], ['context', 'context', 'text'], ['projectId', 'project_id', 'id']],
   tasks: [['title', 'title', 'text'], ['done', 'done', 'bool'], ['doneAt', 'done_at', 'int'], ['fun', 'fun', 'bool'], ['due', 'due_date', 'date'], ['when', 'plan_date', 'date'],
     ['start', 'start_time', 'text'], ['hours', 'hours', 'num'], ['spent', 'spent', 'num'], ['readiness', 'readiness', 'int'], ['important', 'important', 'bool'], ['urgent', 'urgent', 'bool'],
     ['manual', 'manual', 'bool'], ['reason', 'reason', 'text'], ['happy', 'happy', 'int'], ['repeat', 'repeat_rule', 'text'], ['subs', 'subs', 'json'],
@@ -54,7 +54,7 @@ export function toRows(doc) {
     ids[t] = new Set(byId.keys())
   }
   const links = { goal_id: 'goals', project_id: 'projects', deadline_id: 'deadlines' }
-  for (const t of ['projects', 'tasks']) for (const r of rows[t]) for (const [col, parent] of Object.entries(links)) if (col in r && r[col] !== null && !ids[parent].has(r[col])) r[col] = null
+  for (const t of ['deadlines', 'projects', 'tasks']) for (const r of rows[t]) for (const [col, parent] of Object.entries(links)) if (col in r && r[col] !== null && !ids[parent].has(r[col])) r[col] = null
   return rows
 }
 

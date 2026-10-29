@@ -7,7 +7,7 @@ import { ratioOf, fmtDate } from '../shared.jsx'
 
 const KINDS = ['Investment', 'Exam', 'Test', 'Study', 'Work', 'Trip', 'Personal']
 
-function ProjectCard({ p, goals, tasks, setTasks, patch, remove, ratio }) {
+function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -75,6 +75,14 @@ function ProjectCard({ p, goals, tasks, setTasks, patch, remove, ratio }) {
         <div className="h-full bg-primary" style={{ width: `${pr.pct}%` }} />
       </div>
 
+      {deadlines.length > 0 && (
+        <ul className="mt-3 space-y-1 text-sm">
+          {deadlines.map((d) => {
+            const n = tasks.filter((t) => t.deadlineId === d.id)
+            return <li key={d.id} className={`flex justify-between gap-2 rounded-xl bg-panel px-3 py-2 ${d.done ? 'text-slate-500 line-through' : ''}`}><span className="min-w-0 break-words font-medium">{d.title}</span><span className="shrink-0 text-xs text-slate-600">{fmtDate(d.date)} · {n.filter((t) => t.done).length}/{n.length} tasks</span></li>
+          })}
+        </ul>
+      )}
       <ul className="mt-3 space-y-1">
         {mine.map((t) => (
           <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
@@ -141,7 +149,7 @@ function ProjectCard({ p, goals, tasks, setTasks, patch, remove, ratio }) {
 }
 
 // Projects: bigger than a task. A project (investment, exam, test...) owns tasks and shows how far along it is.
-export default function Projects({ goals, projects, setProjects, tasks, setTasks }) {
+export default function Projects({ goals, projects, setProjects, tasks, setTasks, deadlines = [] }) {
   const blank = { title: '', kind: 'Investment', date: '', context: '' }
   const [d, setD] = useState(blank)
   const submit = (e) => {
@@ -165,7 +173,7 @@ export default function Projects({ goals, projects, setProjects, tasks, setTasks
       {!projects.length && <p className="text-sm text-slate-600">No projects yet. A project groups the tasks of something bigger: an investment plan, a final exam, a launch.</p>}
       <ul className="space-y-3">
         {projects.map((p) => (
-          <ProjectCard key={p.id} p={p} goals={goals} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(p.id)}
+          <ProjectCard key={p.id} p={p} goals={goals} deadlines={deadlines.filter((d) => d.projectId === p.id)} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(p.id)}
             remove={() => { setTasks(unlink(tasks, p.id)); setProjects(projects.filter((x) => x.id !== p.id)) }} />
         ))}
       </ul>

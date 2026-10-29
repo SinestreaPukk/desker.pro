@@ -34,7 +34,7 @@ export function risks(tasks, deadlines, freeHours, today = day(new Date())) {
   }
   if (freeHours > 0) for (const d of deadlines) {
     const left = diffDays(today, d.date)
-    if (left < 0) continue
+    if (left < 0 || d.done) continue
     const need = tasks.filter((t) => t.deadlineId === d.id && !t.done).reduce((n, t) => n + (t.hours || 1), 0)
     const cap = freeHours * (left + 1)
     if (need > cap) out.push({ title: d.title, why: `needs about ${need}h but only about ${cap}h of free time is left before ${d.date}` })

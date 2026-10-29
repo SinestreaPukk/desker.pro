@@ -58,10 +58,14 @@ create table if not exists deadlines (
   due_time   text,
   hours      numeric,
   context    text,
+  project_id bigint,
   extra      jsonb  not null default '{}',
   updated_at timestamptz not null default now(),
   primary key (user_id, id)
 );
+-- upgrade for databases made before deadlines belonged to projects
+alter table deadlines add column if not exists project_id bigint;
+do $$ begin if not exists (select 1 from pg_constraint where conname = 'deadlines_project_fk') then alter table deadlines add constraint deadlines_project_fk foreign key (user_id, project_id) references projects (user_id, id) on delete set null (project_id); end if; end $$;
 
 create table if not exists tasks (
   user_id     text   not null references users(id) on delete cascade,

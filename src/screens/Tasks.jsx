@@ -10,7 +10,7 @@ import { post } from '../api.js'
 
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
 // The Eisenhower matrix and AI sorting are one switch away.
-function Detail({ t, projects, update, onDelete, onClose, bd, analyse, split, dismiss }) {
+function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse, split, dismiss }) {
   const field = 'flex flex-col gap-1 text-sm text-slate-600'
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto bg-white p-5 md:inset-y-0 md:left-auto md:w-[26rem] md:border-l md:border-line" role="dialog" aria-label="Task details" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
@@ -28,6 +28,15 @@ function Detail({ t, projects, update, onDelete, onClose, bd, analyse, split, di
           <select className={input} value={t.projectId ?? ''} onChange={(e) => update(t.id, { projectId: e.target.value === '' ? undefined : +e.target.value })}>
             <option value="">None (Inbox)</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
+        </label>
+        <label className={field}>Deadline
+          <select className={input} value={t.deadlineId ?? ''} onChange={(e) => {
+            const dl = deadlines.find((d) => d.id === +e.target.value)
+            update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId } : { deadlineId: undefined })
+          }}>
+            <option value="">None</option>
+            {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title} · {fmtDate(d.date)}</option>)}
           </select>
         </label>
         <label className={field}>Repeat
@@ -89,6 +98,13 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const move = (id, qi) => update(id, qi === ''
     ? { important: undefined, urgent: undefined, goalId: undefined, reason: undefined, manual: false }
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
+  const [dl, setDl] = useState({ title: '', date: '', projectId: '' })
+  const addDeadline = (e) => {
+    e.preventDefault()
+    if (!dl.title.trim() || !dl.date) return
+    setDeadlines([...deadlines, { id: Date.now(), title: dl.title.trim(), date: dl.date, projectId: dl.projectId === '' ? undefined : +dl.projectId }])
+    setDl({ title: '', date: '', projectId: '' })
+  }
   const lines = dump.split('\n').map((l) => l.trim()).filter(Boolean)
   const addDump = (e) => {
     e.preventDefault()
@@ -134,7 +150,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   // Splitting turns the task into a deadline that owns the new tasks.
   const split = (t, out) => {
     const date = t.due || t.when, id = Date.now()
-    setDeadlines([...deadlines, { id, title: t.title, date, hours: Number.isFinite(out.hours) ? out.hours : null, context: '' }])
+    setDeadlines([...deadlines, { id, title: t.title, date, hours: Number.isFinite(out.hours) ? out.hours : null, context: '', projectId: t.projectId }])
     setTasks(addTasks(tasks.filter((x) => x.id !== t.id), out.options.map((o) => ({ title: o.title, due: OK(o.due, date) ? o.due : date, hours: Number(o.hours) || undefined, deadlineId: id, projectId: t.projectId }))))
     setSel(null); setBd(null)
   }
@@ -173,7 +189,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
             <summary className="cursor-pointer text-sm font-semibold">Deadlines with several tasks <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
             <ul className="mt-2 space-y-3">
               {shownDeadlines.map((dl) => (
-                <DeadlineCard key={dl.id} dl={dl} goals={goals} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
+                <DeadlineCard key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
                   patch={(p) => setDeadlines(deadlines.map((x) => (x.id === dl.id ? { ...x, ...p } : x)))}
                   remove={() => setDeadlines(deadlines.filter((x) => x.id !== dl.id))} />
               ))}
@@ -207,6 +223,20 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
             {[parsed.due && fmtDate(parsed.due), parsed.start, parsed.hours && `${parsed.hours}h`, parsed.projectId && projects.find((p) => p.id === parsed.projectId)?.title].filter(Boolean).join(' · ')}
           </p>
         )}
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm text-accent">Add a deadline</summary>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <input className={`${input} min-w-48 flex-1`} aria-label="Deadline name" placeholder="Deadline, e.g. Statics midterm" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
+            <input type="date" className={input} aria-label="Deadline date" value={dl.date} onChange={(e) => setDl({ ...dl, date: e.target.value })} />
+            {projects.length > 0 && (
+              <select className={input} aria-label="Project" value={dl.projectId} onChange={(e) => setDl({ ...dl, projectId: e.target.value })}>
+                <option value="">No project</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            )}
+            <button type="button" className={`${btn} ${BLUE}`} disabled={!dl.title.trim() || !dl.date} onClick={addDeadline}>Add deadline</button>
+          </div>
+        </details>
         <details className="mt-3">
           <summary className="cursor-pointer text-sm text-accent">Add many at once</summary>
           <div className="mt-3">
@@ -267,7 +297,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
           <ul className="mt-2 space-y-2">{doneList.map(row)}</ul>
         </details>
       )}
-      {selected && <Detail t={selected} projects={projects} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
+      {selected && <Detail t={selected} projects={projects} deadlines={deadlines} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
       <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-lg md:hidden`} aria-label="Add a task"
         onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); quickRef.current?.focus() }}>+</button>
     </>
