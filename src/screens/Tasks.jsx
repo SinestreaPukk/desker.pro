@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { addTasks, doneStats } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, Q, LEVELS } from '../ui.js'
-import { quadrant, prioritise, REPEATS, Happy, todayStr, fmtDate, ratioOf } from '../shared.jsx'
+import { quadrant, rankTasks, REPEATS, Happy, todayStr, fmtDate, ratioOf } from '../shared.jsx'
 import { inList, groupSoon } from '../lists.js'
 import AddBox from '../components/AddBox.jsx'
 import Row from '../components/Row.jsx'
@@ -106,12 +106,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const run = async (everything = false) => {
     setAdded(0); setBusy(true); setError('')
     try {
-      const pool = tasks.filter((t) => !t.done && !t.fun && (everything || !t.manual))
-      const ranks = await prioritise(goals, pool)
-      setTasks(tasks.map((t) => {
-        const r = ranks.find((r) => r.id === t.id)
-        return r ? { ...t, goalId: r.goalId, important: !!r.important, urgent: !!r.urgent, reason: r.reason, manual: false } : t
-      }))
+      setTasks(await rankTasks(goals, tasks, everything))
     } catch (err) { setError(err.message) }
     setBusy(false)
   }

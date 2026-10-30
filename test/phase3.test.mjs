@@ -75,3 +75,12 @@ test('syllabus: validate items and spread study blocks backwards', () => {
   const tight = spreadBlocks({ title: 'T', date: '2026-10-27', hours: 3 }, '2026-10-26')
   assert.equal(tight.every((x) => x.when === '2026-10-26'), true) // never before today
 })
+
+import { insight } from '../src/review.js'
+test('insight names the biggest finding', () => {
+  const z = { Vision: 0, 'Long-term': 0, 'Mid-term': 0, 'Short-term': 0, Fun: 0, 'No goal': 0 }
+  assert.equal(insight(z), null)
+  assert.equal(insight({ ...z, 'No goal': 3, 'Short-term': 2 }), '60% of your time had no goal')
+  assert.equal(insight({ ...z, 'Short-term': 2 }), 'Nothing toward Fun this week')
+  assert.equal(insight({ ...z, 'Short-term': 2, Fun: 1 }), 'Most of your time went to Short-term')
+})

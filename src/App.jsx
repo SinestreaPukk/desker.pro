@@ -20,6 +20,7 @@ import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
 import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
+import { Button, EmptyState, Skeleton } from './components/ui.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -40,7 +41,7 @@ export default function App() {
   const [focusOpen, setFocusOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [fresh, setFresh] = useState(null) // goals just saved from the guide: { ids, offer }
-  const [reviewReq, setReviewReq] = useState(0)
+  const [ask, setAsk] = useState(null) // a one-tap prompt for the agent: { text, n }
   const [, tick] = useState(0) // re-render each minute so "missed" flags stay current
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [cheer, setCheer] = useState(0) // bumps when Do First is cleared, to animate the logo
@@ -69,7 +70,13 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
-  if (!data) return <p className="p-6 text-slate-600">{loadError || 'Loading…'}</p>
+  if (!data) return (
+    <main className="mx-auto max-w-[1100px] space-y-4 p-4 md:p-8" aria-busy={!loadError}>
+      {loadError
+        ? <EmptyState title="Could not load your workspace" action={<Button onClick={() => location.reload()}>Try again</Button>}>{loadError}. Check your connection; your data is safe on the server.</EmptyState>
+        : <><Skeleton className="h-10 w-1/2" /><Skeleton className="h-56" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}</div><Skeleton className="h-64" /></>}
+    </main>
+  )
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere
@@ -106,7 +113,9 @@ export default function App() {
     setTasks(addTasks(tasks, goals.filter((g) => fresh.ids.includes(g.id) && g.firstStep).map((g) => ({ title: g.firstStep, goalId: g.id }))))
     setFresh(null)
   }
-  const openReview = () => { setAgentOpen(true); setReviewReq((n) => n + 1) }
+  const askAgent = (text) => { setAgentOpen(true); if (text) setAsk({ text, n: Date.now() }) }
+  const openReview = () => askAgent('Weekly review')
+  const openGuideDefault = () => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')
   // Every task change goes through settle(): it stamps doneAt, adds the next copy of finished repeating tasks, and feeds Undo.
   const setTasks = (next) => {
     const r = settle(tasks, next)
@@ -136,7 +145,7 @@ export default function App() {
             <span><span className="block text-lg font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
           </button>
           <div className="flex items-center gap-2">
-            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Ask the AI agent</button>
+            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </div>
@@ -153,7 +162,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo('h-8 w-8')}<span className="text-lg font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
-            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />AI agent</button>
+            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
@@ -170,7 +179,7 @@ export default function App() {
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
-              goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
+              goTab={setTab} openTimer={() => setFocusOpen(true)} openAgent={askAgent} onReplan={openReplan} onReview={openReview} onGuide={openGuideDefault} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
@@ -180,7 +189,7 @@ export default function App() {
       </div>
 
       <aside className={`${agentOpen ? 'fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white sm:w-[26rem] sm:border-l sm:border-line' : 'hidden'}`} aria-label="AI agent" onKeyDown={(e) => e.key === 'Escape' && setAgentOpen(false)}>
-        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={() => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')} reviewReq={reviewReq} />
+        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={openGuideDefault} ask={ask} />
       </aside>
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (

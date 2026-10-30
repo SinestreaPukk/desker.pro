@@ -35,8 +35,8 @@ test('doneStats counts this week and the streak', () => {
     { done: true, doneAt: d('2026-10-23T08:00:00') }, { done: true, doneAt: d('2026-10-19T08:00:00') },
     { done: true, doneAt: d('2026-10-18T08:00:00') }, { done: false, doneAt: d('2026-10-25T08:00:00') },
   ]
-  assert.deepEqual(doneStats(tasks, now), { week: 4, streak: 3 })
-  assert.deepEqual(doneStats([], now), { week: 0, streak: 0 })
+  assert.deepEqual(doneStats(tasks, now), { week: 4, last: 1, ever: 5, streak: 3 })
+  assert.deepEqual(doneStats([], now), { week: 0, last: 0, ever: 0, streak: 0 })
 })
 
 test('reminders fire at start, and 1 day / 1 hour before a deadline, once in window', () => {

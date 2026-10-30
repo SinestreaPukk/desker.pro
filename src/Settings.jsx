@@ -62,7 +62,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
   const row = 'flex items-center justify-between gap-3 text-sm'
   return (
     <div className="relative shrink-0">
-      <button className={inSidebar ? 'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-slate-700 hover:bg-panel' : 'flex h-11 items-center gap-2 rounded-full px-4 text-sm text-slate-700 hover:bg-panel'} aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
+      <button className={inSidebar ? 'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-slate-700 hover:bg-panel' : 'flex h-11 items-center gap-2 rounded-full px-3 text-sm text-slate-700 hover:bg-panel md:px-4'} aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
         onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" /></svg>
         Settings

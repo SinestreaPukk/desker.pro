@@ -13,6 +13,15 @@ export async function prioritise(goals, tasks) {
   return out
 }
 
+// Rank tasks against the goals (skipping ones the user placed by hand unless `everything`) and return the updated list.
+export async function rankTasks(goals, tasks, everything = false) {
+  const ranks = await prioritise(goals, tasks.filter((t) => !t.done && !t.fun && (everything || !t.manual)))
+  return tasks.map((t) => {
+    const r = ranks.find((r) => r.id === t.id)
+    return r ? { ...t, goalId: r.goalId, important: !!r.important, urgent: !!r.urgent, reason: r.reason, manual: false } : t
+  })
+}
+
 // Photos, PDFs, text files and web pages -> plain notes the planner can use.
 export async function readSource({ file, url }) {
   let body = { url }

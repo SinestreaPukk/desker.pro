@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
-import Review from '../Review.jsx'
+import Mirror from './Mirror.jsx'
 import { areaTag } from '../guide/questions.js'
 
 function Hobbies({ hobbies, setHobbies }) {
@@ -120,7 +120,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
           </section>
         ))}
       </div>
-      <div className="mt-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>
+      <div className="mt-6"><Mirror tasks={tasks} goals={goals} onReview={onReview} /></div>
       <Hobbies hobbies={hobbies} setHobbies={setHobbies} />
     </>
   )

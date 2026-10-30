@@ -4,7 +4,7 @@ import { BLUE, btn, input, LEVELS } from '../ui.js'
 import { weekReview } from '../review.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
 
-export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
+export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }) {
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -54,8 +54,8 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
   const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
-  useEffect(() => { if (reviewReq) review() }, [reviewReq])
   const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
+  useEffect(() => { if (ask) chipClick(ask.text) }, [ask]) // buttons elsewhere in the app reuse the chips' one-tap prompts
   const addGoals = (mi, ks) => {
     const picked = ks.map((k) => msgs[mi].goals[k])
     setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
