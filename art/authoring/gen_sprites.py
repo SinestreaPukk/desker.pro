@@ -115,7 +115,7 @@ class Canvas:
         L = letters
         for y, (x0, x1) in spans.items():
             for x in range(x0, x1 + 1):
-                edge = x in (x0, x1) or y == (top if top is not None else min(spans)) or y == (bottom if bottom is not None else max(spans))
+                edge = x in (x0, x1) or (top != -1 and y == (top if top is not None else min(spans))) or y == (bottom if bottom is not None else max(spans))
                 if edge: self.g[y][x] = outline; continue
                 t = (1 if x >= x1 - 2 else 0) + (1 if y >= max(spans) - 2 else 0) + (1 if y >= max(spans) - 1 else 0)
                 self.g[y][x] = L[min(t, 3)]
@@ -133,7 +133,7 @@ def eyes(c, blink, ch='K', xs=(7, 15)):
         c.put(x, 12, 'K' if blink else ch); c.put(x + 1, 12, 'K' if blink else ch)
 
 def body_feet(c, letters):
-    c.shape(BODY, letters, top=17)
+    c.shape(BODY, letters, top=-1)  # the head's bottom outline is the body's top: no double line
     for x in range(5, 19): c.put(x, 21, 'K')
 
 FUR_SNOW = 'WwsS'
@@ -238,7 +238,7 @@ def person(c, blink):
     for x in (8, 15):
         c.put(x, 11, 'K' if not blink else 'W'); c.put(x, 12, 'K')
     c.row(13, 5, 'PP'); c.row(13, 17, 'PP'); c.row(14, 10, 'KKKK') if False else c.row(14, 11, 'KK')
-    c.shape(BODY, 'JjkK', top=17)
+    c.shape(BODY, 'JjkK', top=-1)
     for x in range(5, 19): c.put(x, 21, 'K')
     c.row(16, 5, 'KKKKKKKKKKKKKK')
     c.row(17, 5, 'KgGgGgGgGgGgK'[:14] if False else 'KgGgGgGgGgGgGK'); c.row(18, 5, 'KGgGgGgGgGgGgK')

@@ -134,3 +134,15 @@ My first draft was a standard retro-pixel page: framed cards everywhere, pixel i
 2. **Add `avatar` to `api/_store.js` SETTINGS** (a one-line server change): ok?
 3. **Other routes stay half-themed** this round: ok?
 4. **Scene height 192×80** (320px on desktop) rather than the reference's taller crop: ok?
+
+## As built (addendum after approval)
+
+Your answers: 1 ok (quadrants by position), 2 ok (`avatar` in `SETTINGS`), 3 "do the best that leads to pixel art", 4 ok (192x80).
+
+- **Decision 3:** I went further than token-only. Every `rounded-*`, shadow, `transition`, off-palette hex and opacity colour in `src/` was swept, so other routes are square, 2px-bordered and on the palette. They still use the old layouts. `slop_lint` over all of `src/` is at 0 errors, 0 warnings.
+- **Mobile:** the scene crops 24 art px of empty sky (`--crop`) so the Start button sits at y=741 on an 844px screen, above the 64px tab bar.
+- **Stat captions** hide below 1024px (except Free time, which needs its note).
+- **Dusk** keeps the snow cold; only the horizon band turns hada-1, plus the window glow.
+- **Avatar picker** lives in Settings (3 beanie colourways plus the six animals). Nav shows the user's avatar; the chat shows the shimaenaga.
+- **Hanko** plays in the "Done" toast, because the finished row leaves the Today list at once and could not show it.
+- **Not built:** Tooltip and a standalone Dialog component (the one dialog, Getting started, uses the panel frame and checker backdrop directly), and 16x16 head sprites.
