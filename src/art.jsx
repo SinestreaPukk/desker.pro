@@ -4,10 +4,9 @@ export function Hero({ className = '' }) {
   return <div className={`px-strip ${className}`} aria-hidden="true"><img src="/pixel/scene-morning.png" alt="" className="px-art" /></div>
 }
 
-// Card cover strip. The same task id always gets the same slice of the scene.
-export function Cover({ seed = 0, className = '' }) {
-  const x = `calc(${-(Math.abs(seed) * 37) % 130} * var(--px))`
-  return <div className={`${className} px-art`} aria-hidden="true" style={{ height: 'calc(16 * var(--px))', backgroundColor: 'var(--color-kori-1)', backgroundImage: 'url(/pixel/scene-morning.png)', backgroundRepeat: 'repeat-x', backgroundSize: 'calc(192 * var(--px)) auto', backgroundPosition: `${x} calc(-28 * var(--px))` }} />
+// One pattern per quadrant (art/authoring/gen_covers.py): torii, peaks, pines, night drifts.
+export function Cover({ q = 3, className = '' }) {
+  return <div className={`${className} px-art`} aria-hidden="true" style={{ height: 'calc(16 * var(--px))', backgroundImage: `url(/pixel/cover-q${q}.png)`, backgroundRepeat: 'repeat-x', backgroundSize: 'calc(48 * var(--px)) 100%' }} />
 }
 
 const BANNERS = {

@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test test/*.test.mjs",
-    "pixel:draw": "python3 art/authoring/gen_sprites.py && python3 art/authoring/gen_house.py",
+    "pixel:draw": "python3 art/authoring/gen_sprites.py && python3 art/authoring/gen_house.py && python3 art/authoring/gen_covers.py",
     "pixel:build": "python3 pixel-kit/tools/sprite_build.py art/sprites --palette pixel-kit/art/palette/yuki16.json --out public/pixel && python3 art/scene_build.py",
     "pixel:lint": "sh scripts/pixel-lint.sh",
     "test:pixel": "playwright test"
