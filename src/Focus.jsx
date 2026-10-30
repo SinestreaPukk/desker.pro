@@ -60,7 +60,7 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
   const shell = 'fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 overflow-y-auto bg-ink p-6 text-center text-white'
   if (mode === null) return (
     <div className={shell} role="dialog" aria-label="Choose a timer">
-      <h2 className="max-w-md break-words text-xl font-semibold leading-tight tracking-tight">{title}</h2>
+      <h2 className="max-w-md break-words text-2xl font-semibold leading-tight tracking-tight">{title}</h2>
       <p className="text-slate-300">Use Pomodoro?</p>
       <div className="flex w-full max-w-sm flex-col gap-2">
         <button autoFocus className={`${btn} bg-white text-slate-900 hover:bg-slate-100`} onClick={() => choose('pomo')}>Pomodoro</button>
@@ -73,7 +73,7 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
   return (
     <div className={shell} role="dialog" aria-label="Focus timer">
       <p className="text-sm text-slate-300">{free ? 'Focus' : phase === 'work' ? 'Focus' : 'Break'}{cycles ? ` · ${cycles} done` : ''}</p>
-      <h2 className="max-w-md break-words text-xl font-semibold leading-tight tracking-tight">{title}</h2>
+      <h2 className="max-w-md break-words text-2xl font-semibold leading-tight tracking-tight">{title}</h2>
       <p className="text-7xl font-semibold tabular-nums tracking-tight" role="timer" aria-live="off">{free ? mmss(session) : mmss(left)}</p>
       {!free && <div className="h-1.5 w-64 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-slate-200" style={{ width: `${(1 - left / total) * 100}%` }} /></div>}
       {logged && <p className="text-sm text-slate-300">Logged on this task: {Math.round((spent + session / 36e5) * 60)} min{estimate ? ` of ${Math.round(estimate * 60)} min estimated` : ''}</p>}

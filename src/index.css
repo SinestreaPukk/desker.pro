@@ -2,21 +2,10 @@
 
 @theme {
   /* Desker: editorial greeting. White page, pale-blue tonal panels, soft radii, one pastel-blue action, deep blue only for links and small marks. */
-  /* Tokens. Spacing: Tailwind's 4px step (p-1 = 4px, p-2 = 8px ...), use multiples of 4/8 only.
-     Type: six sizes only. Line heights are generous so Thai vowel and tone marks never clip.
-     Thai falls back to IBM Plex Sans Thai (the Google Fonts stylesheet only fetches it when Thai text appears). */
-  --font-sans: 'Instrument Sans', 'IBM Plex Sans Thai', Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Instrument Serif', 'IBM Plex Sans Thai', ui-serif, Georgia, serif;
-  --text-*: initial;
-  --text-xs: 0.8125rem; --text-xs--line-height: 1.375rem;
-  --text-sm: 0.9375rem; --text-sm--line-height: 1.5rem;
-  --text-base: 1rem; --text-base--line-height: 1.625rem;
-  --text-lg: 1.25rem; --text-lg--line-height: 1.75rem;
-  --text-xl: 1.75rem; --text-xl--line-height: 2.25rem;
-  --text-2xl: 2.25rem; --text-2xl--line-height: 2.75rem;
-  /* Elevation: flat by default; floating things (menus, sheets, toast) use shadow-md / shadow-lg only. */
-  /* Semantic: warning = danger text on danger-tint. Never rely on colour alone: always pair with words or an icon. */
-  --color-danger-tint: #fdf1ee;
+  --font-sans: 'Instrument Sans', Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+  --text-xs: 0.8125rem; --text-xs--line-height: 1.25rem;
+  --text-sm: 0.9375rem; --text-sm--line-height: 1.4rem;
   --color-paper: #ffffff;
   --color-ink: #14213d;
   --color-panel: #f3f6fc;
@@ -30,15 +19,14 @@
   --color-danger: #b3261e;
   --color-leaf: #2e7d32;
   --color-amber: #8a5a14;
-  --color-stone: #6b7690;
+  --color-stone: #8a97b0;
   --color-white: #ffffff;
   --color-slate-50: #f8faff; --color-slate-100: #f3f6fc; --color-slate-200: #e1e8f4; --color-slate-300: #c9d3e8;
   --color-slate-400: #9aa6bf; --color-slate-500: #5f6b86; --color-slate-600: #4d5873; --color-slate-700: #3a4560;
   --color-slate-800: #27314a; --color-slate-900: #14213d;
-  /* Radius: lg controls and rows, xl cards, 2xl panels, 3xl sheets, full pills. */
   --radius-lg: 0.75rem; --radius-xl: 0.875rem; --radius-2xl: 1.25rem; --radius-3xl: 1.5rem;
 }
-body { background: #fff; font-family: var(--font-sans); color: var(--color-ink); line-height: 1.6; -webkit-font-smoothing: antialiased; font-feature-settings: 'tnum'; }
+body { background: #fff; font-family: var(--font-sans); color: var(--color-ink); line-height: 1.5; -webkit-font-smoothing: antialiased; font-feature-settings: 'tnum'; }
 h1, h2, h3 { letter-spacing: -0.01em; }
 .greeting { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.02em; line-height: 1.05; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }

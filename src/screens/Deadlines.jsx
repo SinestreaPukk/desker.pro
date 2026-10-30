@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
-import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
-import { fmtDuration } from '../format.js'
+import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
-import { Button } from '../components/ui.jsx'
 
 export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
@@ -79,7 +77,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
           <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-          {dl.hours != null && <span className="text-sm text-slate-600">{fmtDuration(dl.hours)}</span>}
+          {dl.hours != null && <span className="text-sm text-slate-600">{dl.hours}h</span>}
         </span>
         {linked > 0 && <span className="text-sm tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={`rounded-full px-3 py-0.5 text-sm ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-[#fdf1ee] text-[#7a1a14]' : 'bg-pale text-accent-dark'}`}>
@@ -98,7 +96,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
             <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
-            {t.hours > 0 && <span className="text-xs text-slate-600">{fmtDuration(t.hours)}</span>}
+            {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
           </li>
         ))}
       </ul>
@@ -110,9 +108,9 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         <div className="border-t border-line p-4 pt-3">
       <div className="mb-3 flex flex-wrap gap-2">
         <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
-        <Button variant="primary" disabled={busy} onClick={() => plan()}>
+        <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
           {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? '✨ Add more with AI' : '✨ Break into tasks'}
-        </Button>
+        </button>
         <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
       </div>
 
@@ -155,7 +153,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           </label>
           <form className="flex min-w-48 flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); if (link.trim()) attach({ url: link.trim() }, link.trim()) }}>
             <input className={`${input} min-w-0 flex-1`} aria-label="Web link" placeholder="Paste a link (syllabus, assignment page)" value={link} onChange={(e) => setLink(e.target.value)} />
-            <Button variant="secondary" disabled={reading || !link.trim()}>Read</Button>
+            <button className={`${btn} ${ghost}`} disabled={reading || !link.trim()}>Read</button>
           </form>
         </div>
 
@@ -167,7 +165,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           <p className="mb-2 font-medium">{res.question}</p>
           <div className="flex gap-2">
             <input className={`${input} min-w-0 flex-1`} aria-label="Your answer" value={answer} onChange={(e) => setAnswer(e.target.value)} />
-            <Button variant="primary" disabled={busy}>Answer</Button>
+            <button className={`${btn} ${BLUE}`} disabled={busy}>Answer</button>
           </div>
         </form>
       )}
@@ -179,7 +177,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               <li key={i}>
                 <label className={`flex cursor-pointer gap-2 rounded-2xl border p-2 text-sm ${picked.includes(i) ? 'border-accent bg-accent/10' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                   <input type="checkbox" checked={picked.includes(i)} onChange={() => toggle(i)} />
-                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{fmtDuration(o.hours)} · by {o.due}</span></span>
+                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{o.hours}h · by {o.due}</span></span>
                 </label>
               </li>
             ))}

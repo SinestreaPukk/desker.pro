@@ -44,7 +44,7 @@ export function settle(prev, next, now = Date.now()) {
   return { tasks: out, finished: finished.map((t) => t.id), spawned: out.slice(tasks.length).map((t) => t.id) }
 }
 
-// Done this week and last week (Monday start) and the current day streak, from doneAt stamps.
+// Done this week (Monday start) and the current day streak, from doneAt stamps.
 export function doneStats(tasks, now = Date.now()) {
   const stamps = tasks.filter((t) => t.done && t.doneAt && !t.fun).map((t) => t.doneAt)
   const days = new Set(stamps.map((s) => day(new Date(s))))
@@ -53,7 +53,7 @@ export function doneStats(tasks, now = Date.now()) {
   const d = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12)
   if (!days.has(day(d))) d.setDate(d.getDate() - 1) // today may not have a finished task yet
   while (days.has(day(d))) { streak++; d.setDate(d.getDate() - 1) }
-  return { week: stamps.filter((s) => s >= monday).length, last: stamps.filter((s) => s >= monday - 7 * 864e5 && s < monday).length, ever: stamps.length, streak }
+  return { week: stamps.filter((s) => s >= monday).length, streak }
 }
 
 // A planned task whose day (or start + length, when it has a start time) has passed without being done.

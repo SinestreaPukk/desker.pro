@@ -41,7 +41,6 @@ export function Cover({ seed = 0, className = '' }) {
 }
 
 const BANNERS = {
-  Tasks: ['Tasks', 'Everything you need to do, ranked by deadline and by the goal it serves.'],
   Goals: ['Goals', 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.'],
   Projects: ['Projects', 'Something bigger than a task: an investment, an exam, a launch. It owns the tasks that get it done.'],
   Calendar: ['Calendar', 'Planned tasks, deadlines and your calendar events in one place.'],
@@ -50,11 +49,11 @@ const BANNERS = {
 // Notion-style page head: wide cover, an icon that overlaps its edge, then the title.
 export function PageHead({ title, sub, v = 0, icon, children }) {
   return (
-    <header className="mb-5 md:mb-8">
-      <div className="overflow-hidden rounded-3xl bg-[#eef3fc]"><Hero v={v} className="h-14 w-full md:h-32" /></div>
-      <div className="relative -mt-5 px-2 md:px-5">
-        <span className="flex h-10 w-10 md:h-16 md:w-16 items-center justify-center rounded-2xl border border-line bg-white text-accent-dark">{icon}</span>
-        <h1 className="greeting mt-2 text-xl md:text-2xl">{title}</h1>
+    <header className="mb-8 md:mb-10">
+      <div className="overflow-hidden rounded-3xl bg-[#eef3fc]"><Hero v={v} className="h-32 w-full md:h-40" /></div>
+      <div className="relative -mt-8 px-2 md:px-5">
+        <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-line bg-white text-accent-dark">{icon}</span>
+        <h1 className="greeting mt-3 text-4xl md:text-5xl">{title}</h1>
         {sub && <p className="mt-2 max-w-2xl text-slate-700">{sub}</p>}
         {children}
       </div>
@@ -65,5 +64,5 @@ export function PageHead({ title, sub, v = 0, icon, children }) {
 export function Banner({ tab }) {
   const b = BANNERS[tab]
   if (!b) return null
-  return <PageHead title={b[0]} sub={b[1]} v={Object.keys(BANNERS).indexOf(tab)} icon={<span className="scale-125 md:scale-150"><Icon name={tab} /></span>} />
+  return <PageHead title={b[0]} sub={b[1]} v={Object.keys(BANNERS).indexOf(tab) + 1} icon={<span className="scale-150"><Icon name={tab} /></span>} />
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { btn, input, panel } from './ui.js'
-import { Button } from './components/ui.jsx'
+import { BLUE, btn, input, panel } from './ui.js'
 
 const NAMES = { chat: 'AI agent chat', deadline: 'Split a task / deadline', project: 'Project breakdown', prioritise: 'Prioritise tasks', now: 'Right now pick', syllabus: 'Syllabus import', replan: 'Replan week', read: 'Read file, photo or link' }
 const n = (v) => Math.round(v).toLocaleString()
@@ -39,7 +38,7 @@ export default function Dsb() {
       <h1 className="greeting text-4xl">Dashboard</h1>
       <form className="flex flex-col gap-3" onSubmit={load}>
         <input type="password" autoFocus className={input} aria-label="Password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
-        <Button variant="primary" disabled={busy || !pw}>{busy ? 'Checking…' : 'Open'}</Button>
+        <button className={`${btn} ${BLUE}`} disabled={busy || !pw}>{busy ? 'Checking…' : 'Open'}</button>
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       </form>
     </main>

@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
-import Mirror from './Mirror.jsx'
+import Review from '../Review.jsx'
 import { areaTag } from '../guide/questions.js'
-import { Button } from '../components/ui.jsx'
 
 function Hobbies({ hobbies, setHobbies }) {
   const [v, setV] = useState('')
@@ -18,7 +17,7 @@ function Hobbies({ hobbies, setHobbies }) {
       <p className="mb-3 text-sm text-slate-600">Hobbies and things that make you happy. The AI agent schedules them between your tasks.</p>
       <form className="mb-3 flex gap-2" onSubmit={add}>
         <input className={`${input} min-w-0 flex-1`} placeholder="e.g. Play guitar" aria-label="New hobby" value={v} onChange={(e) => setV(e.target.value)} />
-        <Button variant="primary">Add</Button>
+        <button className={`${btn} ${BLUE}`}>Add</button>
       </form>
       <ul className="flex flex-wrap gap-2">
         {hobbies.map((h) => (
@@ -41,15 +40,15 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
   if (draft) return (
     <div className={`${panel} mb-6 flex flex-wrap items-center gap-3`}>
       <p className="min-w-48 flex-1">You have a goal guide in progress.</p>
-      <Button variant="primary" onClick={() => onGuide('resume')}>Resume where you left off</Button>
-      <Button variant="secondary" onClick={() => confirm('Start over? Your answers will be cleared.') && onGuide('fresh')}>Start over</Button>
+      <button className={`${btn} ${BLUE}`} onClick={() => onGuide('resume')}>Resume where you left off</button>
+      <button className={`${btn} ${ghost}`} onClick={() => confirm('Start over? Your answers will be cleared.') && onGuide('fresh')}>Start over</button>
     </div>
   )
   if (!goals.length && !guide?.skipped) return (
     <div className={`${panel} mb-6`}>
       <h2 className="text-lg font-semibold">Not sure what your goals are? Take the 10-minute guide</h2>
       <p className="mb-3 text-sm text-slate-600">A few short questions, then the AI drafts goals you can edit before saving.</p>
-      <div className="flex gap-2"><Button variant="primary" onClick={() => onGuide('start')}>Start</Button><Button variant="secondary" onClick={setSkipped}>Skip</Button></div>
+      <div className="flex gap-2"><button className={`${btn} ${BLUE}`} onClick={() => onGuide('start')}>Start</button><button className={`${btn} ${ghost}`} onClick={setSkipped}>Skip</button></div>
     </div>
   )
   return (
@@ -78,14 +77,14 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       {fresh?.offer && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-pale p-4 text-sm">
           <span className="min-w-48 flex-1">Goals saved. Create tasks from your first steps?</span>
-          <Button variant="primary" onClick={onMakeTasks}>Create tasks</Button>
+          <button className={`${btn} ${BLUE}`} onClick={onMakeTasks}>Create tasks</button>
           <button className={`${btn} hover:bg-white`} onClick={onDismissOffer}>No thanks</button>
         </div>
       )}
       <form className={`${panel} mb-6`} onSubmit={submit}>
         <div className="flex flex-wrap items-center gap-3">
           <input className={`${input} min-w-48 flex-1`} placeholder="Goal" aria-label="Goal" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
-          <select className={`${input} max-w-full`} aria-label="Level" value={d.level} onChange={(e) => setD({ ...d, level: +e.target.value })}>
+          <select className={input} aria-label="Level" value={d.level} onChange={(e) => setD({ ...d, level: +e.target.value })}>
             {LEVELS.map((l, i) => <option key={l.name} value={i}>{l.name} ({l.hint})</option>)}
           </select>
           <input className={`${input} w-40`} list="goal-areas" placeholder="Area (optional)" aria-label="Area" value={d.area || ''} onChange={(e) => setD({ ...d, area: e.target.value || undefined })} />
@@ -93,8 +92,8 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!d.happiness} onChange={(e) => setD({ ...d, happiness: e.target.checked })} /> Happiness goal
           </label>
-          <Button variant="primary">{d.id ? 'Save' : 'Add'}</Button>
-          {d.id && <Button type="button" variant="secondary" onClick={() => setD(blank)}>Cancel</Button>}
+          <button className={`${btn} ${BLUE}`}>{d.id ? 'Save' : 'Add'}</button>
+          {d.id && <button type="button" className={`${btn} ${ghost}`} onClick={() => setD(blank)}>Cancel</button>}
         </div>
       </form>
       {areas.length > 0 && (
@@ -104,7 +103,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       )}
       <div className="flex flex-col items-center gap-2">
         {LEVELS.map((l, i) => (
-          <section key={l.name} style={{ borderColor: l.color }} className={`w-full ${l.w} ${l.cls} rounded-2xl border-l-4 p-5`}>
+          <section key={l.name} className={`w-full ${l.w} ${l.cls} rounded-2xl p-5`}>
             <h2 className="text-center text-lg font-semibold">{l.name} <span className="text-sm font-normal text-slate-800">{l.hint}</span></h2>
             <ul className="mt-3 space-y-2">
               {!shown.some((g) => g.level === i) && <li className="text-center text-sm text-slate-800">No goals yet</li>}
@@ -121,7 +120,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
           </section>
         ))}
       </div>
-      <div className="mt-6"><Mirror tasks={tasks} goals={goals} onReview={onReview} /></div>
+      <div className="mt-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>
       <Hobbies hobbies={hobbies} setHobbies={setHobbies} />
     </>
   )

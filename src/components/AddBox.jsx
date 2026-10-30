@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
-import { btn, input, panel, LEVELS } from '../ui.js'
+import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { REPEATS, todayStr, fmtDate } from '../shared.jsx'
-import { fmtDuration } from '../format.js'
 import { parseQuick, inList } from '../lists.js'
-import { Button } from './ui.jsx'
 
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv') }
 const label = 'flex flex-col gap-1 text-xs text-slate-600'
@@ -79,7 +77,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
       </div>
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder={isDl ? 'Deadline, e.g. "Statics midterm Monday 3pm"' : 'What needs doing? e.g. "Call dentist tomorrow 3pm"'} aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />
-        <Button variant="primary" disabled={!parsed || (isDl && !due)} title={isDl && !due ? 'Pick a date first' : undefined}>{isDl ? 'Add deadline' : 'Add'}</Button>
+        <button className={`${btn} ${BLUE}`} disabled={!parsed || (isDl && !due)} title={isDl && !due ? 'Pick a date first' : undefined}>{isDl ? 'Add deadline' : 'Add'}</button>
       </div>
       <div className={`mt-3 flex-wrap items-end gap-3 ${parsed ? 'flex' : 'hidden group-focus-within:flex'}`}> {/* options appear once you start typing */}
         <div className={label}>When
@@ -92,7 +90,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           <input type="date" className={ctl} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
         </label>}
         <div className="flex gap-1" role="group" aria-label="Quick dates">
-          {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <Button key={n} type="button" variant="secondary" className="chip h-10" onClick={() => set({ date: plus(d) })}>{n}</Button>)}
+          {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <button key={n} type="button" className={`${btn} ${ghost} chip h-10`} onClick={() => set({ date: plus(d) })}>{n}</button>)}
           {(f.date || f.time || f.until) && <button type="button" className={`${btn} chip h-10 hover:bg-white`} onClick={() => set({ date: '', time: '', until: '' })}>No date</button>}
         </div>
         {!isDl && <label className={label}>Repeat
@@ -101,7 +99,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
         <div className={label}>Hours I need
           <div className="flex gap-1">
             <input type="number" min="0" step="0.5" className={`${ctl} w-24`} aria-label="Hours I need" placeholder={parsed?.hours ? String(parsed.hours) : 'Not sure'} value={f.hours} onChange={(e) => set({ hours: e.target.value })} />
-            <Button type="button" variant="secondary" className="h-10" disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : '✨ Estimate'}</Button>
+            <button type="button" className={`${btn} ${ghost} h-10`} disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : '✨ Estimate'}</button>
           </div>
         </div>
         {(isDl ? projects.length > 0 : deadlines.length > 0 || projects.length > 0) && (
@@ -114,7 +112,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           </label>
         )}
       </div>
-      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && fmtDuration(+hours), f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
+      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
       {isDl && parsed && !due && <p className="mt-2 text-sm text-slate-600">Pick a date (or type one, like "Monday") to add the deadline.</p>}
       {est && !est.busy && (
         <div className="mt-3 rounded-xl bg-pale p-3 text-sm" role="status">
@@ -124,7 +122,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
               <p className="mb-2 font-medium">{est.question}</p>
               <div className="flex gap-2">
                 <input className={`${input} min-w-0 flex-1`} aria-label="Your answer" autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && reply(e)} />
-                <Button type="button" variant="primary" onClick={reply}>Answer</Button>
+                <button type="button" className={`${btn} ${BLUE}`} onClick={reply}>Answer</button>
                 <button type="button" className={`${btn} hover:bg-white`} onClick={() => ask(`${est.context}\nQ: ${est.question}\nA: not sure, make your best guess`, 2)}>Not sure</button>
               </div>
             </div>
@@ -132,10 +130,10 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           {est.out && (
             <div>
               <p>{est.out.summary}</p>
-              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className="rounded-lg bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{fmtDuration(o.hours)}{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
+              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className="rounded-lg bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
               <div className="mt-2 flex flex-wrap gap-2">
-                {Number.isFinite(est.out.hours) && <Button type="button" variant="primary" onClick={() => { set({ hours: String(est.out.hours) }); setEst(null) }}>Use {fmtDuration(est.out.hours)}</Button>}
-                {est.out.options.length > 1 && <Button type="button" variant="secondary" onClick={steps}>Add as {est.out.options.length} steps</Button>}
+                {Number.isFinite(est.out.hours) && <button type="button" className={`${btn} ${BLUE}`} onClick={() => { set({ hours: String(est.out.hours) }); setEst(null) }}>Use {est.out.hours}h</button>}
+                {est.out.options.length > 1 && <button type="button" className={`${btn} ${ghost}`} onClick={steps}>Add as {est.out.options.length} steps</button>}
                 <button type="button" className={`${btn} hover:bg-white`} onClick={() => setEst(null)}>Dismiss</button>
               </div>
             </div>

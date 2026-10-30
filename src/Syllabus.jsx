@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { post } from './api.js'
-import { btn, input, ghost } from './ui.js'
+import { btn, input, BLUE, ghost } from './ui.js'
 import { encodeFile } from './files.js'
 import { addTasks } from './tasks.js'
 import { validItems, spreadBlocks } from './syllabus.js'
-import { Button } from './components/ui.jsx'
 
 // Pasted outline or PDF/photo -> review list -> deadlines plus study blocks spread backwards from each due date.
 export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, ratio }) {
@@ -46,7 +45,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
           <p className="text-sm text-slate-600">Paste the outline or upload a PDF or photo. The AI finds every exam and assignment with its date, you check the list, and Desker adds the deadlines with study blocks leading up to each one.</p>
           <textarea className={`${input} w-full`} rows={4} aria-label="Course outline" placeholder="Paste the course outline here" value={text} onChange={(e) => setText(e.target.value)} />
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="primary" disabled={busy || !text.trim()} onClick={() => find({ text })}>{busy ? 'Reading…' : 'Find deadlines'}</Button>
+            <button className={`${btn} ${BLUE}`} disabled={busy || !text.trim()} onClick={() => find({ text })}>{busy ? 'Reading…' : 'Find deadlines'}</button>
             <label className={`${btn} inline-flex cursor-pointer items-center ${ghost} ${busy ? 'pointer-events-none opacity-50' : ''}`}>Upload PDF or photo
               <input type="file" className="sr-only" accept="application/pdf,image/*,.txt,.md" disabled={busy} onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) upload(f) }} />
             </label>
@@ -70,8 +69,8 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
             ))}
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button variant="primary" disabled={!items.some((i) => i.on)} onClick={create}>Add {items.filter((i) => i.on).length} deadline{items.filter((i) => i.on).length === 1 ? '' : 's'} with study blocks</Button>
-            <Button variant="secondary" onClick={() => setItems(null)}>Start over</Button>
+            <button className={`${btn} ${BLUE}`} disabled={!items.some((i) => i.on)} onClick={create}>Add {items.filter((i) => i.on).length} deadline{items.filter((i) => i.on).length === 1 ? '' : 's'} with study blocks</button>
+            <button className={`${btn} ${ghost}`} onClick={() => setItems(null)}>Start over</button>
           </div>
         </div>
       )}

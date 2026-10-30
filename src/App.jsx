@@ -14,15 +14,12 @@ import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
 import Projects from './screens/Projects.jsx'
 import { unlink } from './projects.js'
-import { track, trackOpen, trackSteps } from './track.js'
-import { stepsOf } from './screens/GetStarted.jsx'
 import Calendar from './screens/Calendar.jsx'
 import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
-import { btn } from './ui.js'
+import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
-import { Button, EmptyState, Skeleton } from './components/ui.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -43,7 +40,7 @@ export default function App() {
   const [focusOpen, setFocusOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [fresh, setFresh] = useState(null) // goals just saved from the guide: { ids, offer }
-  const [ask, setAsk] = useState(null) // a one-tap prompt for the agent: { text, n }
+  const [reviewReq, setReviewReq] = useState(0)
   const [, tick] = useState(0) // re-render each minute so "missed" flags stay current
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [cheer, setCheer] = useState(0) // bumps when Do First is cleared, to animate the logo
@@ -53,7 +50,6 @@ export default function App() {
     const id = setTimeout(() => setToast(null), 7000)
     return () => clearTimeout(id)
   }, [toast])
-  useEffect(trackOpen, [])
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState(false)
@@ -73,18 +69,7 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
-  useEffect(() => { // onboarding_step_completed: any page can finish a step, so it is watched here, where everything stays mounted
-    if (!data) return
-    const hasNext = data.tasks.some((t) => !t.done && !t.fun)
-    trackSteps(stepsOf({ data, goals: data.goals, tasks: data.tasks }, hasNext).filter((s) => s.done).map((s) => s.key), data.goals.length + data.tasks.length > 0)
-  }, [data])
-  if (!data) return (
-    <main className="mx-auto max-w-[1100px] space-y-4 p-4 md:p-8" aria-busy={!loadError}>
-      {loadError
-        ? <EmptyState title="Could not load your workspace" action={<Button onClick={() => location.reload()}>Try again</Button>}>{loadError}. Check your connection; your data is safe on the server.</EmptyState>
-        : <><Skeleton className="h-10 w-1/2" /><Skeleton className="h-56" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}</div><Skeleton className="h-64" /></>}
-    </main>
-  )
+  if (!data) return <p className="p-6 text-slate-600">{loadError || 'Loading…'}</p>
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere
@@ -101,7 +86,7 @@ export default function App() {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it yourself.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const focusTask = focus && tasks.find((t) => t.id === focus.taskId)
   const missed = tasks.filter((t) => isMissed(t))
-  const openReplan = () => { track('replan_week_clicked'); setAgentOpen(false); setTab('Calendar'); setReplanOpen(true) }
+  const openReplan = () => { setAgentOpen(false); setTab('Calendar'); setReplanOpen(true) }
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
@@ -113,7 +98,6 @@ export default function App() {
   }
   const saveGuide = (guide) => setData((d) => ({ ...d, guide: { ...guide, updatedAt: Date.now() } }))
   const finishGuide = (added) => {
-    track('goals_guide_completed', { goals: added.length })
     setData((d) => ({ ...d, goals: [...d.goals, ...added], guide: { ...d.guide, result: undefined, done: true } }))
     setGuideOpen(false); setFresh({ ids: added.map((g) => g.id), offer: added.some((g) => g.firstStep) })
     setTimeout(() => setFresh((f) => f && { ...f, ids: [] }), 5000)
@@ -122,14 +106,10 @@ export default function App() {
     setTasks(addTasks(tasks, goals.filter((g) => fresh.ids.includes(g.id) && g.firstStep).map((g) => ({ title: g.firstStep, goalId: g.id }))))
     setFresh(null)
   }
-  const askAgent = (text) => { setAgentOpen(true); if (text) setAsk({ text, n: Date.now() }) }
-  const openReview = () => askAgent('Weekly review')
-  const openGuideDefault = () => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')
+  const openReview = () => { setAgentOpen(true); setReviewReq((n) => n + 1) }
   // Every task change goes through settle(): it stamps doneAt, adds the next copy of finished repeating tasks, and feeds Undo.
   const setTasks = (next) => {
     const r = settle(tasks, next)
-    const was = new Map(tasks.map((t) => [t.id, t.goalId]))
-    next.forEach((t) => { if (t.goalId && was.has(t.id) && !was.get(t.id)) track('task_linked_to_goal') })
     const doFirst = (list) => list.some((t) => !t.done && !t.fun && quadrant(t) === 0)
     const cleared = r.finished.length > 0 && doFirst(tasks) && !doFirst(r.tasks)
     if (cleared) setCheer((n) => n + 1)
@@ -156,7 +136,7 @@ export default function App() {
             <span><span className="block text-lg font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
           </button>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" className="flex items-center gap-2" onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</Button>
+            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Ask the AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </div>
@@ -173,7 +153,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo('h-8 w-8')}<span className="text-lg font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
-            <button className={`${btn} flex items-center gap-2 whitespace-nowrap border border-control hover:bg-panel`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
+            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
@@ -183,14 +163,14 @@ export default function App() {
           {missed.length > 0 && tab !== 'Today' && !replanOpen && (
             <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[#fdf1ee] p-4 text-sm">
               <span><b className="font-medium">{missed.length} planned task{missed.length === 1 ? '' : 's'}</b> slipped past {missed.length === 1 ? 'its' : 'their'} time: {missed.slice(0, 3).map((t) => t.title).join(', ')}{missed.length > 3 ? '…' : ''}</span>
-              <Button variant="primary" onClick={openReplan}>Replan my week</Button>
+              <button className={`${btn} ${BLUE}`} onClick={openReplan}>Replan my week</button>
             </div>
           )}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
-              goTab={setTab} openTimer={() => setFocusOpen(true)} openAgent={askAgent} onReplan={openReplan} onReview={openReview} onGuide={openGuideDefault} />}
+              goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
@@ -200,7 +180,7 @@ export default function App() {
       </div>
 
       <aside className={`${agentOpen ? 'fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white sm:w-[26rem] sm:border-l sm:border-line' : 'hidden'}`} aria-label="AI agent" onKeyDown={(e) => e.key === 'Escape' && setAgentOpen(false)}>
-        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={openGuideDefault} ask={ask} />
+        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={() => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')} reviewReq={reviewReq} />
       </aside>
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (

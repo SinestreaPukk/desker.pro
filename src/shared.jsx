@@ -13,15 +13,6 @@ export async function prioritise(goals, tasks) {
   return out
 }
 
-// Rank tasks against the goals (skipping ones the user placed by hand unless `everything`) and return the updated list.
-export async function rankTasks(goals, tasks, everything = false) {
-  const ranks = await prioritise(goals, tasks.filter((t) => !t.done && !t.fun && (everything || !t.manual)))
-  return tasks.map((t) => {
-    const r = ranks.find((r) => r.id === t.id)
-    return r ? { ...t, goalId: r.goalId, important: !!r.important, urgent: !!r.urgent, reason: r.reason, manual: false } : t
-  })
-}
-
 // Photos, PDFs, text files and web pages -> plain notes the planner can use.
 export async function readSource({ file, url }) {
   let body = { url }
@@ -87,7 +78,8 @@ export function applyPlan(d, o) {
 export const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToday.hours : undefined)
 export const QUICK = ['Help me plan my day', 'Replan my week', 'Weekly review', 'Help me set my goals', 'Help me find my goals', "I'm feeling stressed", "I'm low on energy"]
 
-export { fmtDate } from './format.js'
+// "Fri 31 Oct" from yyyy-mm-dd
+export const fmtDate = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) : '')
 
 export function Happy({ value = 50, onChange, label = 'How do you feel about this task?' }) {
   return (

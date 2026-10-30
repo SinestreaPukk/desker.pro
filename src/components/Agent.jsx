@@ -2,11 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
 import { BLUE, btn, input, LEVELS } from '../ui.js'
 import { weekReview } from '../review.js'
-import { track } from '../track.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
-import { Button } from './ui.jsx'
 
-export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }) {
+export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -55,9 +53,9 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
-  const review = () => { track('weekly_review_opened'); send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review') }
+  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
+  useEffect(() => { if (reviewReq) review() }, [reviewReq])
   const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
-  useEffect(() => { if (ask) chipClick(ask.text) }, [ask]) // buttons elsewhere in the app reuse the chips' one-tap prompts
   const addGoals = (mi, ks) => {
     const picked = ks.map((k) => msgs[mi].goals[k])
     setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
@@ -86,7 +84,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }
                       onClick={() => addGoals(i, [k])}>{g.added ? 'Added' : 'Add goal'}</button>
                   </li>
                 ))}
-                {m.goals.some((g) => !g.added) && <li><Button variant="primary" className="!py-1.5" onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</Button></li>}
+                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE} !py-1.5`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
               </ul>
             )}
           </div>

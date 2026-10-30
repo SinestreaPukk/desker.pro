@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { post } from './api.js'
-import { btn, ghost } from './ui.js'
+import { btn, BLUE, ghost } from './ui.js'
 import { isMissed } from './tasks.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
-import { Button } from './components/ui.jsx'
 
 const when = (w, s) => `${new Date(`${w}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${s ? ` ${s}` : ''}`
 
@@ -68,8 +67,8 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
             </div>
           ) : <p className="mb-3 text-sm text-[#1e7d32]">No deadline looks at risk with this plan.</p>}
           <div className="flex flex-wrap gap-2">
-            {d.moved.length > 0 && <Button variant="primary" onClick={() => onApply(plan)}>Apply plan</Button>}
-            <Button variant="secondary" onClick={onClose}>{d.moved.length ? 'Keep my schedule' : 'Close'}</Button>
+            {d.moved.length > 0 && <button className={`${btn} ${BLUE}`} onClick={() => onApply(plan)}>Apply plan</button>}
+            <button className={`${btn} ${ghost}`} onClick={onClose}>{d.moved.length ? 'Keep my schedule' : 'Close'}</button>
           </div>
         </>
       )}
