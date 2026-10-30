@@ -12,24 +12,25 @@ const label = 'flex flex-col gap-1 text-xs text-slate-600'
 // (it may ask a question or two, and can offer to split a big job into steps). No date means no deadline; Repeat covers ongoing work.
 export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadlines, projects, goals, ratio, list, setList, children }) {
   const [text, setText] = useState('')
-  const [f, setF] = useState({ date: '', time: '', repeat: '', hours: '', belongs: '' })
+  const [f, setF] = useState({ date: '', time: '', repeat: '', hours: '', belongs: '', until: '' })
   const [est, setEst] = useState(null) // { busy } | { question, context, asked } | { out, context } | { error }
   const [answer, setAnswer] = useState('')
   const set = (p) => setF((x) => ({ ...x, ...p }))
   const parsed = text.trim() ? parseQuick(text, projects) : null
-  const due = f.date || parsed?.due
+  const begin = f.date || parsed?.due
+  const due = f.until && begin && f.until >= begin ? f.until : begin // with an end date the task spans begin -> until
   const start = f.time || parsed?.start
   const hours = f.hours !== '' ? +f.hours : parsed?.hours
   const [kind, id] = f.belongs.split(':')
   const dl = kind === 'd' ? deadlines.find((d) => d.id === +id) : null
   const projectId = kind === 'p' ? +id : dl?.projectId ?? parsed?.projectId
-  const reset = () => { setText(''); setF({ date: '', time: '', repeat: '', hours: '', belongs: '' }); setEst(null); setAnswer('') }
+  const reset = () => { setText(''); setF({ date: '', time: '', repeat: '', hours: '', belongs: '', until: '' }); setEst(null); setAnswer('') }
 
   const add = (e) => {
     e.preventDefault()
     if (!parsed) return
     const date = start && !due ? todayStr() : due || dl?.date
-    const item = { title: parsed.title, ...(date && { due: date }), ...(start && { when: date, start }), ...(hours && { hours }), ...(f.repeat && { repeat: f.repeat }),
+    const item = { title: parsed.title, ...(date && { due: date }), ...(date && due !== begin && { from: begin }), ...(start && { when: date, start }), ...(hours && { hours }), ...(f.repeat && { repeat: f.repeat }),
       ...(projectId && { projectId }), ...(dl && { deadlineId: dl.id }) }
     setTasks(addTasks(tasks, [item]))
     if (!inList(item, list, todayStr())) setList('all') // never let a new task vanish from view
@@ -74,9 +75,12 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
             <input type="time" className={input} aria-label="Time" value={f.time || parsed?.start || ''} onChange={(e) => set({ time: e.target.value })} />
           </div>
         </div>
+        <label className={label}>Until (optional)
+          <input type="date" className={input} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
+        </label>
         <div className="flex gap-1" role="group" aria-label="Quick dates">
           {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <button key={n} type="button" className={`${btn} ${ghost} chip`} onClick={() => set({ date: plus(d) })}>{n}</button>)}
-          {(f.date || f.time) && <button type="button" className={`${btn} chip hover:bg-white`} onClick={() => set({ date: '', time: '' })}>No date</button>}
+          {(f.date || f.time || f.until) && <button type="button" className={`${btn} chip hover:bg-white`} onClick={() => set({ date: '', time: '', until: '' })}>No date</button>}
         </div>
         <label className={label}>Repeat
           <select className={input} value={f.repeat} onChange={(e) => set({ repeat: e.target.value })}>{REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
@@ -97,7 +101,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           </label>
         )}
       </div>
-      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
+      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
       {est && !est.busy && (
         <div className="mt-3 rounded-xl bg-pale p-3 text-sm" role="status">
           {est.error && <p className="text-danger">{est.error}</p>}

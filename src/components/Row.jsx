@@ -22,7 +22,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   const facts = [
     q !== undefined && !cover && <span key="q" className={`${tag} ${Q[q].cls}`}>{Q[q].name}</span>,
     project && <span key="p" className={`${tag} bg-panel text-slate-700`}>{project}</span>,
-    t.due && <span key="d" className={`${tag} bg-pale text-accent-dark`}>Due {fmtDate(t.due)}</span>,
+    t.due && <span key="d" className={`${tag} bg-pale text-accent-dark`}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}</span>,
     t.when && <span key="w" className={`${tag} bg-[#e3f4ec] text-[#1f6b4a]`}>{fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
     t.hours > 0 && <span key="h" className={`${tag} bg-panel text-slate-700`}>{t.hours}h</span>,
     subs.length > 0 && <span key="s" className={`${tag} bg-panel text-slate-700`}>{subs.filter((x) => x.done).length}/{subs.length} steps</span>,

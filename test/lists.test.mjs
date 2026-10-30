@@ -27,3 +27,11 @@ test('smart lists and groups', () => {
   assert.deepEqual(ids('done'), [7])
   assert.deepEqual(groupByDate(ts.slice(0, 6), '2026-10-29').map((g) => g.name), ['Overdue', 'Today', 'Tomorrow', 'Later', 'No date'])
 })
+
+test('a task with a start date spans a range: listed Today from its start, in the Today group', () => {
+  const t = { id: 1, title: 'Thesis', from: '2026-10-20', due: '2026-12-01' }
+  assert.equal(inList(t, 'today', '2026-10-29'), true)
+  assert.equal(inList({ ...t, from: '2026-11-20' }, 'today', '2026-10-29'), false)
+  assert.equal(inList({ ...t, from: '2026-11-20' }, 'week', '2026-10-29'), false)
+  assert.deepEqual(groupByDate([t], '2026-10-29').map((g) => g.name), ['Today'])
+})

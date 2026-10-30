@@ -35,6 +35,9 @@ export function parseQuick(text, projects = [], today = new Date()) {
 
 export const dateOf = (t) => t.when || t.due
 
+// A task with `from` (and `due`) spans a range: it shows from its start day until it is done.
+const startOf = (t) => t.from || dateOf(t)
+
 // Smart lists: today (incl. overdue), week (next 7 days incl. overdue), inbox (no date, no project), all, done, p:<projectId>.
 export function inList(t, list, todayStr) {
   const d = dateOf(t)
@@ -42,8 +45,8 @@ export function inList(t, list, todayStr) {
   if (list === 'done') return !!t.done
   if (t.done) return false
   if (list === 'all') return true
-  if (list === 'today') return !!d && d <= todayStr
-  if (list === 'week') return !!d && d <= plus(new Date(`${todayStr}T00:00`), 7)
+  if (list === 'today') return !!d && startOf(t) <= todayStr
+  if (list === 'week') return !!d && startOf(t) <= plus(new Date(`${todayStr}T00:00`), 7)
   if (list === 'inbox') return !d && !t.projectId
   return t.projectId === Number(list.slice(2))
 }
@@ -52,7 +55,7 @@ export function inList(t, list, todayStr) {
 export function groupByDate(tasks, todayStr) {
   const t0 = new Date(`${todayStr}T00:00`), tomorrow = plus(t0, 1), week = plus(t0, 7)
   const names = ['Overdue', 'Today', 'Tomorrow', 'Next 7 days', 'Later', 'No date']
-  const bucket = (t) => { const d = dateOf(t); return !d ? 5 : d < todayStr ? 0 : d === todayStr ? 1 : d === tomorrow ? 2 : d <= week ? 3 : 4 }
+  const bucket = (t) => { const d = dateOf(t); return !d ? 5 : d < todayStr ? 0 : d === todayStr || (t.from && t.from <= todayStr) ? 1 : d === tomorrow ? 2 : d <= week ? 3 : 4 }
   const groups = names.map((name) => ({ name, tasks: [] }))
   for (const t of tasks) groups[bucket(t)].tasks.push(t)
   groups.forEach((g) => g.tasks.sort((a, b) => (dateOf(a) || '').localeCompare(dateOf(b) || '') || (a.start || '99').localeCompare(b.start || '99')))
