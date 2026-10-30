@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import { addTasks, doneStats } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, Q, LEVELS } from '../ui.js'
 import { quadrant, prioritise, REPEATS, Happy, todayStr, fmtDate, ratioOf } from '../shared.jsx'
-import { inList, groupByDate } from '../lists.js'
+import { inList, groupSoon } from '../lists.js'
 import AddBox from '../components/AddBox.jsx'
 import Row from '../components/Row.jsx'
 import Syllabus from '../Syllabus.jsx'
@@ -157,7 +157,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const inCurrent = tasks.filter((t) => inList(t, list, today))
   const groups = list === 'done'
     ? [{ name: 'Completed', tasks: [...inCurrent].sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)) }]
-    : groupByDate(inCurrent, today)
+    : groupSoon(inCurrent, today)
   const shownDeadlines = [...deadlines].filter((dl) => inList({ due: dl.date }, list, today)).sort((a, b) => a.date.localeCompare(b.date))
   const listView = (
     <div className="md:grid md:grid-cols-[13rem_1fr] md:items-start md:gap-6">

@@ -62,3 +62,12 @@ export function groupByDate(tasks, todayStr) {
   groups.forEach((g) => g.tasks.sort((a, b) => (dateOf(a) || '').localeCompare(dateOf(b) || '') || (a.start || '99').localeCompare(b.start || '99')))
   return groups.filter((g) => g.tasks.length)
 }
+
+// Two sections only: due soon (overdue through the next 7 days, a started range counts) and due later (further out, or no date).
+export function groupSoon(tasks, todayStr) {
+  const week = plus(new Date(`${todayStr}T00:00`), 7)
+  const groups = [{ name: 'Due soon', tasks: [] }, { name: 'Due later', tasks: [] }]
+  for (const t of tasks) groups[dateOf(t) && startOf(t) <= week ? 0 : 1].tasks.push(t)
+  groups.forEach((g) => g.tasks.sort((a, b) => (dateOf(a) || '9').localeCompare(dateOf(b) || '9') || (a.start || '99').localeCompare(b.start || '99')))
+  return groups.filter((g) => g.tasks.length)
+}

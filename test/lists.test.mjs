@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseQuick, inList, groupByDate } from '../src/lists.js'
+import { parseQuick, inList, groupByDate, groupSoon } from '../src/lists.js'
 
 const today = new Date('2026-10-29T09:00:00') // a Thursday
 const projects = [{ id: 7, title: 'Tax Return' }]
@@ -40,4 +40,10 @@ test('plan and inbox split open tasks: dated or in a project vs neither', () => 
   const ts = [{ id: 1, due: '2026-12-01' }, { id: 2, projectId: 5 }, { id: 3 }, { id: 4, due: '2026-12-01', done: true }]
   const ids = (l) => ts.filter((t) => inList(t, l, '2026-10-29')).map((t) => t.id)
   assert.deepEqual(ids('plan'), [1, 2]); assert.deepEqual(ids('inbox'), [3]); assert.deepEqual(ids('done'), [4])
+})
+
+test('groupSoon: overdue and the next 7 days are due soon, the rest and undated are due later', () => {
+  const ts = [{ id: 1, due: '2026-10-20' }, { id: 2, due: '2026-11-04' }, { id: 3, due: '2026-11-20' }, { id: 4 }, { id: 5, from: '2026-10-25', due: '2026-12-01' }]
+  const g = groupSoon(ts, '2026-10-29')
+  assert.deepEqual(g.map((x) => [x.name, x.tasks.map((t) => t.id)]), [['Due soon', [1, 2, 5]], ['Due later', [3, 4]]])
 })
