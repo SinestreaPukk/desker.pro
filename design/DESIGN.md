@@ -83,7 +83,7 @@ States for all interactive pieces: rest, hover (yuki-1 fill, no motion), pressed
 | Tabs / nav | no frame; active tab gets a 2-art-px ink underline with a beni notch only on Today if overdue | none |
 | Panel | 9-slice `panel-frame`: yuki-0 fill, yuki-2 outline plus yuki-2 shadow row, quadrant tab variants | `panel-frame`, `panel-tab-{beni,kori,matsu,yuki}` |
 | Row (task) | no frame of its own, divided by dotted 1-art-px divider | `divider-dot`, drag grip 8×8, more-dots icon |
-| Stat tile | `panel-frame`, number in DotGothic 32 | none |
+| Stat tile | `panel-frame`, number in Pixelify Sans 32 | none |
 | Avatar | none; 24×24 two-frame sheet, 48px | 7 `.sprite.txt`, `avatar-*` sheets |
 | Toast | `panel-frame` in yoru-1 fill with yuki-0 text, bottom-left | none; copy repeats the verb ("Task done: ...") |
 | Dialog (getting started) | `panel-frame` centred, backdrop is a solid yoru-2 checker, not opacity | `backdrop-checker` |
@@ -146,3 +146,4 @@ Your answers: 1 ok (quadrants by position), 2 ok (`avatar` in `SETTINGS`), 3 "do
 - **Avatar picker** lives in Settings (3 beanie colourways plus the six animals). Nav shows the user's avatar; the chat shows the shimaenaga.
 - **Hanko** plays in the "Done" toast, because the finished row leaves the Today list at once and could not show it.
 - **Not built:** Tooltip and a standalone Dialog component (the one dialog, Getting started, uses the panel frame and checker backdrop directly), and 16x16 head sprites.
+- **Font changed after review (your request):** DotGothic16 was hard to read at 16px, so body and headings now use **Pixelify Sans** (OFL, game-style). Sizes are 16 small, 20 body, 32 and 48. Fusion Pixel stays only as the fallback for Japanese glyphs. Ligatures are off because Pixelify's "fi" renders as a different glyph. This overrides the original 16/32/48 and 12/24 rule.

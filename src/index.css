@@ -2,20 +2,20 @@
 
 @theme {
   /* Yuki: a quiet snowy morning drawn in pixels. Colours are yuki16 only; shading comes from the ramps, never opacity. */
-  --font-sans: 'DotGothic16', 'Fusion Pixel 12px Proportional JP', ui-monospace, monospace;
-  --font-serif: 'DotGothic16', ui-monospace, monospace;
-  --font-meta: 'Fusion Pixel 12px Proportional JP', 'DotGothic16', ui-monospace, monospace;
-  /* DotGothic16 sits on a 16px grid (16/32/48); the meta face on 12px (12/24). */
-  --text-xs: 12px; --text-xs--line-height: 16px;
-  --text-sm: 16px; --text-sm--line-height: 24px; /* pixel-ok: token pinned to the 16/32/48 grid */
-  --text-base: 16px; --text-base--line-height: 24px;
-  --text-lg: 16px; --text-lg--line-height: 24px; /* pixel-ok: token pinned to the 16/32/48 grid */
-  --text-xl: 32px; --text-xl--line-height: 32px; /* pixel-ok: token pinned to the 16/32/48 grid */
-  --text-2xl: 32px; --text-2xl--line-height: 40px;
-  --text-3xl: 32px; --text-3xl--line-height: 40px; /* pixel-ok: token pinned to the 16/32/48 grid */
-  --text-4xl: 32px; --text-4xl--line-height: 40px;
+  --font-sans: 'Pixelify Sans', 'Fusion Pixel 12px Proportional JP', ui-monospace, monospace;
+  --font-serif: 'Pixelify Sans', ui-monospace, monospace;
+  --font-meta: 'Fusion Pixel 12px Proportional JP', 'Pixelify Sans', ui-monospace, monospace;
+  /* Pixelify Sans: a game-style pixel face that stays readable. Sizes: 16 (small), 20 (body), 32, 48. */
+  --text-xs: 16px; --text-xs--line-height: 20px;
+  --text-sm: 20px; --text-sm--line-height: 28px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
+  --text-base: 20px; --text-base--line-height: 28px;
+  --text-lg: 20px; --text-lg--line-height: 28px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
+  --text-xl: 32px; --text-xl--line-height: 36px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
+  --text-2xl: 32px; --text-2xl--line-height: 36px;
+  --text-3xl: 32px; --text-3xl--line-height: 36px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
+  --text-4xl: 32px; --text-4xl--line-height: 36px;
   --text-5xl: 48px; --text-5xl--line-height: 56px;
-  --text-7xl: 48px; --text-7xl--line-height: 56px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --text-7xl: 48px; --text-7xl--line-height: 56px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
   --font-weight-medium: 400; --font-weight-semibold: 400; --font-weight-bold: 400;
   --radius-lg: 0; --radius-xl: 0; --radius-2xl: 0; --radius-3xl: 0;
 
@@ -51,9 +51,8 @@
 @media (min-width: 640px) { :root { --px-scene: 4px; } }
 
 html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bg); }
-body { background: var(--bg); font-family: var(--font-sans); font-size: 16px; line-height: 24px; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
+body { background: var(--bg); font-family: var(--font-sans); font-size: 20px; line-height: 28px; word-spacing: 2px; font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'clig' 0; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
 b, strong { font-weight: 400; color: var(--color-yoru-2); }
-.text-xs { font-family: var(--font-meta); }
 .px-art { image-rendering: pixelated; }
 ::selection { background: var(--color-kori-1); color: var(--ink); }
 button { -webkit-tap-highlight-color: transparent; }
@@ -77,7 +76,7 @@ hr { border: 0; height: var(--px); background: url(/pixel/divider.png) 0 0 / cal
 .px-btn-primary { border-image: url(/pixel/btn-primary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
 .px-btn-secondary { border-image: url(/pixel/btn-secondary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
 .px-btn-danger { border-image: url(/pixel/btn-danger.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
-.px-tab { padding: 0 var(--px); font-size: 16px; line-height: 16px; color: var(--color-yuki-0); }
+.px-tab { padding: 0 var(--px); font-size: 16px; line-height: 20px; color: var(--color-yuki-0); }
 .px-tab-beni { border-image: url(/pixel/tab-beni.png) 3 fill / calc(3 * var(--px)) stretch; }
 .px-tab-kori { border-image: url(/pixel/tab-kori.png) 3 fill / calc(3 * var(--px)) stretch; }
 .px-tab-matsu { border-image: url(/pixel/tab-matsu.png) 3 fill / calc(3 * var(--px)) stretch; }
