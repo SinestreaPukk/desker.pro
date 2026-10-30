@@ -127,7 +127,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </div>
       )}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-12 lg:gap-4">
-        <Tile label="Do first" caption={doFirst.length ? 'Urgent and important' : 'Nothing urgent'}><button className="tabular-nums hover:text-accent" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
+        <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="tabular-nums hover:text-accent" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
         <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span className="tabular-nums">{thisWeek.length}</span></Tile>
         <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span className="tabular-nums">{stats.week}</span></Tile>
         <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>

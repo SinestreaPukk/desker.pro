@@ -6,12 +6,13 @@ export const input = 'rounded-xl border border-control bg-white px-3 py-2 placeh
 export const panel = 'rounded-2xl bg-panel p-5'
 export const rowCard = 'rounded-xl border border-line bg-white'
 
+// every task matters, just not equally: the four boxes rank by impact and timing, none means 'drop it'
 // quadrant tint + dot colour; the tint is used on chips in the calendar too
 export const Q = [
-  { name: 'Do First', hint: 'Urgent and important', cls: 'border border-line bg-[#fdf1ee]', dot: 'bg-[#e8a598]' },
-  { name: 'Schedule', hint: 'Important, not urgent', cls: 'border border-line bg-[#eaf0fc]', dot: 'bg-[#7fa3e0]' },
-  { name: 'Batch / minimize', hint: 'Urgent, not important', cls: 'border border-line bg-[#fbf5e6]', dot: 'bg-[#dcc084]' },
-  { name: 'Eliminate', hint: 'Neither', cls: 'border border-line bg-[#f1f3f8]', dot: 'bg-[#a9b4cb]' },
+  { name: 'Do First', hint: 'Due soon, high impact', cls: 'border border-line bg-[#fdf1ee]', dot: 'bg-[#e8a598]' },
+  { name: 'Schedule', hint: 'High impact, not due yet', cls: 'border border-line bg-[#eaf0fc]', dot: 'bg-[#7fa3e0]' },
+  { name: 'Fit it in', hint: 'Due soon, lighter impact', cls: 'border border-line bg-[#fbf5e6]', dot: 'bg-[#dcc084]' },
+  { name: 'Later', hint: 'Lighter impact, no rush', cls: 'border border-line bg-[#f1f3f8]', dot: 'bg-[#a9b4cb]' },
 ]
 // Goals pyramid, narrowest (top) to widest (base): a pastel-blue ladder, deeper toward the near term
 export const LEVELS = [
