@@ -34,7 +34,7 @@ export function stepsFor(areas) {
     T('q12', 4, 'What will you stop doing to make room?', 'A habit, commitment or time sink.', ['Scrolling ', 'Saying yes to ', 'Spending time on ']),
     T('q13', 5, "What's the smallest next step on your top goal? Something you can do in 24 hours.", 'Make it tiny: "Email X", "Open a savings account".', ['Email ', 'Open ', 'Book a time to ']),
     T('q14', 5, 'What might get in your way, and how will you handle it?', 'One obstacle, one plan.', ['I might run out of ', 'If I get busy, I will ', 'When I feel stuck, I will ']),
-    T('q15', 5, 'Who can keep you accountable?', 'A friend, mentor or study partner. Optional.', ['My friend ', 'My mentor ', 'A study partner']),
+    T('q15', 5, 'Who can keep you accountable?', 'A friend, mentor or study partner.', ['My friend ', 'My mentor ', 'A study partner']),
   ]
 }
 

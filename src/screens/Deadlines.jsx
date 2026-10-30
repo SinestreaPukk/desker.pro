@@ -71,14 +71,14 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         <div className="min-w-0">
           <h3 className={`break-words font-semibold ${dl.done ? 'text-slate-500 line-through' : ''}`}>{dl.title}</h3>
           <p className="text-sm text-slate-600">
-            {dl.date} · {dl.done ? 'done' : days < 0 ? 'passed' : days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`}
+            {fmtDate(dl.date)}{dl.time ? ` ${dl.time}` : ''} · {dl.done ? 'done' : days < 0 ? 'passed' : days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`}
             {dl.hours != null && ` · ${dl.hours}h needed`}{linked > 0 && ` · ${linked} task${linked === 1 ? '' : 's'} added`}
           </p>
         </div>
         <span className="flex gap-1">
           <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
           <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
-            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : '✨ Break into tasks'}
+            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? '✨ Add more with AI' : '✨ Break into tasks'}
           </button>
           <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
         </span>

@@ -79,7 +79,7 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
             <div className="space-y-3">
               {[...groups, ...(goals.some((g) => !g.area) ? [''] : [])].map((area) => (
                 <details key={area} open className="rounded-2xl bg-panel p-3">
-                  <summary className="flex cursor-pointer items-center gap-2 font-medium">{area ? <Tag a={area} /> : 'No area'}<span className="text-sm font-normal text-slate-600">{goals.filter((g) => (g.area || '') === area).length} goals</span></summary>
+                  <summary className="flex cursor-pointer items-center gap-2 font-medium">{area ? <Tag a={area} /> : 'No area'}<span className="text-sm font-normal text-slate-600">{goals.filter((g) => (g.area || '') === area).length === 1 ? '1 goal' : `${goals.filter((g) => (g.area || '') === area).length} goals`}</span></summary>
                   <ul className="mt-3 space-y-2">
                     {goals.filter((g) => (g.area || '') === area).map((g) => <Card key={g.id} g={g} areas={areas} patch={patchGoal(g.id)} remove={removeGoal(g.id)} />)}
                   </ul>

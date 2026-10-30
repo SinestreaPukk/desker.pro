@@ -7,6 +7,7 @@ import { parseQuick, inList } from '../lists.js'
 
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv') }
 const label = 'flex flex-col gap-1 text-xs text-slate-600'
+const ctl = `${input} h-10` // one height for every control in the row
 
 // The one box that adds everything. Type what needs doing, set when / repeat / hours right here, or let the AI estimate the hours
 // (it may ask a question or two, and can offer to split a big job into steps). No date means no deadline; Repeat covers ongoing work.
@@ -57,7 +58,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
   }
   const steps = () => {
     const { out, context } = est, ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && (!due || d <= due), gid = Date.now()
-    if (due) setDeadlines([...deadlines, { id: gid, title: parsed.title, date: due, time: f.time || undefined, hours: Number.isFinite(out.hours) ? out.hours : undefined, context, projectId }])
+    if (due) setDeadlines([...deadlines, { id: gid, title: parsed.title, date: due, time: start || undefined, hours: Number.isFinite(out.hours) ? out.hours : undefined, context, projectId }])
     setTasks(addTasks(tasks, out.options.map((o) => ({ title: o.title, ...(ok(o.due) ? { due: o.due } : due ? { due } : {}), hours: Number(o.hours) || undefined, ...(due && { deadlineId: gid }), ...(projectId && { projectId }) }))))
     setList('all'); reset()
   }
@@ -71,29 +72,29 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
       <div className="mt-3 flex flex-wrap items-end gap-3">
         <div className={label}>When
           <div className="flex items-center gap-1">
-            <input type="date" className={input} aria-label="Date" value={f.date || parsed?.due || ''} onChange={(e) => set({ date: e.target.value })} />
-            <input type="time" className={input} aria-label="Time" value={f.time || parsed?.start || ''} onChange={(e) => set({ time: e.target.value })} />
+            <input type="date" className={ctl} aria-label="Date" value={f.date || parsed?.due || ''} onChange={(e) => set({ date: e.target.value })} />
+            <input type="time" className={ctl} aria-label="Time" value={f.time || parsed?.start || ''} onChange={(e) => set({ time: e.target.value })} />
           </div>
         </div>
         <label className={label}>Until (optional)
-          <input type="date" className={input} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
+          <input type="date" className={ctl} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
         </label>
         <div className="flex gap-1" role="group" aria-label="Quick dates">
-          {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <button key={n} type="button" className={`${btn} ${ghost} chip`} onClick={() => set({ date: plus(d) })}>{n}</button>)}
-          {(f.date || f.time || f.until) && <button type="button" className={`${btn} chip hover:bg-white`} onClick={() => set({ date: '', time: '', until: '' })}>No date</button>}
+          {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <button key={n} type="button" className={`${btn} ${ghost} chip h-10`} onClick={() => set({ date: plus(d) })}>{n}</button>)}
+          {(f.date || f.time || f.until) && <button type="button" className={`${btn} chip h-10 hover:bg-white`} onClick={() => set({ date: '', time: '', until: '' })}>No date</button>}
         </div>
         <label className={label}>Repeat
-          <select className={input} value={f.repeat} onChange={(e) => set({ repeat: e.target.value })}>{REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+          <select className={ctl} value={f.repeat} onChange={(e) => set({ repeat: e.target.value })}>{REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
         </label>
         <div className={label}>Hours I need
           <div className="flex gap-1">
-            <input type="number" min="0" step="0.5" className={`${input} w-24`} aria-label="Hours I need" placeholder={parsed?.hours ? String(parsed.hours) : 'Not sure'} value={f.hours} onChange={(e) => set({ hours: e.target.value })} />
-            <button type="button" className={`${btn} ${ghost}`} disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : '✨ Estimate'}</button>
+            <input type="number" min="0" step="0.5" className={`${ctl} w-24`} aria-label="Hours I need" placeholder={parsed?.hours ? String(parsed.hours) : 'Not sure'} value={f.hours} onChange={(e) => set({ hours: e.target.value })} />
+            <button type="button" className={`${btn} ${ghost} h-10`} disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : '✨ Estimate'}</button>
           </div>
         </div>
         {(deadlines.length > 0 || projects.length > 0) && (
           <label className={label}>Belongs to
-            <select className={input} value={f.belongs} onChange={(e) => set({ belongs: e.target.value })}>
+            <select className={ctl} value={f.belongs} onChange={(e) => set({ belongs: e.target.value })}>
               <option value="">Nothing</option>
               {deadlines.some((d) => !d.done) && <optgroup label="Deadlines">{deadlines.filter((d) => !d.done).map((d) => <option key={d.id} value={`d:${d.id}`}>{d.title} · {fmtDate(d.date)}</option>)}</optgroup>}
               {projects.length > 0 && <optgroup label="Projects">{projects.map((p) => <option key={p.id} value={`p:${p.id}`}>{p.title}</option>)}</optgroup>}
