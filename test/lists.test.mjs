@@ -35,3 +35,9 @@ test('a task with a start date spans a range: listed Today from its start, in th
   assert.equal(inList({ ...t, from: '2026-11-20' }, 'week', '2026-10-29'), false)
   assert.deepEqual(groupByDate([t], '2026-10-29').map((g) => g.name), ['Today'])
 })
+
+test('plan and inbox split open tasks: dated or in a project vs neither', () => {
+  const ts = [{ id: 1, due: '2026-12-01' }, { id: 2, projectId: 5 }, { id: 3 }, { id: 4, due: '2026-12-01', done: true }]
+  const ids = (l) => ts.filter((t) => inList(t, l, '2026-10-29')).map((t) => t.id)
+  assert.deepEqual(ids('plan'), [1, 2]); assert.deepEqual(ids('inbox'), [3]); assert.deepEqual(ids('done'), [4])
+})

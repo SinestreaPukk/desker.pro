@@ -38,13 +38,14 @@ export const dateOf = (t) => t.when || t.due
 // A task with `from` (and `due`) spans a range: it shows from its start day until it is done.
 const startOf = (t) => t.from || dateOf(t)
 
-// Smart lists: today (incl. overdue), week (next 7 days incl. overdue), inbox (no date, no project), all, done, p:<projectId>.
+// Smart lists: plan (dated or in a project), today (incl. overdue), week (next 7 days incl. overdue), inbox (no date, no project), all, done, p:<projectId>.
 export function inList(t, list, todayStr) {
   const d = dateOf(t)
   if (t.fun) return false
   if (list === 'done') return !!t.done
   if (t.done) return false
   if (list === 'all') return true
+  if (list === 'plan') return !!d || !!t.projectId // everything with a day or a project; the rest waits in the inbox
   if (list === 'today') return !!d && startOf(t) <= todayStr
   if (list === 'week') return !!d && startOf(t) <= plus(new Date(`${todayStr}T00:00`), 7)
   if (list === 'inbox') return !d && !t.projectId

@@ -34,7 +34,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
     const item = { title: parsed.title, ...(date && { due: date }), ...(date && due !== begin && { from: begin }), ...(start && { when: date, start }), ...(hours && { hours }), ...(f.repeat && { repeat: f.repeat }),
       ...(projectId && { projectId }), ...(dl && { deadlineId: dl.id }) }
     setTasks(addTasks(tasks, [item]))
-    if (!inList(item, list, todayStr())) setList('all') // never let a new task vanish from view
+    if (!inList(item, list, todayStr())) setList(inList(item, 'plan', todayStr()) ? 'plan' : 'inbox') // never let a new task vanish from view
     reset()
   }
 
@@ -60,7 +60,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
     const { out, context } = est, ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && (!due || d <= due), gid = Date.now()
     if (due) setDeadlines([...deadlines, { id: gid, title: parsed.title, date: due, time: start || undefined, hours: Number.isFinite(out.hours) ? out.hours : undefined, context, projectId }])
     setTasks(addTasks(tasks, out.options.map((o) => ({ title: o.title, ...(ok(o.due) ? { due: o.due } : due ? { due } : {}), hours: Number(o.hours) || undefined, ...(due && { deadlineId: gid }), ...(projectId && { projectId }) }))))
-    setList('all'); reset()
+    setList('plan'); reset()
   }
 
   return (

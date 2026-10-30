@@ -77,7 +77,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
 
 export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines }) {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
-  const [list, setList] = useState('today')
+  const [list, setList] = useState('plan')
   const [sel, setSel] = useState(null) // task id open in the detail panel
   const quickRef = useRef(null)
   const [bd, setBd] = useState(null) // AI check of the open task: { id, busy | error | note | out }
@@ -152,7 +152,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const row = (t, cover) => (
     <Row key={t.id} t={t} cover={cover} project={projectName(t) || (deadlineOf(t) && `For ${deadlineOf(t).title}`)} update={update} move={move} onStart={startTask} onEdit={() => setSel(t.id)} onDelete={() => deleteTask(t)} />
   )
-  const lists = [['today', 'Today'], ['week', 'Next 7 days'], ['inbox', 'Inbox'], ['all', 'All'],
+  const lists = [['plan', 'Tasks'], ['inbox', 'Inbox'],
     ...projects.map((p) => [`p:${p.id}`, p.title]), ['done', 'Completed']]
   const inCurrent = tasks.filter((t) => inList(t, list, today))
   const groups = list === 'done'
@@ -192,7 +192,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
           </details>
         ))}
         {!groups.length && !shownDeadlines.length && <p className="rounded-2xl bg-panel p-6 text-center text-sm text-slate-600">
-          {list === 'done' ? 'Nothing completed yet.' : list === 'today' ? 'Nothing for today. Add a task above, or check Next 7 days.' : 'No tasks here. Type one above and press Add.'}
+          {list === 'done' ? 'Nothing completed yet.' : list === 'plan' ? 'Nothing planned. Add a task above; tasks without a date wait in Inbox.' : list === 'inbox' ? 'Inbox is empty. Tasks without a date or project land here.' : 'No tasks here. Type one above and press Add.'}
         </p>}
       </div>
     </div>
