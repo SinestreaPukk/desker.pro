@@ -65,16 +65,16 @@ def sky(A):
     for y in range(0, 44):
         for x in range(W):
             r = 'sky0'
-            if y >= 14 or (y >= 8 and dith(x, y, (y - 8) / 6)): r = 'sky1'
-            if y >= 41 or (y >= 33 and dith(x, y, (y - 33) / 8)): r = 'sky2'
+            if y >= 14 or (y >= 8 and dith(x, y, ((y - 8) // 2 + 1) / 4)): r = 'sky1'
+            if y >= 42 or (y >= 36 and dith(x, y, ((y - 36) // 2 + 1) / 4)): r = 'sky2'
             put(A, x, y, r)
     # moon, upper left, with a graduated dither halo
     cx, cy, rr = 26, 27, 5
     for y in range(cy - 14, cy + 15):
         for x in range(cx - 14, cx + 15):
             d = math.hypot(x - cx, y - cy)
-            if d > rr + 0.5 and d <= rr + 9 and is_(A, x, y, 'sky0', 'sky1', 'sky2'):
-                t = .75 if d <= rr + 3 else .5 if d <= rr + 6 else .25
+            if d > rr + 0.5 and d <= rr + 6 and is_(A, x, y, 'sky0', 'sky1', 'sky2'):
+                t = .5 if d <= rr + 3 else .25
                 if dith(x, y, t): put(A, x, y, 'halo')
     for y in range(cy - rr - 1, cy + rr + 2):
         for x in range(cx - rr - 1, cx + rr + 2):
@@ -119,10 +119,10 @@ def mountain(A, pts, seed, base=46):
         if lit and slope < 0: put(A, x, top[x], 'rim' if top[x] >= SNOWLINE(x) else 'sn_hi')
     # strata and gullies: short 1px diagonals running down-right in shade colour
     g = random.Random(seed + 1)
-    for _ in range(40):
-        x = g.randint(pts[0][0] + 4, pts[-1][0] - 4)
-        if top[x] >= base - 6: continue
-        y = top[x] + g.randint(2, 9); n = g.randint(4, 9)
+    for _ in range(6):
+        x = g.randint(pts[0][0] + 6, pts[-1][0] - 6)
+        if top[x] >= base - 10: continue
+        y = top[x] + g.randint(2, 4); n = g.randint(8, 13)
         for i in range(n):
             if is_(A, x + i // 2, y + i, 'rock_l', 'snow_fl'): put(A, x + i // 2, y + i, 'rock_s' if is_(A, x + i // 2, y + i, 'rock_l') else 'snow_fs')
 
@@ -141,9 +141,11 @@ def forest(A):
     for x in range(W):
         for y in range(top[x], 47): put(A, x, y, 'hill')
     g = random.Random(21)
-    for x in range(2, W, 5):
-        if 118 <= x <= 176: continue                                    # leave room for the house
-        mini_pine(A, x + g.randint(-1, 1), top[x] + 1, g.randint(5, 9))
+    for gx, n in ((12, 4), (52, 3), (84, 5), (108, 3), (186, 3)):                  # clumps of three or four, uneven heights, gaps between
+        for i in range(n):
+            x = gx + i * g.randint(3, 6)
+            if 118 <= x <= 176: continue
+            mini_pine(A, x, top[min(x, W - 1)] + 1, g.randint(4, 12))
 
 # ---------------------------------------------------------------- lake
 BANK = lambda x: int(round(66 + 2 * math.sin(x / 24 + .5) - 6 * math.exp(-((x - 12) / 22) ** 2)))
@@ -151,14 +153,14 @@ def lake(A):
     for x in range(W):
         for y in range(46, BANK(x)):
             r = 'w_far'
-            if y >= 52 or (y >= 48 and dith(x, y, (y - 48) / 4)): r = 'w_mid'
-            if y >= 61 or (y >= 57 and dith(x, y, (y - 57) / 4)): r = 'w_near'
+            if y >= 52 or (y >= 49 and dith(x, y, (y - 48) / 4)): r = 'w_mid'
+            if y >= 61 or (y >= 58 and dith(x, y, (y - 57) / 4)): r = 'w_near'
             put(A, x, y, r)
     # moonlit glints under the moon (the animated ones are added in scene.json)
     for x, y, w in ((24, 47, 6), (22, 49, 9), (25, 52, 5), (23, 55, 7), (26, 58, 3), (22, 60, 5)):
         for i in range(w): put(A, x + i, y, 'glint')
     g = random.Random(5)
-    for _ in range(70):                                                  # calm surface: sparse 1px ripples
+    for _ in range(34):                                                  # calm surface: sparse 1px ripples
         x, y = g.randint(0, W - 6), g.randint(47, 64)
         if is_(A, x, y, 'w_far', 'w_mid', 'w_near'):
             for i in range(g.randint(3, 7)): put(A, x + i, y, 'w_far' if y > 53 else 'w_mid' if y > 49 else 'w_mid')
@@ -173,7 +175,7 @@ def reflect(A, L, base, shear=1):
             v = L[y, x]
             if not v: continue
             ry = base + (base - y) + 1
-            if ry >= H or ry % 4 == 3: continue
+            if ry >= H or ry % 3 == 2: continue
             sx = x + (0, shear, 0, -shear)[(ry // 2) % 4]
             if 0 <= sx < W and ry < BANK(sx) and is_(A, sx, ry, 'w_far', 'w_mid', 'w_near', 'glint'): put(A, sx, ry, REFL.get(inv[v], 'w_near'))
 
@@ -184,6 +186,12 @@ def shore(A):
         for y in range(lip, 47):
             put(A, x, y, 'sn_hi' if y == lip else 'sn_l' if y == 46 or x % 7 else 'sn_m')
         if x % 5 == 2: put(A, x, 46, 'sn_m')
+
+def spit(A):
+    for y in range(46, 50):
+        for x in range(HOUSE_X - 8, HOUSE_X + 40):
+            e = (x - (HOUSE_X + 16)) / 24
+            if y - 46 <= 3 * (1 - e * e) and is_(A, x, y, 'w_far', 'w_mid', 'sn_hi', 'sn_l', 'sn_m'): put(A, x, y, 'sn_hi' if y == 46 else 'sn_l' if y < 49 else 'sn_m')
 
 def pine(L, cx, base, h, seed, w_scale=1.0):
     """Irregular snow-laden fir: uneven tiers, drooping ragged boughs, snow lit on the left and clumped on top, dark under each tier."""
@@ -226,10 +234,12 @@ def house(L):
     def P(pts, r): poly(L, pts, r)
     P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wood_s')        # right wall, in shade
     P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'thatch_s')                                    # side roof: straw...
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 3), (ex - 2, ey - 3)], 'sn_s')                              # ...under a heavy shaded snow load
+    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 4), (ex - 2, ey - 4)], 'sn_s')                              # ...under a heavy shaded snow load
     for i in range(DX + 1):                                                                                          # lit crest along the ridge, ragged lower lip
         put(L, ax + i, ay + round(i * DY / DX), 'sn_m')
-        y = ey - 3 - round(i * 5 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'sn_m'); put(L, ex - 2 + i, y + 1, 'sn_s')
+        y = ey - 4 - round(i * 5 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'sn_m'); put(L, ex - 2 + i, y + 1, 'sn_s')
+    for i in range(0, DX + 1):
+        for k in range(3): put(L, ex + i, ey - round(i * 5 / DX) - k, 'thatch' if (i + k) % 3 else 'thatch_s')
     for i in range(0, DX + 1, 2): put(L, ex + i, ey - round(i * 5 / DX) - 1, 'thatch'); put(L, ex + i + 1, ey - round(i * 5 / DX) - 2, 'thatch_s')
     rect(L, x0, yb - HW, x0 + W1, yb, 'wood')                                                                        # front wall, timber frame
     for px_ in range(x0, x0 + W1 + 1, 6): rect(L, px_, yb - HW, px_, yb, 'wood_s')
@@ -253,10 +263,10 @@ def house(L):
 
 def pool(A):
     """Stepped light pool on the snow under the windows: palette colours only."""
-    for r, (cx, cy, hw, hh) in (('pool0', (HOUSE_X + 8, 46, 11, 2)), ('pool1', (HOUSE_X + 8, 46, 6, 1))):
+    for r, (cx, cy, hw, hh) in (('pool0', (HOUSE_X + 8, 47, 13, 3)), ('pool1', (HOUSE_X + 8, 47, 7, 2))):
         for y in range(cy - 1, cy + hh + 1):
             for x in range(cx - hw, cx + hw + 1):
-                if 0 <= y < 47 and ((x - cx) / hw) ** 2 + ((y - cy) / max(1, hh)) ** 2 <= 1 and is_(A, x, y, 'sn_l', 'sn_m', 'sn_hi', 'sn_s'): put(A, x, y, r)
+                if 0 <= y < 50 and ((x - cx) / hw) ** 2 + ((y - cy) / max(1, hh)) ** 2 <= 1 and is_(A, x, y, 'sn_l', 'sn_m', 'sn_hi', 'sn_s'): put(A, x, y, r)
 
 # ---------------------------------------------------------------- torii in the shallows
 def torii(L, cx, wl):
@@ -358,7 +368,7 @@ def branch(A):
 # ---------------------------------------------------------------- compose
 def build():
     A = new()
-    sky(A); peaks(A); forest(A); lake(A); shore(A)
+    sky(A); peaks(A); forest(A); lake(A); shore(A); spit(A)
     ho = new(); house(ho)
     p1, p2, p3, p4, p5 = new(), new(), new(), new(), new()
     pine(p1, 179, 47, 26, 1); pine(p2, 189, 51, 42, 2); pine(p3, 5, 49, 26, 3, 1.1); pine(p4, 42, 47, 15, 4); pine(p5, 17, 47, 14, 5, .9)
