@@ -4,7 +4,7 @@ import { BLUE, btn, ghost, input } from '../ui.js'
 import { AREAS, PHASES, stepsFor, minutesLeft, tagItems, chipLabel, qaOf, fromAI, toSave } from './questions.js'
 import GuideReview from './GuideReview.jsx'
 
-const chip = (on) => `chip min-h-11 rounded-full border px-4 py-2 text-sm transition ${on ? 'border-accent bg-pale text-ink' : 'border-control bg-white text-slate-700 hover:bg-pale'}`
+const chip = (on) => `chip min-h-11 border px-4 py-2 text-base ${on ? 'border-accent bg-pale text-ink' : 'border-control bg-white text-slate-700 hover:bg-pale'}`
 const EMPTY = { vision: '', summary: '', letGo: [], goals: [] }
 
 // Full-screen wizard: one question per screen, autosaved into data.guide so it can be resumed or retaken.
@@ -57,12 +57,12 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
 
   if (stage === 'building') return shell(
     <div className="m-auto text-center" role="status"><div className="mb-4 flex justify-center gap-1"><span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} /></div>
-      <p className="text-lg">Building your goals…</p><p className="text-sm text-slate-600">This takes about 15 seconds.</p></div>)
+      <p className="text-base">Building your goals…</p><p className="text-base text-slate-600">This takes about 15 seconds.</p></div>)
 
   if (stage === 'error') return shell(
     <div className="m-auto max-w-sm px-6 text-center" role="alert">
-      <p className="text-lg">Couldn't build your goals. Try again.</p>
-      <p className="mt-1 text-sm text-slate-600">{g.error} Your answers are saved.</p>
+      <p className="text-base">Couldn't build your goals. Try again.</p>
+      <p className="mt-1 text-base text-slate-600">{g.error} Your answers are saved.</p>
       <div className="mt-5 flex flex-col gap-2">
         <button className={`${btn} ${BLUE} min-h-11`} onClick={build}>Try again</button>
         <button className={`${btn} ${ghost} min-h-11`} onClick={() => { setG((x) => ({ ...x, result: x.result || EMPTY })); setStage('review') }}>Write my goals myself</button>
@@ -85,8 +85,8 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
           <button className={`${btn} shrink-0 hover:bg-panel`} onClick={close}>Save &amp; close</button>
         </div>
         <div className="mx-auto mt-2 flex max-w-2xl items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-pale" role="progressbar" aria-label="Guide progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-            <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
+          <div className="h-2 flex-1 overflow-hidden bg-pale" role="progressbar" aria-label="Guide progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+            <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
           </div>
           <span className="shrink-0 text-xs text-slate-600">about {minutesLeft(steps, i)} min left</span>
         </div>
@@ -94,9 +94,9 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
       </header>
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div key={s.id} className="enter mx-auto max-w-2xl">
-          {s.area && <p className="mb-2 text-sm font-medium text-accent">{s.area}</p>}
-          <h1 id="q" className="text-2xl leading-snug sm:text-3xl">{s.q}</h1>
-          <p id="hint" className="mt-2 text-sm text-slate-600">{s.hint}</p>
+          {s.area && <p className="mb-2 text-base font-medium text-accent">{s.area}</p>}
+          <h1 id="q" className="text-2xl leading-snug sm:text-2xl">{s.q}</h1>
+          <p id="hint" className="mt-2 text-base text-slate-600">{s.hint}</p>
           <div className="mt-5">
             {s.kind === 'areas' && (
               <div className="flex flex-wrap gap-2" role="group" aria-labelledby="q">
@@ -119,14 +119,14 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
               <ul className="space-y-4">
                 {g.areas.map((x) => (
                   <li key={x}>
-                    <label className="block"><span className="flex justify-between text-sm"><span>{x}</span><span className="tabular-nums text-slate-600">{a.q4?.[x] ?? 'not rated'}</span></span>
+                    <label className="block"><span className="flex justify-between text-base"><span>{x}</span><span className="tabular-nums text-slate-600">{a.q4?.[x] ?? 'not rated'}</span></span>
                       <input type="range" min="1" max="10" className="mt-2 w-full" aria-label={`${x}, 1 to 10`} value={a.q4?.[x] ?? 5} onChange={(e) => set('q4', { ...a.q4, [x]: +e.target.value })} /></label>
                   </li>
                 ))}
               </ul>
             )}
             {s.kind === 'triple' && [0, 1, 2].map((k) => (
-              <label key={k} className="mb-3 block text-sm">Goal {k + 1}
+              <label key={k} className="mb-3 block text-base">Goal {k + 1}
                 <input autoFocus={k === 0} className={`${input} mt-1 w-full`} maxLength={200} value={a.q10?.[k] || ''} onChange={(e) => { const v = [...(a.q10 || ['', '', ''])]; v[k] = e.target.value; set('q10', v) }} />
               </label>
             ))}
@@ -141,11 +141,11 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
                     if (cycle[t]) next[it] = cycle[t]; else delete next[it]
                     return (
                       <li key={it}><button type="button" className={`${chip(!!t)} w-full text-left`} aria-label={`${it}: ${t === 'x' ? 'excited' : t === 'o' ? 'obligation' : 'not marked'}. Tap to change.`} onClick={() => set('q11', next)}>
-                        <span className="mr-2">{t === 'x' ? '⚡ Excited' : t === 'o' ? '😐 Obligation' : '·'}</span>{chipLabel(it)}</button></li>
+                        <span className="mr-2">{t === 'x' ? 'Excited' : t === 'o' ? 'Obligation' : '·'}</span>{chipLabel(it)}</button></li>
                     )
                   })}
                 </ul>
-              ) : <p className="text-sm text-slate-600">Nothing to mark yet. Answer some earlier questions, or skip ahead.</p>
+              ) : <p className="text-base text-slate-600">Nothing to mark yet. Answer some earlier questions, or skip ahead.</p>
             })()}
           </div>
         </div>

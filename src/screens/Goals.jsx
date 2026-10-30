@@ -13,21 +13,21 @@ function Hobbies({ hobbies, setHobbies }) {
   }
   return (
     <section className={`${panel} mt-6`}>
-      <h2 className="text-lg font-semibold">Things I want to do for fun</h2>
-      <p className="mb-3 text-sm text-slate-600">Hobbies and things that make you happy. The AI agent schedules them between your tasks.</p>
+      <h2 className="text-base font-semibold">Things I want to do for fun</h2>
+      <p className="mb-3 text-base text-slate-600">Hobbies and things that make you happy. The AI agent schedules them between your tasks.</p>
       <form className="mb-3 flex gap-2" onSubmit={add}>
         <input className={`${input} min-w-0 flex-1`} placeholder="e.g. Play guitar" aria-label="New hobby" value={v} onChange={(e) => setV(e.target.value)} />
         <button className={`${btn} ${BLUE}`}>Add</button>
       </form>
       <ul className="flex flex-wrap gap-2">
         {hobbies.map((h) => (
-          <li key={h.id} className="flex items-center gap-1 rounded-full bg-white py-1 pl-4 pr-1 text-sm">
+          <li key={h.id} className="flex items-center gap-1 bg-white py-1 pl-4 pr-1 text-base">
             {h.title}
-            <button className="flex h-8 w-8 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" aria-label={`Remove ${h.title}`}
+            <button className="flex h-8 w-8 items-center justify-center text-slate-600 hover:bg-slate-100" aria-label={`Remove ${h.title}`}
               onClick={() => setHobbies(hobbies.filter((x) => x.id !== h.id))}>×</button>
           </li>
         ))}
-        {!hobbies.length && <li className="text-sm text-slate-600">Nothing yet. What would you do with a free hour?</li>}
+        {!hobbies.length && <li className="text-base text-slate-600">Nothing yet. What would you do with a free hour?</li>}
       </ul>
     </section>
   )
@@ -46,13 +46,13 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
   )
   if (!goals.length && !guide?.skipped) return (
     <div className={`${panel} mb-6`}>
-      <h2 className="text-lg font-semibold">Not sure what your goals are? Take the 10-minute guide</h2>
-      <p className="mb-3 text-sm text-slate-600">A few short questions, then the AI drafts goals you can edit before saving.</p>
+      <h2 className="text-base font-semibold">Not sure what your goals are? Take the 10-minute guide</h2>
+      <p className="mb-3 text-base text-slate-600">A few short questions, then the AI drafts goals you can edit before saving.</p>
       <div className="flex gap-2"><button className={`${btn} ${BLUE}`} onClick={() => onGuide('start')}>Start</button><button className={`${btn} ${ghost}`} onClick={setSkipped}>Skip</button></div>
     </div>
   )
   return (
-    <p className="mb-4 flex flex-wrap gap-x-4 text-sm">
+    <p className="mb-4 flex flex-wrap gap-x-4 text-base">
       <button className="min-h-11 text-accent underline" onClick={() => onGuide('start')}>{goals.length ? 'Discover more goals' : 'Take the 10-minute guide'}</button>
       {guide?.done && <button className="min-h-11 text-accent underline" onClick={() => onGuide('start')}>Retake the guide</button>}
     </p>
@@ -75,7 +75,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
     <>
       <GuideEntry goals={goals} guide={guide} onGuide={onGuide} setSkipped={() => onGuide('skip')} />
       {fresh?.offer && (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-pale p-4 text-sm">
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 bg-pale p-4 text-base">
           <span className="min-w-48 flex-1">Goals saved. Create tasks from your first steps?</span>
           <button className={`${btn} ${BLUE}`} onClick={onMakeTasks}>Create tasks</button>
           <button className={`${btn} hover:bg-white`} onClick={onDismissOffer}>No thanks</button>
@@ -89,7 +89,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
           </select>
           <input className={`${input} w-40`} list="goal-areas" placeholder="Area (optional)" aria-label="Area" value={d.area || ''} onChange={(e) => setD({ ...d, area: e.target.value || undefined })} />
           <datalist id="goal-areas">{areas.map((x) => <option key={x} value={x} />)}</datalist>
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-base">
             <input type="checkbox" checked={!!d.happiness} onChange={(e) => setD({ ...d, happiness: e.target.checked })} /> Happiness goal
           </label>
           <button className={`${btn} ${BLUE}`}>{d.id ? 'Save' : 'Add'}</button>
@@ -103,13 +103,13 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       )}
       <div className="flex flex-col items-center gap-2">
         {LEVELS.map((l, i) => (
-          <section key={l.name} className={`w-full ${l.w} ${l.cls} rounded-2xl p-5`}>
-            <h2 className="text-center text-lg font-semibold">{l.name} <span className="text-sm font-normal text-slate-800">{l.hint}</span></h2>
+          <section key={l.name} className={`w-full ${l.w} ${l.cls} p-5`}>
+            <h2 className="text-center text-base font-semibold">{l.name} <span className="text-base font-normal text-slate-800">{l.hint}</span></h2>
             <ul className="mt-3 space-y-2">
-              {!shown.some((g) => g.level === i) && <li className="text-center text-sm text-slate-800">No goals yet</li>}
+              {!shown.some((g) => g.level === i) && <li className="text-center text-base text-slate-800">No goals yet</li>}
               {shown.filter((g) => g.level === i).map((g) => (
-                <li key={g.id} className={`flex items-center justify-between gap-2 rounded-xl bg-white/85 px-4 py-2 transition ${fresh?.ids.includes(g.id) ? 'ring-2 ring-accent' : ''}`}>
-                  <span className="min-w-0 break-words">{g.top && <span aria-label="Top 3 goal">⭐ </span>}{g.title}{g.area && <span className={`ml-2 rounded-full px-2 text-xs ${areaTag(g.area)}`}>{g.area}</span>}{g.happiness && <span className="ml-2 rounded-full bg-pale px-2 text-xs">happiness</span>}</span>
+                <li key={g.id} className={`flex items-center justify-between gap-2 bg-yuki-0 px-4 py-2 ${fresh?.ids.includes(g.id) ? 'ring-2 ring-accent' : ''}`}>
+                  <span className="min-w-0 break-words">{g.top && <span aria-label="Top 3 goal" className="mr-2 bg-beni px-1 text-xs text-yuki-0">Top 3</span>}{g.title}{g.area && <span className={`ml-2 px-2 text-xs ${areaTag(g.area)}`}>{g.area}</span>}{g.happiness && <span className="ml-2 bg-pale px-2 text-xs">happiness</span>}</span>
                   <span className="flex shrink-0 gap-1">
                     <button className={`${btn} hover:bg-slate-100`} onClick={() => setD(g)}>Edit</button>
                     <button className={`${btn} text-danger hover:bg-slate-100`} onClick={() => setGoals(goals.filter((x) => x.id !== g.id))}>Delete</button>

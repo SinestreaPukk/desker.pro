@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { btn, BLUE, ghost } from './ui.js'
+import { btn, BLUE, ghost, input } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { uid } from './api.js'
+import { Avatar, AVATARS, DEFAULT_AVATAR } from './px.jsx'
+import { Icon } from './icons.jsx'
 
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
 const store = {
@@ -59,32 +61,43 @@ export default function Settings({ data, setData, row: inSidebar }) {
       setIncoming(Object.fromEntries(KEYS.filter((k) => d[k] !== undefined).map((k) => [k, d[k]])))
     } catch { setMsg('That file is not a Desker backup. Your data was not changed.') }
   }
-  const row = 'flex items-center justify-between gap-3 text-sm'
+  const row = 'flex items-center justify-between gap-3 text-base'
   return (
     <div className="relative shrink-0">
-      <button className={inSidebar ? 'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-slate-700 hover:bg-panel' : 'flex h-11 items-center gap-2 rounded-full px-4 text-sm text-slate-700 hover:bg-panel'} aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
+      <button className={`${btn} gap-2 ${inSidebar ? 'w-full justify-start' : ''}`} aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
         onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" /></svg>
+        <Icon name="Settings" />
         Settings
       </button>
       {open && (
-        <div className={`absolute z-40 w-72 ${inSidebar ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'} space-y-3 rounded-2xl bg-white p-3 shadow-lg border border-control`} role="dialog" aria-label="Settings">
+        <div className={`px-panel absolute z-40 w-72 ${inSidebar ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'} space-y-3 p-3`} role="dialog" aria-label="Settings">
           <label className={row}>Reminders
             <input type="checkbox" checked={rem} onChange={(e) => toggle(e.target.checked)} />
           </label>
-          <p className="text-xs text-slate-600">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
-          <hr className="border-black/5" />
-          <p className="text-xs text-slate-600">Your data lives on our server under an anonymous id tied to this browser. Export a backup to keep it safe or to move it.</p>
-          <div className="text-xs text-slate-600">
+          <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
+          <fieldset>
+            <legend>Your avatar</legend>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {AVATARS.map(([id, name]) => (
+                <label key={id} className="px-sunk flex cursor-pointer justify-center py-1 has-checked:outline-2 has-checked:outline-ink has-focus-visible:outline-2 has-focus-visible:outline-ink">
+                  <input type="radio" name="avatar" className="sr-only" checked={(data.avatar || DEFAULT_AVATAR) === id} onChange={() => setData((d) => ({ ...d, avatar: id }))} />
+                  <Avatar id={id} label={name} />
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <hr />
+          <p className="text-xs text-slate-700">Your data lives on our server under an anonymous id tied to this browser. Export a backup to keep it safe or to move it.</p>
+          <div className="text-xs text-slate-700">
             <p>Sync code (also your API key, see README). Keep it private; paste it on another device to open this workspace there.</p>
-            <input readOnly className="mt-1 w-full rounded-lg bg-panel px-2 py-1 font-mono" aria-label="Your sync code" value={uid} onFocus={(e) => e.target.select()} />
+            <input readOnly className={`${input} mt-1 w-full font-mono text-xs`} aria-label="Your sync code" value={uid} onFocus={(e) => e.target.select()} />
             <form className="mt-2 flex gap-2" onSubmit={(e) => {
               e.preventDefault()
               const c = e.target.code.value.trim()
               if (!/^[0-9a-f-]{36}$/.test(c)) return setMsg('That is not a sync code.')
               if (c !== uid && confirm('Switch to this workspace? Export a backup first if this device has data you want to keep.')) { localStorage.uid = c; location.reload() }
             }}>
-              <input name="code" className="min-w-0 flex-1 rounded-lg bg-panel px-2 py-1 font-mono" placeholder="Paste a sync code" aria-label="Sync code to use" />
+              <input name="code" className={`${input} min-w-0 flex-1 font-mono text-xs`} placeholder="Paste a sync code" aria-label="Sync code to use" />
               <button className={`${btn} ${ghost}`}>Use</button>
             </form>
           </div>
@@ -95,7 +108,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
             </label>
           </div>
           {incoming && (
-            <div role="alert" className="rounded-xl bg-amber/15 p-2 text-sm">
+            <div role="alert" className=" bg-yuki-1 p-2 text-base">
               Replace everything with this file ({incoming.tasks.length} tasks, {incoming.goals.length} goals)? This cannot be undone.
               <div className="mt-2 flex gap-2">
                 <button className={`${btn} ${BLUE}`} onClick={() => { setData(migrate(incoming)); setIncoming(null); setMsg('Backup restored.') }}>Replace</button>
@@ -103,7 +116,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
               </div>
             </div>
           )}
-          {msg && <p role="status" className="text-sm">{msg}</p>}
+          {msg && <p role="status" className="text-base">{msg}</p>}
         </div>
       )}
     </div>

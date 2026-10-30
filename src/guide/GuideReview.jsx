@@ -4,7 +4,7 @@ import { BLUE, btn, ghost, input, rowCard, LEVELS } from '../ui.js'
 import { areaTag } from './questions.js'
 
 const BADGE = ['Vision', 'Long', 'Mid', 'Short']
-const Tag = ({ a }) => <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${areaTag(a)}`}>{a}</span>
+const Tag = ({ a }) => <span className={` px-2.5 py-0.5 text-xs font-medium ${areaTag(a)}`}>{a}</span>
 
 function Card({ g, areas, patch, remove }) {
   const [rw, setRw] = useState(null) // { busy } | { title, why, firstStep } | { error }
@@ -15,13 +15,13 @@ function Card({ g, areas, patch, remove }) {
   return (
     <li className={`${rowCard} p-3`}>
       <div className="flex items-center gap-2">
-        {g.top && <span title="One of your top 3 this year" aria-label="Top 3 goal">⭐</span>}
-        <input autoFocus={!g.title} className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1 py-1 font-medium hover:border-control" aria-label="Goal title" placeholder="Describe the goal" value={g.title} onChange={(e) => patch({ title: e.target.value })} />
-        <span className="shrink-0 rounded-full bg-pale px-2.5 py-0.5 text-xs">{BADGE[g.level]}</span>
+        {g.top && <span title="One of your top 3 this year" aria-label="Top 3 goal" className="bg-beni px-1 text-xs text-yuki-0">Top 3</span>}
+        <input autoFocus={!g.title} className="min-w-0 flex-1 border border-transparent bg-transparent px-1 py-1 font-medium hover:border-control" aria-label="Goal title" placeholder="Describe the goal" value={g.title} onChange={(e) => patch({ title: e.target.value })} />
+        <span className="shrink-0 bg-pale px-2.5 py-0.5 text-xs">{BADGE[g.level]}</span>
       </div>
-      {g.why && <p className="mt-1 px-1 text-sm text-slate-600">{g.why}</p>}
-      {g.firstStep && <p className="px-1 text-sm">First step: {g.firstStep}</p>}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+      {g.why && <p className="mt-1 px-1 text-base text-slate-600">{g.why}</p>}
+      {g.firstStep && <p className="px-1 text-base">First step: {g.firstStep}</p>}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-base">
         <select className={`${input} !py-1`} aria-label="Level" value={g.level} onChange={(e) => patch({ level: +e.target.value })}>
           {LEVELS.slice(1).map((l, k) => <option key={l.name} value={k + 1}>{l.name}</option>)}
         </select>
@@ -30,11 +30,11 @@ function Card({ g, areas, patch, remove }) {
           {[...new Set([...areas, g.area].filter(Boolean))].map((x) => <option key={x}>{x}</option>)}
         </select>
         <label className="flex items-center gap-2"><input type="checkbox" checked={!!g.happiness} onChange={(e) => patch({ happiness: e.target.checked })} />Happiness</label>
-        <button className={`${btn} hover:bg-panel`} disabled={!g.title.trim() || rw?.busy} onClick={rewrite}>✨ Rewrite</button>
+        <button className={`${btn} hover:bg-panel`} disabled={!g.title.trim() || rw?.busy} onClick={rewrite}>Rewrite</button>
         <button className={`${btn} text-danger hover:bg-panel`} onClick={remove}>Delete</button>
       </div>
       {rw && (
-        <div className="mt-2 rounded-xl bg-panel p-3 text-sm" role="status">
+        <div className="mt-2 bg-panel p-3 text-base" role="status">
           {rw.busy ? 'Rewriting…' : rw.error ? <>{rw.error} <button className="underline" onClick={() => setRw(null)}>Dismiss</button></> : (
             <>
               <p className="text-slate-600">Before: {g.title}</p>
@@ -62,14 +62,14 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
   return (
     <>
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
-        <h1 className="text-lg font-semibold">Review your goals</h1>
+        <h1 className="text-base font-semibold">Review your goals</h1>
         <button className={`${btn} hover:bg-panel`} onClick={onClose}>Save &amp; close</button>
       </header>
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="mx-auto max-w-2xl space-y-6">
           <section>
-            <label className="text-sm text-slate-600" htmlFor="vision">Your vision</label>
-            <textarea id="vision" rows={2} className={`${input} mt-1 w-full resize-y font-serif text-xl`} maxLength={300} placeholder="One sentence about the life you want" value={vision} onChange={(e) => setResult((r) => ({ ...r, vision: e.target.value }))} />
+            <label className="text-base text-slate-600" htmlFor="vision">Your vision</label>
+            <textarea id="vision" rows={2} className={`${input} mt-1 w-full resize-y font-serif text-2xl`} maxLength={300} placeholder="One sentence about the life you want" value={vision} onChange={(e) => setResult((r) => ({ ...r, vision: e.target.value }))} />
             {summary && <p className="mt-2 text-slate-700">{summary}</p>}
           </section>
           <div className="flex gap-2" role="group" aria-label="View">
@@ -78,8 +78,8 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
           {view === 'area' ? (
             <div className="space-y-3">
               {[...groups, ...(goals.some((g) => !g.area) ? [''] : [])].map((area) => (
-                <details key={area} open className="rounded-2xl bg-panel p-3">
-                  <summary className="flex cursor-pointer items-center gap-2 font-medium">{area ? <Tag a={area} /> : 'No area'}<span className="text-sm font-normal text-slate-600">{goals.filter((g) => (g.area || '') === area).length === 1 ? '1 goal' : `${goals.filter((g) => (g.area || '') === area).length} goals`}</span></summary>
+                <details key={area} open className=" bg-panel p-3">
+                  <summary className="flex cursor-pointer items-center gap-2 font-medium">{area ? <Tag a={area} /> : 'No area'}<span className="text-base font-normal text-slate-600">{goals.filter((g) => (g.area || '') === area).length === 1 ? '1 goal' : `${goals.filter((g) => (g.area || '') === area).length} goals`}</span></summary>
                   <ul className="mt-3 space-y-2">
                     {goals.filter((g) => (g.area || '') === area).map((g) => <Card key={g.id} g={g} areas={areas} patch={patchGoal(g.id)} remove={removeGoal(g.id)} />)}
                   </ul>
@@ -89,14 +89,14 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2" aria-label="Pyramid preview">
-              <section className={`w-full ${LEVELS[0].w} ${LEVELS[0].cls} rounded-2xl p-4 text-center`}><h2 className="font-semibold">Vision</h2><p className="text-sm">{vision || 'No vision yet'}</p></section>
+              <section className={`w-full ${LEVELS[0].w} ${LEVELS[0].cls} p-4 text-center`}><h2 className="font-semibold">Vision</h2><p className="text-base">{vision || 'No vision yet'}</p></section>
               {LEVELS.slice(1).map((l, k) => (
-                <section key={l.name} className={`w-full ${l.w} ${l.cls} rounded-2xl p-4`}>
-                  <h2 className="text-center font-semibold">{l.name} <span className="text-sm font-normal">{l.hint}</span></h2>
+                <section key={l.name} className={`w-full ${l.w} ${l.cls} p-4`}>
+                  <h2 className="text-center font-semibold">{l.name} <span className="text-base font-normal">{l.hint}</span></h2>
                   <ul className="mt-2 space-y-2">
-                    {!goals.some((g) => g.level === k + 1) && <li className="text-center text-sm">No goals yet</li>}
+                    {!goals.some((g) => g.level === k + 1) && <li className="text-center text-base">No goals yet</li>}
                     {goals.filter((g) => g.level === k + 1).map((g) => (
-                      <li key={g.id} className="flex items-center gap-2 rounded-xl bg-white/85 px-3 py-2 text-sm">{g.top && <span aria-label="Top 3 goal">⭐</span>}<span className="min-w-0 flex-1 break-words">{g.title}{g.happiness && <span className="ml-2 rounded-full bg-pale px-2 text-xs">happiness</span>}</span>{g.area && <Tag a={g.area} />}</li>
+                      <li key={g.id} className="flex items-center gap-2 bg-yuki-0 px-3 py-2 text-base">{g.top && <span aria-label="Top 3 goal" className="bg-beni px-1 text-xs text-yuki-0">Top 3</span>}<span className="min-w-0 flex-1 break-words">{g.title}{g.happiness && <span className="ml-2 bg-pale px-2 text-xs">happiness</span>}</span>{g.area && <Tag a={g.area} />}</li>
                     ))}
                   </ul>
                 </section>
@@ -105,7 +105,7 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
           )}
           <section>
             <h2 className="font-semibold">Let go</h2>
-            <p className="text-sm text-slate-600">A reminder of what you will stop doing. Not saved as goals.</p>
+            <p className="text-base text-slate-600">A reminder of what you will stop doing. Not saved as goals.</p>
             <ul className="mt-2 space-y-2">
               {letGo.map((x, k) => (
                 <li key={k} className="flex gap-2">

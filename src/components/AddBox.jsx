@@ -72,8 +72,8 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
 
   return (
     <form className={`${panel} group mb-4`} onSubmit={add}>
-      <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 rounded-full bg-white p-1">
-        {['Deadline', 'Task'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary font-medium text-ink' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
+      <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 bg-white p-1">
+        {['Deadline', 'Task'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary text-yuki-0' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
       </div>
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder={isDl ? 'Deadline, e.g. "Statics midterm Monday 3pm"' : 'What needs doing? e.g. "Call dentist tomorrow 3pm"'} aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />
@@ -99,23 +99,23 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
         <div className={label}>Hours I need
           <div className="flex gap-1">
             <input type="number" min="0" step="0.5" className={`${ctl} w-24`} aria-label="Hours I need" placeholder={parsed?.hours ? String(parsed.hours) : 'Not sure'} value={f.hours} onChange={(e) => set({ hours: e.target.value })} />
-            <button type="button" className={`${btn} ${ghost} h-10`} disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : '✨ Estimate'}</button>
+            <button type="button" className={`${btn} ${ghost} h-10`} disabled={!parsed || est?.busy} onClick={() => ask()}>{est?.busy ? 'Thinking…' : 'Estimate'}</button>
           </div>
         </div>
         {(isDl ? projects.length > 0 : deadlines.length > 0 || projects.length > 0) && (
           <label className={label}>Belongs to
             <select className={ctl} value={f.belongs} onChange={(e) => set({ belongs: e.target.value })}>
               <option value="">Nothing</option>
-              {!isDl && deadlines.some((d) => !d.done) && <optgroup label="Deadlines">{deadlines.filter((d) => !d.done).map((d) => <option key={d.id} value={`d:${d.id}`}>{d.title} · {fmtDate(d.date)}</option>)}</optgroup>}
+              {!isDl && deadlines.some((d) => !d.done) && <optgroup label="Deadlines">{deadlines.filter((d) => !d.done).map((d) => <option key={d.id} value={`d:${d.id}`}>{d.title}, {fmtDate(d.date)}</option>)}</optgroup>}
               {projects.length > 0 && <optgroup label="Projects">{projects.map((p) => <option key={p.id} value={`p:${p.id}`}>{p.title}</option>)}</optgroup>}
             </select>
           </label>
         )}
       </div>
-      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
-      {isDl && parsed && !due && <p className="mt-2 text-sm text-slate-600">Pick a date (or type one, like "Monday") to add the deadline.</p>}
+      {parsed && (due || start || hours) && <p className="mt-2 text-base text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(', ')}</p>}
+      {isDl && parsed && !due && <p className="mt-2 text-base text-slate-600">Pick a date (or type one, like "Monday") to add the deadline.</p>}
       {est && !est.busy && (
-        <div className="mt-3 rounded-xl bg-pale p-3 text-sm" role="status">
+        <div className="mt-3 bg-pale p-3 text-base" role="status">
           {est.error && <p className="text-danger">{est.error}</p>}
           {est.question && (
             <div>
@@ -130,7 +130,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           {est.out && (
             <div>
               <p>{est.out.summary}</p>
-              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className="rounded-lg bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
+              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className=" bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? `, by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
               <div className="mt-2 flex flex-wrap gap-2">
                 {Number.isFinite(est.out.hours) && <button type="button" className={`${btn} ${BLUE}`} onClick={() => { set({ hours: String(est.out.hours) }); setEst(null) }}>Use {est.out.hours}h</button>}
                 {est.out.options.length > 1 && <button type="button" className={`${btn} ${ghost}`} onClick={steps}>Add as {est.out.options.length} steps</button>}

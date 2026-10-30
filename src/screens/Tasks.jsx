@@ -12,14 +12,14 @@ import { post } from '../api.js'
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
 // The Eisenhower matrix and AI sorting are one switch away.
 function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse, split, dismiss }) {
-  const field = 'flex flex-col gap-1 text-sm text-slate-600'
+  const field = 'flex flex-col gap-1 text-base text-slate-600'
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto bg-white p-5 md:inset-y-0 md:left-auto md:w-[26rem] md:border-l md:border-line" role="dialog" aria-label="Task details" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className="mb-4 flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} />{t.done ? 'Done' : 'Mark done'}</label>
+        <label className="flex items-center gap-2 text-base"><input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} />{t.done ? 'Done' : 'Mark done'}</label>
         <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>
       </div>
-      <input className={`${input} w-full !text-lg font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
+      <input className={`${input} w-full !text-base font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
       <div className="mt-4 grid grid-cols-2 gap-3">
         <label className={field}>Due date<input type="date" className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value || undefined })} /></label>
         <label className={field}>Repeat
@@ -30,16 +30,16 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
         <div className={`${field} col-span-2`}>Hours I need
           <div className="flex gap-2">
             <input type="number" min="0" step="0.5" className={`${input} w-28`} aria-label="Hours I need" placeholder="Not sure" value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />
-            <button type="button" className={`${btn} ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : '✨ Estimate'}</button>
+            <button type="button" className={`${btn} ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : 'Estimate'}</button>
           </div>
         </div>
       </div>
-      {bd?.error && <p className="mt-2 text-sm text-danger">{bd.error}</p>}
-      {bd?.note && <p className="mt-2 text-sm text-slate-700">{bd.note}</p>}
+      {bd?.error && <p className="mt-2 text-base text-danger">{bd.error}</p>}
+      {bd?.note && <p className="mt-2 text-base text-slate-700">{bd.note}</p>}
       {bd?.out && (
-        <div className="mt-2 rounded-2xl bg-panel p-3 text-sm">
+        <div className="mt-2 bg-panel p-3 text-base">
           <p>{bd.out.summary} This needs {bd.out.options.length} tasks. Split the work?</p>
-          <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
+          <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className=" bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? `, by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
           <div className="mt-2 flex gap-2">
             <button className={`${btn} ${BLUE}`} onClick={() => split(t, bd.out)}>Yes, split</button>
             <button className={`${btn} ${ghost}`} onClick={() => dismiss(t, bd.out)}>No, keep as one</button>
@@ -47,7 +47,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
         </div>
       )}
       <details className="mt-4">
-        <summary className="cursor-pointer text-sm text-accent">More options</summary>
+        <summary className="cursor-pointer text-base text-accent">More options</summary>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className={field}>Starts (for ongoing work)<input type="date" className={input} max={t.due || undefined} value={t.from || ''} onChange={(e) => update(t.id, { from: e.target.value || undefined })} /></label>
           <label className={field}>Do it on<input type="date" className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
@@ -64,7 +64,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
               update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId } : { deadlineId: undefined })
             }}>
               <option value="">None</option>
-              {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title} · {fmtDate(d.date)}</option>)}
+              {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title}, {fmtDate(d.date)}</option>)}
             </select>
           </label>
         </div>
@@ -167,7 +167,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
           const n = tasks.filter((t) => inList(t, id, today)).length
           return (
             <button key={id} aria-current={list === id ? 'page' : undefined} onClick={() => setList(id)}
-              className={`${btn} flex shrink-0 items-center justify-between gap-3 !rounded-xl text-left ${list === id ? 'bg-pale font-medium text-ink' : 'text-slate-700 hover:bg-panel'}`}>
+              className={`${btn} flex shrink-0 items-center justify-between gap-3 ! text-left ${list === id ? 'bg-pale font-medium text-ink' : 'text-slate-700 hover:bg-panel'}`}>
               <span className="truncate">{name}</span>{id !== 'done' && n > 0 && <span className="text-xs text-slate-500">{n}</span>}
             </button>
           )
@@ -176,7 +176,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       <div className="min-w-0">
         {shownDeadlines.length > 0 && (
           <details open className="mb-4">
-            <summary className="cursor-pointer text-sm font-semibold">Deadlines <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
+            <summary className="cursor-pointer text-base font-semibold">Deadlines <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
             <ul className="mt-2 space-y-3">
               {shownDeadlines.map((dl) => (
                 <DeadlineCard key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
@@ -188,11 +188,11 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
         )}
         {groups.map((g) => (
           <details key={g.name} open className="mb-4">
-            <summary className="cursor-pointer text-sm font-semibold">{g.name} <span className="font-normal text-slate-500">{g.tasks.length}</span></summary>
+            <summary className="cursor-pointer text-base font-semibold">{g.name} <span className="font-normal text-slate-500">{g.tasks.length}</span></summary>
             <ul className="mt-2 space-y-2">{g.tasks.map((t) => row(t))}</ul>
           </details>
         ))}
-        {!groups.length && !shownDeadlines.length && <p className="rounded-2xl bg-panel p-6 text-center text-sm text-slate-600">
+        {!groups.length && !shownDeadlines.length && <p className=" bg-panel p-6 text-center text-base text-slate-600">
           {list === 'done' ? 'Nothing completed yet.' : list === 'plan' ? 'Nothing planned. Add a task above; tasks without a date wait in Inbox.' : list === 'inbox' ? 'Inbox is empty. Tasks without a date or project land here.' : 'No tasks here. Type one above and press Add.'}
         </p>}
       </div>
@@ -205,9 +205,9 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
     <>
       <AddBox inputRef={quickRef} tasks={tasks} setTasks={setTasks} deadlines={deadlines} setDeadlines={setDeadlines} projects={projects} goals={goals} ratio={ratioOf(tasks)} list={list} setList={setList}>
         <details className="mt-3">
-          <summary className="cursor-pointer text-sm text-accent">Add many at once</summary>
+          <summary className="cursor-pointer text-base text-accent">Add many at once</summary>
           <div className="mt-3">
-            <label className="mb-1 block text-sm text-slate-600" htmlFor="dump">What's on your mind? One task per line.</label>
+            <label className="mb-1 block text-base text-slate-600" htmlFor="dump">What's on your mind? One task per line.</label>
             <textarea id="dump" className={`${input} w-full`} rows={4} placeholder={'Study for statics quiz\nCall the dentist\nBuy a birthday gift'} value={dump} onChange={(e) => setDump(e.target.value)} />
             <button type="button" className={`${btn} mt-2 ${BLUE}`} disabled={!lines.length} onClick={addDump}>{lines.length > 1 ? `Add ${lines.length} tasks` : 'Add task'}</button>
           </div>
@@ -217,7 +217,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       <Syllabus deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} />
 
       {added > 0 && (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-pale p-4 text-sm">
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 bg-pale p-4 text-base">
           <span>Added {added} task{added === 1 ? '' : 's'}. Sort them into the matrix?</span>
           <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => run()}>{busy ? 'Sorting…' : 'Sort with AI'}</button>
           <button className={`${btn} hover:bg-white`} onClick={() => setAdded(0)}>Later</button>
@@ -225,7 +225,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="View" className="flex gap-1 rounded-full bg-panel p-1">
+        <div role="group" aria-label="View" className="flex gap-1 bg-panel p-1">
           {['List', 'Matrix'].map((v) => (
             <button key={v} aria-pressed={view === v} className={`${btn} !py-1 ${view === v ? 'bg-white font-medium text-ink' : 'text-slate-600'}`} onClick={() => setView(v)}>{v}</button>
           ))}
@@ -233,39 +233,39 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
         {view === 'Matrix' && <>
         <button className={`${btn} ${BLUE}`} disabled={!canSort} onClick={() => run()}>{busy ? 'Prioritising…' : 'Prioritise with AI'}</button>
         {open.some((t) => t.manual) && <button className={`${btn} ${ghost}`} disabled={busy} onClick={() => run(true)}>Re-rank everything</button>}
-        {!busy && !canSort && <span className="text-sm text-slate-600">{all.length ? 'Everything is already placed.' : 'Add a task first.'}</span>}
-        {!goals.length && <button className="text-sm text-accent underline" onClick={() => goTab('Goals')}>Link goals for better ranking.</button>}
+        {!busy && !canSort && <span className="text-base text-slate-600">{all.length ? 'Everything is already placed.' : 'Add a task first.'}</span>}
+        {!goals.length && <button className="text-base text-accent underline" onClick={() => goTab('Goals')}>Link goals for better ranking.</button>}
         </>}
-        {error && <span className="text-sm text-danger">{error}</span>}
+        {error && <span className="text-base text-danger">{error}</span>}
       </div>
-      {stats.week > 0 && <p className="mb-3 text-sm text-slate-600">{stats.week} task{stats.week === 1 ? '' : 's'} done this week{stats.streak > 1 ? ` · ${stats.streak}-day streak` : ''}</p>}
+      {stats.week > 0 && <p className="mb-3 text-base text-slate-600">{stats.week} task{stats.week === 1 ? '' : 's'} done this week{stats.streak > 1 ? `, ${stats.streak}-day streak` : ''}</p>}
 
       {view === 'Matrix' ? (
         <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Q.map((q, i) => {
             const rows = open.filter((t) => t.q === i)
             return (
-              <section key={q.name} className={`${q.cls} rounded-2xl p-3 ${over === i ? 'outline outline-2 outline-accent' : ''}`}
+              <section key={q.name} className={`${q.cls} p-3 ${over === i ? 'outline outline-2 outline-accent' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(i) }} onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = +e.dataTransfer.getData('text/plain'); if (tasks.some((t) => t.id === id)) move(id, i) }}>
-                <h2 className="flex items-center gap-2 px-1 text-sm font-semibold"><span className={`h-2.5 w-2.5 rounded-full ${q.dot}`} aria-hidden="true" />{q.name}<span className="ml-auto rounded-full bg-white px-2 text-xs font-normal">{rows.length}</span></h2>
+                <h2 className="flex items-center gap-2 px-1 text-base font-semibold"><span className={`h-2.5 w-2.5 ${q.dot}`} aria-hidden="true" />{q.name}<span className="ml-auto bg-white px-2 text-xs font-normal">{rows.length}</span></h2>
                 <p className="mt-1 px-1 text-xs text-slate-600">{q.hint}</p>
-                <ul className="mt-3 space-y-2">{rows.map((t) => row(t, true))}{!rows.length && <li className="text-sm text-slate-600">Nothing here</li>}</ul>
+                <ul className="mt-3 space-y-2">{rows.map((t) => row(t, true))}{!rows.length && <li className="text-base text-slate-600">Nothing here</li>}</ul>
               </section>
             )
           })}
         </div>
       ) : listView}
-      {unranked.length > 0 && view === 'Matrix' && <p className="mt-4 text-sm text-slate-600">{unranked.length} task{unranked.length === 1 ? '' : 's'} waiting for AI prioritisation: {unranked.slice(0, 3).map((t) => t.title).join(', ')}{unranked.length > 3 ? '…' : ''}</p>}
+      {unranked.length > 0 && view === 'Matrix' && <p className="mt-4 text-base text-slate-600">{unranked.length} task{unranked.length === 1 ? '' : 's'} waiting for AI prioritisation: {unranked.slice(0, 3).map((t) => t.title).join(', ')}{unranked.length > 3 ? '…' : ''}</p>}
 
       {view === 'Matrix' && doneList.length > 0 && (
         <details className="mt-6">
-          <summary className="cursor-pointer text-sm font-semibold">Done ({doneList.length})</summary>
+          <summary className="cursor-pointer text-base font-semibold">Done ({doneList.length})</summary>
           <ul className="mt-2 space-y-2">{doneList.map(row)}</ul>
         </details>
       )}
       {selected && <Detail t={selected} projects={projects} deadlines={deadlines} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
-      <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-lg md:hidden`} aria-label="Add a task"
+      <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center text-2xl md:hidden`} aria-label="Add a task"
         onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); quickRef.current?.focus() }}>+</button>
     </>
   )

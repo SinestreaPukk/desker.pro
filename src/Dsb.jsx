@@ -8,9 +8,9 @@ const per = (v, d) => (d ? v / d : 0)
 
 const Tile = ({ label, value, sub }) => (
   <div className={`${panel} !p-4`}>
-    <p className="text-sm text-slate-600">{label}</p>
-    <p className="mt-1 text-3xl tabular-nums">{value}</p>
-    {sub && <p className="mt-1 text-sm text-slate-600">{sub}</p>}
+    <p className="text-base text-slate-600">{label}</p>
+    <p className="mt-1 text-2xl tabular-nums">{value}</p>
+    {sub && <p className="mt-1 text-base text-slate-600">{sub}</p>}
   </div>
 )
 
@@ -39,7 +39,7 @@ export default function Dsb() {
       <form className="flex flex-col gap-3" onSubmit={load}>
         <input type="password" autoFocus className={input} aria-label="Password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
         <button className={`${btn} ${BLUE}`} disabled={busy || !pw}>{busy ? 'Checking…' : 'Open'}</button>
-        {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="text-base text-danger">{error}</p>}
       </form>
     </main>
   )
@@ -58,7 +58,7 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">People and content</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data · ${c.active7} active in 7 days · anonymous browsers`} />
+        <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data, ${c.active7} active in 7 days, anonymous browsers`} />
         <Tile label="Tasks" value={n(c.tasks)} sub={`${n(c.doneTasks)} done`} />
         <Tile label="Projects" value={n(c.projects)} />
         <Tile label="Deadlines" value={n(c.deadlines)} />
@@ -68,9 +68,9 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">AI usage so far</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Tokens used" value={n(tokens)} sub={`${n(ai.input)} in · ${n(ai.output)} out`} />
+        <Tile label="Tokens used" value={n(tokens)} sub={`${n(ai.input)} in, ${n(ai.output)} out`} />
         <Tile label="Estimated cost" value={usd(ai.cost)} sub="At list price, no discounts" />
-        <Tile label="AI calls" value={n(ai.calls)} sub={`${n(per(tokens, ai.calls))} tokens per call · ${usd(per(ai.cost, ai.calls))} per call`} />
+        <Tile label="AI calls" value={n(ai.calls)} sub={`${n(per(tokens, ai.calls))} tokens per call, ${usd(per(ai.cost, ai.calls))} per call`} />
         <Tile label="Users of AI" value={n(ai.users)} sub={`${usd(per(ai.cost, ai.users))} per user`} />
       </div>
 
@@ -83,7 +83,7 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">By feature</h2>
       <div className={`${panel} mb-8 overflow-x-auto !p-0`}>
-        <table className="w-full min-w-[640px] text-sm">
+        <table className="w-full min-w-[640px] text-base">
           <thead className="text-slate-600"><tr><th className={th}>Feature</th><th className={th}>Calls</th><th className={th}>Avg in</th><th className={th}>Avg out</th><th className={th}>Avg tokens</th><th className={th}>Avg cost</th><th className={th}>Total tokens</th><th className={th}>Total cost</th></tr></thead>
           <tbody>
             {kinds.map((k) => (
@@ -106,16 +106,16 @@ export default function Dsb() {
       <h2 className="mb-2 font-semibold">Last 14 days</h2>
       <div className={panel}>
         {daily.length ? (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-1 text-base">
             {daily.map((d) => (
               <li key={d.day} className="flex items-center gap-3">
                 <span className="w-24 shrink-0 text-slate-600">{d.day}</span>
-                <span className="h-4 rounded-full bg-primary" style={{ width: `${Math.max(2, (d.tokens / max) * 55)}%` }} aria-hidden="true" />
-                <span className="tabular-nums">{n(d.tokens)} tokens · {d.calls} calls · {usd(d.cost)}</span>
+                <span className="h-4 bg-primary" style={{ width: `${Math.max(2, (d.tokens / max) * 55)}%` }} aria-hidden="true" />
+                <span className="tabular-nums">{n(d.tokens)} tokens, {d.calls} calls, {usd(d.cost)}</span>
               </li>
             ))}
           </ul>
-        ) : <p className="text-sm text-slate-600">Nothing yet.</p>}
+        ) : <p className="text-base text-slate-600">Nothing yet.</p>}
       </div>
     </main>
   )

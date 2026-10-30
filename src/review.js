@@ -1,7 +1,7 @@
 import { LEVELS } from './ui.js'
 
 export const SLICES = [...LEVELS.map((l) => l.name), 'Fun', 'No goal']
-export const SLICE_COLOR = { Vision: '#af52de', 'Long-term': '#5856d6', 'Mid-term': '#007aff', 'Short-term': '#5ac8fa', Fun: '#34c759', 'No goal': '#8e8e93' }
+export const SLICE_COLOR = { Vision: '#3B4262', 'Long-term': '#5A6283', 'Mid-term': '#5A8AA3', 'Short-term': '#8DBCCB', Fun: '#7E9C8F', 'No goal': '#8394AE' } // yuki16: yoru-1, yoru-0, kori-2, kori-1, matsu-0, yuki-3
 const day = (d) => d.toLocaleDateString('sv')
 const zero = () => Object.fromEntries(SLICES.map((s) => [s, 0]))
 const h1 = (n) => Math.round(n * 10) / 10

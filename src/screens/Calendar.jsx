@@ -8,11 +8,11 @@ import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, H
 function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
   const goal = goals.find((g) => g.id === t.goalId)
   const dl = deadlines.find((x) => x.id === t.deadlineId)
-  const lbl = 'flex flex-col gap-1 text-sm'
+  const lbl = 'flex flex-col gap-1 text-base'
   return (
-    <section className={`mt-4 rounded-2xl p-3 border border-line ${color(t)} ${t.fun || quadrant(t) !== undefined ? '' : 'border-slate-200'}`} aria-label="Task details">
+    <section className={`mt-4 p-3 border border-line ${color(t)} ${t.fun || quadrant(t) !== undefined ? '' : 'border-slate-200'}`} aria-label="Task details">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">{t.fun ? 'Fun session' : 'Task details'}</h2>
+        <h2 className="text-base font-semibold">{t.fun ? 'Fun session' : 'Task details'}</h2>
         <button className={`${btn} hover:bg-white`} onClick={close}>Close</button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -40,15 +40,15 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
           <input type="range" min="0" max="100" value={t.readiness ?? 50} onChange={(e) => update(t.id, { readiness: +e.target.value })} />
         </label>}
         <div className={lbl}><Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
-        <label className="flex items-center gap-2 self-end text-sm">
+        <label className="flex items-center gap-2 self-end text-base">
           <input type="checkbox" checked={t.done} onChange={() => update(t.id, { done: !t.done })} /> Done
         </label>
       </div>
-      {t.spent > 0 && <p className="mt-3 text-sm">Focused so far: {Math.round(t.spent * 60)} min{t.hours ? ` of ${Math.round(t.hours * 60)} min estimated` : ''}</p>}
-      {dl && <p className="mt-3 text-sm">For deadline: <b>{dl.title}</b> ({dl.date})</p>}
+      {t.spent > 0 && <p className="mt-3 text-base">Focused so far: {Math.round(t.spent * 60)} min{t.hours ? ` of ${Math.round(t.hours * 60)} min estimated` : ''}</p>}
+      {dl && <p className="mt-3 text-base">For deadline: <b>{dl.title}</b> ({dl.date})</p>}
       {!t.fun && t.reason && (
-        <p className="mt-3 text-sm"><b>{Q[quadrant(t)].name}</b>
-          <span className="text-slate-600"> · {goal ? `${LEVELS[goal.level].name} goal: ${goal.title}` : 'No matching goal'}</span><br />{t.reason}</p>
+        <p className="mt-3 text-base"><b>{Q[quadrant(t)].name}</b>
+          <span className="text-slate-600">, {goal ? `${LEVELS[goal.level].name} goal: ${goal.title}` : 'No matching goal'}</span><br />{t.reason}</p>
       )}
       {!t.done && <button className={`${btn} mt-3 mr-2 ${BLUE}`} onClick={() => onStart(t)}>Start focus</button>}
       <button className={`${btn} mt-3 text-danger hover:bg-white`} onClick={() => { remove(t.id); close() }}>Delete</button>
@@ -74,15 +74,15 @@ function CalendarSync({ data, setData }) {
   }
   const link = `${btn} inline-flex items-center ${ghost}`
   return (
-    <details className="mb-4 rounded-2xl bg-panel p-4">
+    <details className="mb-4 bg-panel p-4">
       <summary className="cursor-pointer font-semibold">
         Connect your calendar
-        {data.sync && <span className="ml-2 text-sm font-normal text-slate-600">· {(data.busy || []).length} events imported</span>}
+        {data.sync && <span className="ml-2 text-base font-normal text-slate-600">· {(data.busy || []).length} events imported</span>}
       </summary>
       <div className="mt-3 grid gap-4 sm:grid-cols-2">
         <section>
-          <h3 className="mb-1 text-sm font-semibold">Send Desker to your calendar</h3>
-          <p className="mb-2 text-sm text-slate-600">Subscribe once and your tasks, planned days and deadlines show up in Google Calendar, Apple Calendar, Outlook or any app that takes a calendar link.</p>
+          <h3 className="mb-1 text-base font-semibold">Send Desker to your calendar</h3>
+          <p className="mb-2 text-base text-slate-600">Subscribe once and your tasks, planned days and deadlines show up in Google Calendar, Apple Calendar, Outlook or any app that takes a calendar link.</p>
           <div className="flex flex-wrap gap-2">
             <a className={link} href={`https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(webcal)}`} target="_blank" rel="noreferrer">Google Calendar</a>
             <a className={link} href={webcal}>Apple / Outlook</a>
@@ -93,8 +93,8 @@ function CalendarSync({ data, setData }) {
           <p className="mt-2 text-xs text-slate-600">Keep this link private: anyone with it can see your tasks. Google refreshes subscribed calendars about once a day.</p>
         </section>
         <section>
-          <h3 className="mb-1 text-sm font-semibold">Bring your calendar into Desker</h3>
-          <p className="mb-2 text-sm text-slate-600">The AI agent plans around your meetings and classes. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file.</p>
+          <h3 className="mb-1 text-base font-semibold">Bring your calendar into Desker</h3>
+          <p className="mb-2 text-base text-slate-600">The AI agent plans around your meetings and classes. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file.</p>
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) run({ url: url.trim() }) }}>
             <input className={`${input} min-w-0 flex-1`} aria-label="Calendar link" placeholder="https://… or webcal://…" value={url} onChange={(e) => setUrl(e.target.value)} />
             <button className={`${btn} ${BLUE}`} disabled={loading || !url.trim()}>{loading ? 'Reading…' : 'Import'}</button>
@@ -110,15 +110,15 @@ function CalendarSync({ data, setData }) {
           <p className="mt-2 text-xs text-slate-600">Your link is saved so we can refresh it. Imported events are only used to plan around.</p>
         </section>
       </div>
-      {msg && <p role="status" className="mt-3 text-sm">{msg}</p>}
+      {msg && <p role="status" className="mt-3 text-base">{msg}</p>}
     </details>
   )
 }
 
 const Key = () => (
-  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-700" aria-label="Colour key">
-    {[['bg-[#eef3fd]', 'Task (tint shows its box)'], ['bg-pale', 'For fun'], ['bg-[#f6d5cf]', 'Deadline'], ['bg-stone/20', 'Calendar event']].map(([c, l]) => (
-      <li key={l} className="flex items-center gap-2"><span className={`h-3 w-3 rounded-sm border border-control ${c}`} aria-hidden="true" />{l}</li>
+  <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base text-slate-700" aria-label="Colour key">
+    {[['bg-yuki-1', 'Task (tint shows its box)'], ['bg-pale', 'For fun'], ['bg-beni', 'Deadline'], ['bg-yuki-1', 'Calendar event']].map(([c, l]) => (
+      <li key={l} className="flex items-center gap-2"><span className={`h-3 w-3 border border-control ${c}`} aria-hidden="true" />{l}</li>
     ))}
   </ul>
 )
@@ -140,7 +140,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
   const update = (id, patch) => setTasks(tasks.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   const chip = (t) => (
     <button key={t.id} title={t.title} onClick={() => setSel(t.id)}
-      className={`chip block w-full truncate rounded px-1 text-left text-xs ${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? 'ring-2 ring-slate-800' : ''}`}>
+      className={`chip block w-full truncate px-1 text-left text-xs ${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? 'ring-2 ring-slate-800' : ''}`}>
       {t.title}
     </button>
   )
@@ -158,13 +158,13 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     }
     for (const x of deadlines) {
       if (x.date !== k) continue
-      const hm = HM.exec(x.time || ''), cls = 'bg-[#f6d5cf] font-medium text-[#7a1a14]', label = `Due: ${x.title}`
+      const hm = HM.exec(x.time || ''), cls = 'bg-beni text-yuki-0', label = `Due: ${x.title}`
       if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `d${x.id}`, label, s, e: s + 30, cls, title: `${x.time} ${label}` }) }
       else allDay.push({ id: `d${x.id}`, label, cls })
     }
     ;(data.busy || []).forEach((x, j) => {
       if (evDay(x) !== k) return
-      const cls = 'bg-stone/20 text-slate-700'
+      const cls = 'bg-yuki-1 text-slate-700'
       if (x.d) return allDay.push({ id: `e${j}`, label: x.t, cls })
       const s = minutes(x.s), e = new Date(x.e).toLocaleDateString('sv') === k ? minutes(x.e) : 1440
       blocks.push({ id: `e${j}`, label: x.t, s, e: e > s ? e : s + 30, cls, title: `${hhmm(x.s)}-${hhmm(x.e)} ${x.t}` })
@@ -185,9 +185,9 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
         <button aria-label={`Next ${view}`} className={`${btn} ${ghost}`} onClick={() => shift(1)}>→</button>
       </div>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex gap-1 rounded-full border border-line bg-white p-1" role="group" aria-label="Calendar view">
+        <div className="flex gap-1 border border-line bg-white p-1" role="group" aria-label="Calendar view">
           {VIEWS.map((v) => (
-            <button key={v} className={`${btn} !px-3 !py-1 capitalize !transition-none ${view === v ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>
+            <button key={v} className={`${btn} !px-3 !py-1 capitalize ! ${view === v ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>
           ))}
         </div>
         <span className="flex gap-2">
@@ -215,17 +215,17 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           const limit = key(d) === today && freeToday != null ? freeToday : freeHours // today's own number wins
           const hrs = day.reduce((n, t) => n + (t.done ? 0 : t.hours || 0), 0)
           return (
-            <div key={i} className={`min-h-16 rounded p-1 ${d ? 'border border-line bg-white' : ''} ${d && key(d) === today ? 'ring-2 ring-accent' : ''}`}>
+            <div key={i} className={`min-h-16 p-1 ${d ? 'border border-line bg-white' : ''} ${d && key(d) === today ? 'ring-2 ring-accent' : ''}`}>
               {d && (
                 <div className="mb-1 flex justify-between text-xs text-slate-500">
-                  <button className="chip -m-1 rounded px-1 py-0.5 hover:bg-slate-100" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
+                  <button className="chip -m-1 px-1 py-0.5 hover:bg-slate-100" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
                   {hrs > 0 && <span className={limit && hrs > limit ? 'font-medium text-danger' : ''}>{hrs}h</span>}
                 </div>
               )}
               <div className="space-y-0.5">
-                {deadlines.filter((x) => x.date === key(d)).map((x) => <div key={x.id} title={`Deadline: ${x.title}`} className="truncate rounded bg-[#f6d5cf] px-1 text-xs font-medium text-[#7a1a14]">Due: {x.title}</div>)}
+                {deadlines.filter((x) => x.date === key(d)).map((x) => <div key={x.id} title={`Deadline: ${x.title}`} className="truncate bg-beni px-1 text-xs text-yuki-0">Due: {x.title}</div>)}
                 {day.map(chip)}
-                {events.slice(0, 2).map((x, j) => <div key={j} title={`${x.s ? `${hhmm(x.s)}-${hhmm(x.e)} ` : ''}${x.t}`} className="truncate rounded bg-stone/20 px-1 text-xs text-slate-700">{x.s ? `${hhmm(x.s)} ` : ''}{x.t}</div>)}
+                {events.slice(0, 2).map((x, j) => <div key={j} title={`${x.s ? `${hhmm(x.s)}-${hhmm(x.e)} ` : ''}${x.t}`} className="truncate bg-yuki-1 px-1 text-xs text-slate-700">{x.s ? `${hhmm(x.s)} ` : ''}{x.t}</div>)}
                 {events.length > 2 && <div className="px-1 text-xs text-slate-600" title={events.slice(2).map((x) => x.t).join(', ')}>+{events.length - 2} more</div>}
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
         </>
       )}
       {adding && (
-        <form className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl bg-panel p-4" aria-label="Add task"
+        <form className="mt-4 flex flex-wrap items-end gap-3 bg-panel p-4" aria-label="Add task"
           onSubmit={(e) => {
             e.preventDefault()
             if (!dl.title.trim()) return
@@ -254,7 +254,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
       )}
       {undated.length > 0 && (
         <section className="mt-4">
-          <h2 className="mb-1 text-lg font-semibold">Not scheduled</h2>
+          <h2 className="mb-1 text-base font-semibold">Not scheduled</h2>
           <div className="flex flex-wrap gap-1">{undated.map((t) => <div key={t.id} className="w-40">{chip(t)}</div>)}</div>
         </section>
       )}

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
-import { BLUE, btn, input, LEVELS } from '../ui.js'
+import { BLUE, btn, ghost, input, LEVELS } from '../ui.js'
+import { Avatar } from '../px.jsx'
+import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
 
@@ -61,37 +63,41 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
     setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
     setMsgs(msgs.map((m, i) => (i === mi ? { ...m, goals: m.goals.map((g, k) => (ks.includes(k) ? { ...g, added: true } : g)) } : m)))
   }
-  const bubble = 'max-w-[80%] break-words px-3.5 py-2 text-[0.9375rem] leading-snug'
+  const bubble = 'max-w-[80%] break-words px-3 py-2'
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-        <img src="/favicon.svg" alt="Desker AI agent" className="h-9 w-9" />
-        {onClose && <button className="flex min-h-11 items-center rounded-full px-4 text-accent hover:bg-pale" onClick={onClose}>Close</button>}
+      <header className="flex items-center justify-between border-b border-line px-3 py-2">
+        <Avatar id="shimaenaga" label="Desker AI agent" />
+        {onClose && <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>}
       </header>
       <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
-        <div className={`${bubble} mr-auto rounded-2xl rounded-bl-md bg-panel text-ink`}>
-          Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?
+        <div className="mr-auto flex items-start gap-2">
+          <Avatar id="shimaenaga" />
+          <div className={`${bubble} px-sunk`}>Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?</div>
         </div>
         {msgs.map((m, i) => (
-          <div key={i} className={`${bubble} ${m.role === 'user' ? 'ml-auto rounded-2xl rounded-br-md bg-primary text-ink' : 'mr-auto rounded-2xl rounded-bl-md bg-panel text-ink'}`}>
+          <div key={i} className={`flex items-start gap-2 ${m.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
+            {m.role !== 'user' && <Avatar id="shimaenaga" />}
+            <div className={`${bubble} ${m.role === 'user' ? 'px-btn-primary' : 'px-sunk'}`}>
             {m.label ?? m.content}
             {m.goals?.length > 0 && (
               <ul className="mt-2 space-y-1.5">
                 {m.goals.map((g, k) => (
-                  <li key={k} className="rounded-xl bg-white p-2 text-sm">
-                    <span className="text-xs text-slate-600">{LEVELS[g.level].name}{g.happiness ? ' · happiness' : ''}</span><br />{g.title}
-                    <button className={`${btn} mt-1 block !px-3 !py-1 ${g.added ? 'bg-slate-100 text-slate-600' : BLUE}`} disabled={g.added}
+                  <li key={k} className="px-rule py-2">
+                    <span className="text-xs">{LEVELS[g.level].name}{g.happiness ? ', happiness' : ''}</span><br />{g.title}
+                    <button className={`${btn} mt-1 ${g.added ? ghost : BLUE}`} disabled={g.added}
                       onClick={() => addGoals(i, [k])}>{g.added ? 'Added' : 'Add goal'}</button>
                   </li>
                 ))}
-                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE} !py-1.5`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
+                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE}`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
               </ul>
             )}
+            </div>
           </div>
         ))}
         {busy && (
-          <div className="mr-auto flex gap-1 rounded-2xl rounded-bl-md bg-panel px-4 py-3" aria-label="AI agent is typing">
-            <span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} />
+          <div className="mr-auto flex items-center gap-2" role="status" aria-label="AI agent is typing"><Avatar id="shimaenaga" /><span className="px-sunk flex gap-1 px-3 py-3">
+            <span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} /></span>
           </div>
         )}
         {error && <p className="text-center text-xs text-danger">{error}</p>}
@@ -100,32 +106,32 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       {!msgs.length && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
           {QUICK.map((q) => (
-            <button key={q} className="rounded-full border border-control bg-white px-4 py-2 text-sm text-ink transition hover:bg-pale disabled:opacity-60" disabled={busy} onClick={() => chipClick(q)}>{q}</button>
+            <button key={q} className={`${btn} ${ghost}`} disabled={busy} onClick={() => chipClick(q)}>{q}</button>
           ))}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-black/5 px-3 pt-2 text-xs text-slate-600">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line px-3 pt-2 text-xs text-slate-600">
         <label className="flex items-center gap-2">Free time today (hours)
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+          <input type="number" min="0" max="24" step="0.5" className={`${input} w-20`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
         </label>
         <label className="flex items-center gap-2">Free time per day (hours)
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder="4" value={data.freeHours ?? ''}
+          <input type="number" min="0" max="24" step="0.5" className={`${input} w-20`} placeholder="4" value={data.freeHours ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeHours: e.target.value === '' ? undefined : +e.target.value }))} />
         </label>
         <p className="w-full">Leave today blank to use your daily number.</p>
       </div>
       <form className="flex items-center gap-2 p-3" onSubmit={submit}>
-        <label className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel text-slate-700 transition hover:bg-slate-300 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+        <label className={`${btn} ${ghost} w-11 shrink-0 !px-0 ${busy ? 'pointer-events-none text-yoru-0' : ''}`}>
           <span className="sr-only">Attach a photo, PDF or text file</span>
-          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
+          <Icon name="Add" />
           <input type="file" className="sr-only" accept="image/*,application/pdf,.txt,.md,.csv,.json,.ics" disabled={busy}
             onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) attachFile(f) }} />
         </label>
         <div className="relative flex-1">
-          <input className="w-full rounded-full border border-control bg-white py-2.5 pl-4 pr-12 placeholder:text-slate-500" aria-label="Message" placeholder="Message or paste a link" value={text} onChange={(e) => setText(e.target.value)} />
-          <button className={`absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-primary text-ink transition ${text.trim() && !busy ? 'scale-100 opacity-100' : 'pointer-events-none scale-75 opacity-0'}`} aria-label="Send" tabIndex={text.trim() && !busy ? 0 : -1}>
-            <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" /></svg>
+          <input className={`${input} w-full pr-14`} aria-label="Message" placeholder="Message or paste a link" value={text} onChange={(e) => setText(e.target.value)} />
+          <button className={`absolute right-1 top-1/2 -translate-y-1/2 ${text.trim() && !busy ? 'px-btn flex w-11' : 'hidden'}`} aria-label="Send" tabIndex={text.trim() && !busy ? 0 : -1}>
+            <Icon name="Send" />
           </button>
         </div>
       </form>

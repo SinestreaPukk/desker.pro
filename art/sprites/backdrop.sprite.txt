@@ -1,0 +1,9 @@
+# Dialog backdrop: solid checker, no opacity.
+size 2 2
+palette yuki16
+. transparent
+a yoru-2
+b yoru-1
+frame rest
+ab
+ba

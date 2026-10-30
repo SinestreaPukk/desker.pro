@@ -1,76 +1,160 @@
 @import "tailwindcss";
 
 @theme {
-  /* Desker: editorial greeting. White page, pale-blue tonal panels, soft radii, one pastel-blue action, deep blue only for links and small marks. */
-  --font-sans: 'Instrument Sans', Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
-  --text-xs: 0.8125rem; --text-xs--line-height: 1.25rem;
-  --text-sm: 0.9375rem; --text-sm--line-height: 1.4rem;
-  --color-paper: #ffffff;
-  --color-ink: #14213d;
-  --color-panel: #f3f6fc;
-  --color-primary: #b4caf0;
-  --color-primary-hover: #9fbbea;
-  --color-pale: #e6edfa;
-  --color-accent: #35599a;
-  --color-accent-dark: #274677;
-  --color-line: #e1e8f4;
-  --color-control: #c9d3e8;
-  --color-danger: #b3261e;
-  --color-leaf: #2e7d32;
-  --color-amber: #8a5a14;
-  --color-stone: #8a97b0;
-  --color-white: #ffffff;
-  --color-slate-50: #f8faff; --color-slate-100: #f3f6fc; --color-slate-200: #e1e8f4; --color-slate-300: #c9d3e8;
-  --color-slate-400: #9aa6bf; --color-slate-500: #5f6b86; --color-slate-600: #4d5873; --color-slate-700: #3a4560;
-  --color-slate-800: #27314a; --color-slate-900: #14213d;
-  --radius-lg: 0.75rem; --radius-xl: 0.875rem; --radius-2xl: 1.25rem; --radius-3xl: 1.5rem;
+  /* Yuki: a quiet snowy morning drawn in pixels. Colours are yuki16 only; shading comes from the ramps, never opacity. */
+  --font-sans: 'DotGothic16', 'Fusion Pixel 12px Proportional JP', ui-monospace, monospace;
+  --font-serif: 'DotGothic16', ui-monospace, monospace;
+  --font-meta: 'Fusion Pixel 12px Proportional JP', 'DotGothic16', ui-monospace, monospace;
+  /* DotGothic16 sits on a 16px grid (16/32/48); the meta face on 12px (12/24). */
+  --text-xs: 12px; --text-xs--line-height: 16px;
+  --text-sm: 16px; --text-sm--line-height: 24px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --text-base: 16px; --text-base--line-height: 24px;
+  --text-lg: 16px; --text-lg--line-height: 24px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --text-xl: 32px; --text-xl--line-height: 32px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --text-2xl: 32px; --text-2xl--line-height: 40px;
+  --text-3xl: 32px; --text-3xl--line-height: 40px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --text-4xl: 32px; --text-4xl--line-height: 40px;
+  --text-5xl: 48px; --text-5xl--line-height: 56px;
+  --text-7xl: 48px; --text-7xl--line-height: 56px; /* pixel-ok: token pinned to the 16/32/48 grid */
+  --font-weight-medium: 400; --font-weight-semibold: 400; --font-weight-bold: 400;
+  --radius-lg: 0; --radius-xl: 0; --radius-2xl: 0; --radius-3xl: 0;
+
+  --color-yuki-0: #F4F7F6; --color-yuki-1: #DDE6EA; --color-yuki-2: #B4C5D1; --color-yuki-3: #8394AE;
+  --color-yoru-0: #5A6283; --color-yoru-1: #3B4262; --color-yoru-2: #252A40;
+  --color-kori-1: #8DBCCB; --color-kori-2: #5A8AA3;
+  --color-matsu-0: #7E9C8F; --color-matsu-1: #4F6E68; --color-matsu-2: #31474A;
+  --color-beni: #B4534A; --color-hada-0: #F0D2C2; --color-hada-1: #D49E95; --color-kuri: #8C6A5C;
+
+  --color-paper: var(--color-yuki-0);
+  --color-ink: var(--color-yoru-2);
+  --color-panel: var(--color-yuki-1);
+  --color-primary: var(--color-yoru-1);
+  --color-primary-hover: var(--color-yoru-2);
+  --color-pale: var(--color-yuki-1);
+  --color-accent: var(--color-yoru-1);
+  --color-accent-dark: var(--color-yoru-2);
+  --color-line: var(--color-yuki-2);
+  --color-control: var(--color-yuki-3);
+  --color-danger: var(--color-beni);
+  --color-leaf: var(--color-matsu-1);
+  --color-amber: var(--color-kuri);
+  --color-stone: var(--color-yoru-0);
+  --color-white: var(--color-yuki-0);
+  --color-slate-50: var(--color-yuki-0); --color-slate-100: var(--color-yuki-1); --color-slate-200: var(--color-yuki-2); --color-slate-300: var(--color-yuki-2);
+  --color-slate-400: var(--color-yuki-3); --color-slate-500: var(--color-yoru-0); --color-slate-600: var(--color-yoru-0); --color-slate-700: var(--color-yoru-1);
+  --color-slate-800: var(--color-yoru-2); --color-slate-900: var(--color-yoru-2);
 }
-body { background: #fff; font-family: var(--font-sans); color: var(--color-ink); line-height: 1.5; -webkit-font-smoothing: antialiased; font-feature-settings: 'tnum'; }
-h1, h2, h3 { letter-spacing: -0.01em; }
-.greeting { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.02em; line-height: 1.05; }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-::selection { background: #cddcf5; }
+
+/* Two art-pixel units: --px for UI, --px-scene for the banner. Every border, offset and sprite is an integer multiple. */
+:root { --px: 2px; --px-scene: 2px; --bg: var(--color-yuki-0); --ink: var(--color-yoru-2); }
+@media (min-width: 1024px) { :root { --px-scene: 4px; } }
+
+html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bg); }
+body { background: var(--bg); font-family: var(--font-sans); font-size: 16px; line-height: 24px; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
+b, strong { font-weight: 400; color: var(--color-yoru-2); }
+.text-xs { font-family: var(--font-meta); }
+.px-art { image-rendering: pixelated; }
+::selection { background: var(--color-kori-1); color: var(--ink); }
 button { -webkit-tap-highlight-color: transparent; }
-button:not(:disabled):active { transform: translateY(1px); transition-duration: 100ms; }
+:focus-visible { outline: var(--px) solid var(--ink); outline-offset: var(--px); }
 
+/* Borders are whole art pixels: Tailwind's 1px becomes --px. */
+.border, .border-b, .border-t, .border-l, .border-r { border-width: var(--px); }
+.border { border-style: solid; } .border-b { border-bottom-style: solid; } .border-t { border-top-style: solid; } .border-l { border-left-style: solid; } .border-r { border-right-style: solid; }
+.border-b { border-width: 0 0 var(--px) 0; } .border-t { border-width: var(--px) 0 0 0; } .border-l { border-width: 0 0 0 var(--px); } .border-r { border-width: 0 var(--px) 0 0; }
+.border-b-2 { border-bottom-width: var(--px); }
+hr { border: 0; height: var(--px); background: url(/pixel/divider.png) 0 0 / calc(4 * var(--px)) var(--px); image-rendering: pixelated; }
+
+/* ---- Frames: 9-slice PNGs, slice 3, drawn at --px ---- */
+.px-panel, .px-btn-primary, .px-btn-secondary, .px-btn-danger, .px-field, .px-sunk, .px-tab {
+  border-style: solid; border-width: calc(3 * var(--px)); background: none; image-rendering: pixelated; border-radius: 0;
+}
+.px-panel { border-image: url(/pixel/panel.png) 3 fill / calc(3 * var(--px)) stretch; }
+.px-sunk { border-image: url(/pixel/panel-sunk.png) 3 fill / calc(3 * var(--px)) stretch; }
+.px-field { border-image: url(/pixel/field.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); min-height: 44px; padding: 0 calc(2 * var(--px)); }
+.px-field::placeholder { color: var(--color-yoru-0); }
+.px-btn-primary { border-image: url(/pixel/btn-primary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
+.px-btn-secondary { border-image: url(/pixel/btn-secondary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
+.px-btn-danger { border-image: url(/pixel/btn-danger.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
+.px-tab { padding: 0 var(--px); font-size: 16px; line-height: 16px; color: var(--color-yuki-0); }
+.px-tab-beni { border-image: url(/pixel/tab-beni.png) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-kori { border-image: url(/pixel/tab-kori.png) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-matsu { border-image: url(/pixel/tab-matsu.png) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-yuki { border-image: url(/pixel/tab-yuki.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
+
+/* Buttons: flat text buttons by default; the frame comes from a variant. Press = one art pixel down. */
+.px-btn { display: inline-flex; align-items: center; justify-content: center; gap: calc(2 * var(--px)); min-height: 44px; padding: 0 calc(4 * var(--px)); cursor: pointer; }
+.px-btn:hover:not(:disabled) { background-color: var(--color-yuki-1); }
+.px-btn-primary:hover:not(:disabled), .px-btn-danger:hover:not(:disabled) { background-color: transparent; filter: none; }
+.px-btn-primary:hover:not(:disabled) { color: var(--color-yuki-1); }
+.px-btn-secondary:hover:not(:disabled) { color: var(--color-yoru-1); }
+.px-btn:active:not(:disabled) { transform: translateY(var(--px)); }
+.px-btn:disabled { cursor: not-allowed; color: var(--color-yoru-0); }
+.px-btn-primary:disabled, .px-btn-danger:disabled { color: var(--color-yuki-2); }
+.px-btn-sm { min-height: 44px; }
+
+/* Segmented controls and tabs use a sunk well; selected = raised secondary */
+.px-seg { display: inline-flex; gap: var(--px); padding: var(--px); border: var(--px) solid var(--color-yuki-2); background: var(--color-yuki-1); }
+.px-seg > button { min-height: 40px; padding: 0 calc(3 * var(--px)); background: transparent; }
+.px-seg > button[aria-pressed='true'] { background: var(--color-yuki-0); outline: var(--px) solid var(--ink); outline-offset: calc(-1 * var(--px)); }
+
+/* Checkbox: 8x8 sprite at 2x, 44px hit area */
 input[type='checkbox'] {
-  appearance: none; flex: none; width: 1.25rem; height: 1.25rem; border-radius: 0.25rem;
-  border: 1.5px solid var(--color-control); background: #fff center / 70% no-repeat; cursor: pointer; transition: background-color 120ms;
+  appearance: none; flex: none; box-sizing: content-box; width: 16px; height: 16px; padding: 14px; margin: -14px;
+  background: url(/pixel/check.sheet.png) 0 0 / 32px 16px no-repeat; background-origin: content-box; background-clip: content-box; image-rendering: pixelated; cursor: pointer;
 }
-input[type='checkbox']:checked {
-  border-color: var(--color-accent); background-color: var(--color-accent);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
-}
-input[type='range'] { appearance: none; height: 4px; border-radius: 9999px; background: var(--color-slate-300); cursor: pointer; }
-input[type='range']::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid var(--color-accent); }
-input[type='range']::-moz-range-thumb { width: 16px; height: 16px; border: 2px solid var(--color-accent); border-radius: 50%; background: #fff; }
+input[type='checkbox']:checked { background-position: -16px 0; }
+input[type='checkbox']:focus-visible { outline-offset: -12px; }
+input[type='range'] { appearance: none; height: calc(2 * var(--px)); background: var(--color-yuki-3); cursor: pointer; }
+input[type='range']::-webkit-slider-thumb { appearance: none; width: 16px; height: 24px; background: var(--color-yuki-0); border: var(--px) solid var(--ink); }
+input[type='range']::-moz-range-thumb { width: 12px; height: 20px; border: var(--px) solid var(--ink); border-radius: 0; background: var(--color-yuki-0); }
+details > summary { cursor: pointer; }
 
-.cheer { animation: cheer 800ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes cheer { 30% { transform: translateY(-8px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
-.enter { animation: enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes enter { from { opacity: 0; transform: translateY(6px); } }
-@keyframes fade { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .enter { animation: fade 150ms ease; }
-  .cheer { animation: none; }
-  button:not(:disabled):active, input[type='range']:active::-webkit-slider-thumb { transform: none; }
-}
+/* Avatars: 24x24 sprite, 2 frames (idle, blink), drawn at 2x = 48px */
+.px-avatar { width: calc(24 * var(--px)); height: calc(24 * var(--px)); flex: none; background-size: calc(48 * var(--px)) calc(24 * var(--px)); background-repeat: no-repeat; image-rendering: pixelated; animation: blink 4s steps(1) infinite; }
+.px-avatar-scene { width: calc(24 * var(--px-scene)); height: calc(24 * var(--px-scene)); background-size: calc(48 * var(--px-scene)) calc(24 * var(--px-scene)); }
+@keyframes blink { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px)) 0; } }
+.px-avatar-scene { animation-name: blink-scene; }
+@keyframes blink-scene { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
+
+/* Hanko stamp: 16x16, 3 frames, one pass. The only celebratory motion. */
+.px-hanko { width: calc(16 * var(--px)); height: calc(16 * var(--px)); background: url(/pixel/hanko.sheet.png) 0 0 / calc(48 * var(--px)) calc(16 * var(--px)) no-repeat; image-rendering: pixelated; animation: stamp 450ms steps(1) forwards; }
+@keyframes stamp { 0% { background-position: 0 0; } 34% { background-position: calc(-16 * var(--px)) 0; } 67%, 100% { background-position: calc(-32 * var(--px)) 0; } }
+
+.cheer { animation: hop 400ms steps(2) 1; }
+@keyframes hop { 50% { transform: translateY(calc(-2 * var(--px))); } }
+.enter { animation: none; }
+
+/* Scene banner */
+/* Phones crop the empty top of the sky (16 art px) so the first step stays on screen */
+.px-scene { --crop: 24; position: relative; overflow: hidden; background: var(--color-kori-1); width: 100%; height: calc((80 - var(--crop)) * var(--px-scene)); }
+.px-scene > img { position: absolute; left: 50%; top: calc(-1 * var(--crop) * var(--px-scene)); width: calc(192 * var(--px-scene)); height: calc(80 * var(--px-scene)); margin-left: calc(-96 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
+@media (min-width: 1024px) { .px-scene { --crop: 0; width: calc(192 * var(--px-scene)); flex: none; } .px-scene > img { left: 0; margin-left: 0; } }
+.px-scene > .px-avatar { position: absolute; }
+.px-flake { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.px-strip { height: calc(24 * var(--px-scene)); overflow: hidden; position: relative; background: var(--color-kori-1); }
+.px-strip > img { position: absolute; top: calc(-24 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
+
+/* Dialog backdrop and dotted row rule */
+.px-backdrop { background: url(/pixel/backdrop.png) 0 0 / calc(2 * var(--px)) calc(2 * var(--px)); image-rendering: pixelated; }
+.px-rule { background: url(/pixel/divider.png) 0 100% / calc(4 * var(--px)) var(--px) repeat-x; image-rendering: pixelated; }
+
+/* Typing indicator: three pixels that step */
+.dot { width: var(--px); height: var(--px); background: var(--color-yoru-0); animation: step 900ms steps(1) infinite; }
+@keyframes step { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(calc(-1 * var(--px))); } }
+
 /* calendar hour lines */
-.hour-lines { background-image: repeating-linear-gradient(to bottom, rgba(20,33,61,0.07) 0 1px, transparent 1px var(--px)); } /* taste-skill-ignore */
+.hour-lines { background-image: url(/pixel/divider.png); background-size: calc(4 * var(--px)) var(--px); background-repeat: repeat-x; image-rendering: pixelated; }
 
-/* typing indicator */
-.dot { width: 7px; height: 7px; border-radius: 9999px; background: var(--color-stone); animation: blink 1s infinite ease-in-out; }
-@keyframes blink { 0%, 80%, 100% { opacity: 0.35; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
-@media (prefers-reduced-motion: reduce) { .dot { animation: none; opacity: 0.7; } }
-
-/* Touch: no double-tap zoom delay, no grey tap flash, no rubber-band scroll chaining out of the app */
-html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+@media (prefers-reduced-motion: reduce) {
+  .px-avatar, .px-avatar-scene, .dot, .cheer { animation: none; }
+  .px-hanko { animation: none; background-position: calc(-32 * var(--px)) 0; }
+  .px-btn:active:not(:disabled) { transform: none; }
+}
 
 /* Phones: 44px touch targets (calendar day chips stay compact) */
 @media (max-width: 767px) {
   button:not(.chip), a.inline-flex, select, textarea, input:not([type='checkbox']):not([type='range']):not([type='file']), summary { min-height: 44px; }
-  input:not([type='checkbox']):not([type='range']):not([type='file']), select, textarea { font-size: 16px; } /* no iOS zoom on focus */
-  input[type='checkbox'] { width: 22px; height: 22px; flex-shrink: 0; } /* thumb-sized ticks */
+  input:not([type='checkbox']):not([type='range']):not([type='file']), select, textarea { font-size: 16px; }
   label:has(> input[type='checkbox']), label:has(input[type='range']), summary { min-height: 44px; display: flex; align-items: center; }
 }

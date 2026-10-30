@@ -67,57 +67,57 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
 
   return (
-    <li className="rounded-xl border border-line bg-white">
+    <li className=" border border-line bg-white">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 p-4 pb-2">
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${dl.done ? 'text-slate-500 line-through' : ''}`}
-            aria-label="Deadline name (click to rename)" defaultValue={dl.title} maxLength={200} onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+          <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${dl.done ? 'text-slate-500 line-through' : ''}`}
+            aria-label="Deadline name (click to rename)" defaultValue={dl.title} maxLength={200} onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
             onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== dl.title) patch({ title: v }); else e.target.value = dl.title }} />
-          <input type="date" className="w-36 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
+          <input type="date" className="w-36 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
             value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
-          <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
+          <input type="time" className="w-24 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-          {dl.hours != null && <span className="text-sm text-slate-600">{dl.hours}h</span>}
+          {dl.hours != null && <span className="text-base text-slate-600">{dl.hours}h</span>}
         </span>
-        {linked > 0 && <span className="text-sm tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
-        <span className={`rounded-full px-3 py-0.5 text-sm ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-[#fdf1ee] text-[#7a1a14]' : 'bg-pale text-accent-dark'}`}>
+        {linked > 0 && <span className="text-base tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
+        <span className={` px-3 py-0.5 text-base ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
           {dl.done ? 'Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
         </span>
       </div>
       <ul className="space-y-1 px-4 pb-1">
         {mine.map((t) => (
-          <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+          <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-1 gap-y-1 text-base">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => upd(t.id, { done: !t.done })} />
-            <input key={t.title} size={Math.max(6, Math.min(40, t.title.length + 1))} className={`min-w-0 max-w-full rounded-lg border border-transparent bg-transparent px-2 py-1 hover:border-control focus:border-accent focus:bg-white ${t.done ? 'text-slate-500 line-through' : ''}`}
+            <input key={t.title} size={Math.max(6, Math.min(40, t.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 hover:border-control focus:border-accent focus:bg-white ${t.done ? 'text-slate-500 line-through' : ''}`}
               aria-label="Task name (click to rename)" defaultValue={t.title} maxLength={200}
-              onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) upd(t.id, { title: v }); else e.target.value = t.title }} />
-            <input type="date" className="w-36 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
+            <input type="date" className="w-36 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
-            <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
+            <input type="time" className="w-24 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
             {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
           </li>
         ))}
       </ul>
       <form className="px-4 pb-3" onSubmit={addOwn}>
-        <input className="w-full rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm placeholder:text-slate-500 hover:border-control focus:border-accent focus:bg-white" aria-label={`Add a task to ${dl.title}`} placeholder="+ Add a task (press Enter)" value={own} onChange={(e) => setOwn(e.target.value)} />
+        <input className="w-full border border-transparent bg-transparent px-2 py-2 text-base placeholder:text-slate-500 hover:border-control focus:border-accent focus:bg-white" aria-label={`Add a task to ${dl.title}`} placeholder="+ Add a task (press Enter)" value={own} onChange={(e) => setOwn(e.target.value)} />
       </form>
       <details className="group border-t border-line">
-        <summary className="cursor-pointer px-4 py-2 text-sm text-accent">{linked ? 'More: AI, hours, project, context' : 'Break into tasks with AI, more'}</summary>
+        <summary className="cursor-pointer px-4 py-2 text-base text-accent">{linked ? 'More: AI, hours, project, context' : 'Break into tasks with AI, more'}</summary>
         <div className="border-t border-line p-4 pt-3">
       <div className="mb-3 flex flex-wrap gap-2">
         <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
         <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
-          {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? '✨ Add more with AI' : '✨ Break into tasks'}
+          {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? 'Add more with AI' : 'Break into tasks'}
         </button>
         <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
       </div>
 
 
       <details className="mt-3">
-        <summary className="cursor-pointer text-sm text-accent">Edit details and context</summary>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+        <summary className="cursor-pointer text-base text-accent">Edit details and context</summary>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-base">
           {ratio && ratio !== 1 && <span className="text-xs text-slate-600">Your timed tasks take about {ratio}x your estimates; the AI allows for that.</span>}
           <label className="flex items-center gap-1">Hours I need
             <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
@@ -145,7 +145,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             placeholder="Not sure how long it takes? Paste a syllabus, topics, notes, or say how ready you feel."
             value={dl.context || ''} onChange={(e) => patch({ context: e.target.value })} />
         )}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-base">
           <label className={`${btn} cursor-pointer ${ghost} ${reading ? 'pointer-events-none opacity-50' : ''}`}>
             {reading ? 'Reading…' : 'Attach photo or file'}
             <input type="file" className="sr-only" accept="image/*,application/pdf,.txt,.md,.csv,.json,.ics" disabled={reading}
@@ -159,9 +159,9 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
 
       </details>
 
-      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      {error && <p className="mt-2 text-base text-danger">{error}</p>}
       {res?.question && (
-        <form className="mt-3 rounded-xl bg-pale p-3 text-sm" onSubmit={reply}>
+        <form className="mt-3 bg-pale p-3 text-base" onSubmit={reply}>
           <p className="mb-2 font-medium">{res.question}</p>
           <div className="flex gap-2">
             <input className={`${input} min-w-0 flex-1`} aria-label="Your answer" value={answer} onChange={(e) => setAnswer(e.target.value)} />
@@ -171,13 +171,13 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
       )}
       {res?.options && (
         <div className="mt-3">
-          <p className="mb-2 text-sm text-slate-600">{res.summary} {res.options.length > 1 ? `This needs ${res.options.length} tasks. Split the work?` : 'One task is enough.'}</p>
+          <p className="mb-2 text-base text-slate-600">{res.summary} {res.options.length > 1 ? `This needs ${res.options.length} tasks. Split the work?` : 'One task is enough.'}</p>
           <ul className="grid gap-2 sm:grid-cols-2">
             {res.options.map((o, i) => (
               <li key={i}>
-                <label className={`flex cursor-pointer gap-2 rounded-2xl border p-2 text-sm ${picked.includes(i) ? 'border-accent bg-accent/10' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                <label className={`flex cursor-pointer gap-2 border p-2 text-base ${picked.includes(i) ? 'border-ink bg-yuki-1' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                   <input type="checkbox" checked={picked.includes(i)} onChange={() => toggle(i)} />
-                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{o.hours}h · by {o.due}</span></span>
+                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{o.hours}h, by {o.due}</span></span>
                 </label>
               </li>
             ))}

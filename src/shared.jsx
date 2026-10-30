@@ -83,7 +83,7 @@ export const fmtDate = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString([],
 
 export function Happy({ value = 50, onChange, label = 'How do you feel about this task?' }) {
   return (
-    <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-600" title={`Feeling: ${value} of 100`}>
+    <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-slate-600" title={`Feeling: ${value} of 100`}>
       {label}
       <span className="flex items-center gap-2">
         <span aria-hidden="true" className="text-xs">Dread</span>

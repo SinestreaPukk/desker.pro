@@ -38,11 +38,11 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
     setItems(null); setText('')
   }
   return (
-    <details className="mb-4 rounded-2xl bg-panel p-4">
+    <details className="mb-4 bg-panel p-4">
       <summary className="cursor-pointer font-semibold">Import a syllabus or course outline</summary>
       {!items && (
         <div className="mt-3 space-y-2">
-          <p className="text-sm text-slate-600">Paste the outline or upload a PDF or photo. The AI finds every exam and assignment with its date, you check the list, and Desker adds the deadlines with study blocks leading up to each one.</p>
+          <p className="text-base text-slate-600">Paste the outline or upload a PDF or photo. The AI finds every exam and assignment with its date, you check the list, and Desker adds the deadlines with study blocks leading up to each one.</p>
           <textarea className={`${input} w-full`} rows={4} aria-label="Course outline" placeholder="Paste the course outline here" value={text} onChange={(e) => setText(e.target.value)} />
           <div className="flex flex-wrap items-center gap-2">
             <button className={`${btn} ${BLUE}`} disabled={busy || !text.trim()} onClick={() => find({ text })}>{busy ? 'Reading…' : 'Find deadlines'}</button>
@@ -54,14 +54,14 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
       )}
       {items && (
         <div className="mt-3">
-          <p className="mb-2 text-sm text-slate-600">Found {items.length} item{items.length === 1 ? '' : 's'}. Untick what you do not want and fix anything wrong. Dates in the past are unticked.</p>
+          <p className="mb-2 text-base text-slate-600">Found {items.length} item{items.length === 1 ? '' : 's'}. Untick what you do not want and fix anything wrong. Dates in the past are unticked.</p>
           <ul className="space-y-2">
             {items.map((i) => (
-              <li key={i.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-slate-50 p-2">
+              <li key={i.id} className="flex flex-wrap items-center gap-2 bg-slate-50 p-2">
                 <input type="checkbox" aria-label={`Include ${i.title}`} checked={i.on} onChange={(e) => patch(i.id, { on: e.target.checked })} />
                 <input className={`${input} min-w-40 flex-1`} aria-label="Title" value={i.title} onChange={(e) => patch(i.id, { title: e.target.value })} />
                 <input type="date" className={input} aria-label="Due date" value={i.date} onChange={(e) => patch(i.id, { date: e.target.value, past: false })} />
-                <label className="flex items-center gap-1 text-sm">Hours
+                <label className="flex items-center gap-1 text-base">Hours
                   <input type="number" min="0.5" step="0.5" className={`${input} w-20`} value={i.hours} onChange={(e) => patch(i.id, { hours: +e.target.value || 1 })} />
                 </label>
                 {i.type && <span className="text-xs text-slate-600">{i.type}</span>}
@@ -74,8 +74,8 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
           </div>
         </div>
       )}
-      {error && <p role="alert" className="mt-2 text-sm text-danger">{error}</p>}
-      {made && <p role="status" className="mt-2 text-sm">{made}</p>}
+      {error && <p role="alert" className="mt-2 text-base text-danger">{error}</p>}
+      {made && <p role="status" className="mt-2 text-base">{made}</p>}
     </details>
   )
 }

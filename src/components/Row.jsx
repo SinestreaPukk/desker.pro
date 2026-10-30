@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { btn, input, rowCard, Q } from '../ui.js'
 import { Cover } from '../art.jsx'
+import { Icon } from '../icons.jsx'
 import { isMissed } from '../tasks.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
 
@@ -21,34 +22,34 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   // Core facts only, one muted line: when it is due, the planned slot, effort, project. Everything else lives in the task panel.
   const today = new Date().toLocaleDateString('sv')
   const facts = [
-    t.due && <span key="d" className={t.due < today && !t.done ? 'font-medium text-danger' : ''}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ' ↻' : ''}</span>,
+    t.due && <span key="d" className={t.due < today && !t.done ? 'text-danger' : ''}>{t.from ? `${fmtDate(t.from)} to ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ', repeats' : ''}</span>,
     t.when && <span key="w">Plan {fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
     t.hours > 0 && <span key="h">{t.hours}h</span>,
     q !== undefined && !cover && !project && <span key="q">{Q[q].name}</span>,
     project && <span key="p">{project}</span>,
   ].filter(Boolean)
-  const item = 'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-slate-100'
+  const item = 'flex min-h-11 w-full items-center px-3 text-left hover:bg-yuki-1'
   return (
-    <li className={`${rowCard} px-3 py-2`}>
-      {cover && <Cover seed={t.id} className="-mx-3 -mt-2 mb-2 block h-14 w-[calc(100%+1.5rem)] rounded-t-[0.8125rem]" />}
+    <li className={`${cover ? 'px-sunk p-2' : `${rowCard} py-2`}`}>
+      {cover && <Cover seed={t.id} className="mb-2" />}
       <div className="flex items-center gap-2">
         <span className="hidden shrink-0 cursor-grab text-slate-400 md:block" draggable title="Drag to another box" aria-hidden="true"
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>
-          <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor"><circle cx="5" cy="4" r="1.2" /><circle cx="11" cy="4" r="1.2" /><circle cx="5" cy="8" r="1.2" /><circle cx="11" cy="8" r="1.2" /><circle cx="5" cy="12" r="1.2" /><circle cx="11" cy="12" r="1.2" /></svg>
+          <Icon name="Grip" />
         </span>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} aria-label={`Mark ${t.title} done`} />
           <button className="min-h-11 min-w-0 flex-1 text-left" onClick={onEdit} aria-label={`Open ${t.title}`}>
-            <span className={`block break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}{isMissed(t) && <span className="ml-2 rounded-full bg-[#f6d5cf] px-2 text-xs text-[#7a1a14]">missed</span>}</span>
+            <span className={`block break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}{isMissed(t) && <span className="ml-2 bg-beni px-1 text-xs text-yuki-0">missed</span>}</span>
           </button>
         </div>
         <span className="relative flex shrink-0 items-center gap-1">
           {!t.done && <button className={`${btn} text-accent hover:bg-pale`} onClick={() => onStart(t)} aria-label={`Start focus on ${t.title}`}>Start</button>}
-          <button className="flex h-11 w-11 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100" onClick={() => setMenu(!menu)} aria-haspopup="menu" aria-expanded={menu} aria-label={`More actions for ${t.title}`}>
-            <svg viewBox="0 0 16 16" className="h-4 w-4" fill="currentColor" aria-hidden="true"><circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="13" cy="8" r="1.4" /></svg>
+          <button className="flex h-11 w-11 items-center justify-center text-slate-600 hover:bg-slate-100" onClick={() => setMenu(!menu)} aria-haspopup="menu" aria-expanded={menu} aria-label={`More actions for ${t.title}`}>
+            <Icon name="More" />
           </button>
           {menu && (
-            <div role="menu" className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-line bg-white p-1 shadow-md" onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
+            <div role="menu" className="px-panel absolute right-0 top-full z-20 mt-1 w-44 p-1" onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
               <button role="menuitem" className={item} onClick={() => { setOpen(!open); setMenu(false) }}>{open ? 'Hide details' : 'Details'}</button>
               <button role="menuitem" className={item} onClick={() => { onEdit(); setMenu(false) }}>Open</button>
               <button role="menuitem" className={`${item} text-danger`} onClick={() => { onDelete(); setMenu(false) }}>Delete</button>
@@ -56,11 +57,11 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
           )}
         </span>
       </div>
-      {facts.length > 0 && <p className="flex flex-wrap gap-x-2 pb-1 pl-9 text-xs text-slate-600">{facts.flatMap((f, i) => (i ? [<span key={`s${i}`} aria-hidden="true">·</span>, f] : [f]))}</p>}
+      {facts.length > 0 && <p className="flex flex-wrap gap-x-3 pb-1 pl-9 text-xs text-slate-700">{facts}</p>}
       {open && (
-        <div className="space-y-3 pb-1 pl-9 pt-3 text-sm">
+        <div className="space-y-3 pb-1 pl-9 pt-3 text-base">
           <Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} label="Feeling about it" />
-          <p className="text-slate-600">{[Q[q]?.name, t.repeat && `Repeats ${t.repeat}`, subs.length > 0 && `${subs.filter((x) => x.done).length}/${subs.length} steps`, t.spent > 0 && `${t.spent < 1 / 120 ? '<1' : Math.round(t.spent * 60)} min focused`].filter(Boolean).join(' · ')}</p>
+          <p className="text-slate-600">{[Q[q]?.name, t.repeat && `Repeats ${t.repeat}`, subs.length > 0 && `${subs.filter((x) => x.done).length} of ${subs.length} steps`, t.spent > 0 && `${t.spent < 1 / 120 ? '<1' : Math.round(t.spent * 60)} min focused`].filter(Boolean).join(', ')}</p>
           <p><b className="font-medium">Why here?</b> {t.reason || (q === undefined ? 'Not ranked yet. Use Prioritise with AI, or move it yourself below.' : 'No reason saved.')}</p>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2">Move to

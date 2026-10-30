@@ -38,7 +38,7 @@ AVATAR = {'x': 72, 'y': 50}
 
 REMAP = {
     'morning': {},
-    'dusk': {'kori-1': 'kori-2', 'yuki-1': 'hada-1', 'yuki-0': 'hada-0', 'yuki-2': 'yoru-0', 'yuki-3': 'yoru-1', 'kori-2': 'yoru-0', 'matsu-0': 'matsu-1', 'matsu-1': 'matsu-2'},
+    'dusk': {'kori-1': 'kori-2', 'yuki-1': 'hada-1', 'yuki-0': 'yuki-1', 'yuki-2': 'yoru-0', 'yuki-3': 'yoru-1', 'kori-2': 'yoru-0', 'matsu-0': 'matsu-1', 'matsu-1': 'matsu-2'},
     'night': {'kori-1': 'yoru-2', 'yuki-1': 'yoru-1', 'yuki-0': 'yuki-2', 'yuki-2': 'yoru-0', 'yuki-3': 'yoru-0', 'kori-2': 'yoru-1', 'matsu-0': 'matsu-1', 'matsu-1': 'matsu-2', 'matsu-2': 'yoru-2', 'hada-0': 'hada-0'},
 }
 

@@ -29,14 +29,14 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
   useEffect(() => { run() }, [])
   const { loading, error, plan, d, note, risk } = state
   return (
-    <section className="mb-4 rounded-2xl bg-panel p-4" aria-label="Replan my week" aria-busy={loading}>
+    <section className="mb-4 bg-panel p-4" aria-label="Replan my week" aria-busy={loading}>
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="font-semibold">Replan my week</h2>
         <button className={`${btn} hover:bg-slate-100`} onClick={onClose}>Close</button>
       </div>
-      {loading && <p className="text-sm text-slate-600">Looking at your deadlines, free time and calendar…</p>}
+      {loading && <p className="text-base text-slate-600">Looking at your deadlines, free time and calendar…</p>}
       {error && (
-        <div role="alert" className="text-sm">
+        <div role="alert" className="text-base">
           <p className="text-danger">{error}</p>
           <p className="text-slate-600">Nothing was changed.</p>
           <button className={`${btn} mt-2 ${ghost}`} onClick={run}>Try again</button>
@@ -44,28 +44,28 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
       )}
       {plan && (
         <>
-          {note && <p className="mb-3 text-sm text-slate-600">{note}</p>}
-          {d.moved.length === 0 ? <p className="text-sm">Your schedule already looks right. Nothing needs to move.</p> : (
+          {note && <p className="mb-3 text-base text-slate-600">{note}</p>}
+          {d.moved.length === 0 ? <p className="text-base">Your schedule already looks right. Nothing needs to move.</p> : (
             <>
-              <h3 className="text-sm font-semibold">Moves ({d.moved.length})</h3>
-              <ul className="mb-3 space-y-1 text-sm">
+              <h3 className="text-base font-semibold">Moves ({d.moved.length})</h3>
+              <ul className="mb-3 space-y-1 text-base">
                 {d.moved.map((m) => (
-                  <li key={m.t.id} className="rounded-xl bg-slate-50 px-3 py-1.5">
+                  <li key={m.t.id} className=" bg-slate-50 px-3 py-1.5">
                     <b>{m.t.title}</b>{' '}
                     <span className="text-slate-600">{m.fresh ? 'new:' : `${when(m.t.when, m.t.start)} →`}</span> {when(m.to.when, m.to.start)}
-                    {m.pushedBack && <span className="ml-2 rounded bg-amber/20 px-1.5 text-xs">pushed back</span>}
+                    {m.pushedBack && <span className="ml-2 bg-yuki-1 px-1.5 text-xs">pushed back</span>}
                   </li>
                 ))}
               </ul>
             </>
           )}
-          {d.pushedBack.length > 0 && <p className="mb-3 text-sm text-slate-600">{d.pushedBack.length} task{d.pushedBack.length === 1 ? ' was' : 's were'} pushed to a later day to make room.</p>}
+          {d.pushedBack.length > 0 && <p className="mb-3 text-base text-slate-600">{d.pushedBack.length} task{d.pushedBack.length === 1 ? ' was' : 's were'} pushed to a later day to make room.</p>}
           {risk.length > 0 ? (
-            <div className="mb-3 rounded-xl bg-danger/10 p-3 text-sm">
+            <div className="mb-3 bg-yuki-1 p-3 text-base">
               <h3 className="font-semibold text-danger">At risk of missing a deadline</h3>
               <ul className="mt-1 list-disc pl-5">{risk.map((r, i) => <li key={i}><b>{r.title}</b>: {r.why}</li>)}</ul>
             </div>
-          ) : <p className="mb-3 text-sm text-[#1e7d32]">No deadline looks at risk with this plan.</p>}
+          ) : <p className="mb-3 text-base text-leaf">No deadline looks at risk with this plan.</p>}
           <div className="flex flex-wrap gap-2">
             {d.moved.length > 0 && <button className={`${btn} ${BLUE}`} onClick={() => onApply(plan)}>Apply plan</button>}
             <button className={`${btn} ${ghost}`} onClick={onClose}>{d.moved.length ? 'Keep my schedule' : 'Close'}</button>

@@ -90,5 +90,5 @@ export function toSave(result, now = Date.now()) {
 }
 
 // Soft tag colours; custom areas get a stable one from their name.
-const TAGS = ['bg-[#dbe7fb] text-[#274677]', 'bg-[#dff1e3] text-[#245a2a]', 'bg-[#fbe9cf] text-[#7a4c0e]', 'bg-[#f5dce6] text-[#7a2a4d]', 'bg-[#e6dcf5] text-[#4a2a7a]', 'bg-[#d6f0ef] text-[#1f5a58]']
+const TAGS = ['bg-yuki-1 text-ink', 'bg-kori-1 text-ink', 'bg-matsu-0 text-ink', 'bg-yuki-2 text-ink', 'bg-hada-0 text-ink', 'bg-yuki-3 text-ink']
 export const areaTag = (a) => TAGS[[...a].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % TAGS.length]

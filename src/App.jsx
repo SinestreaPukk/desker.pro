@@ -20,6 +20,7 @@ import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
 import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
+import { Avatar, Hanko } from './px.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -31,7 +32,7 @@ export default function App() {
   const setTab = (t) => { if (t !== tab) history.pushState(null, '', PATHS[t]); setTabState(t); window.scrollTo({ top: 0 }) }
   useEffect(() => { const f = () => setTabState(tabOf()); addEventListener('popstate', f); return () => removeEventListener('popstate', f) }, [])
   useEffect(() => {
-    document.title = `${tab} · Desker`
+    document.title = `${tab} - Desker`
     if (location.pathname !== PATHS[tab]) history.replaceState(null, '', PATHS[tab]) // "/" and /do-now land on Today
   }, [tab])
 
@@ -69,7 +70,7 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
-  if (!data) return <p className="p-6 text-slate-600">{loadError || 'Loading…'}</p>
+  if (!data) return <div className="flex items-center gap-3 p-6"><Avatar id="shimaenaga" /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere
@@ -116,7 +117,7 @@ export default function App() {
     setData((d) => ({ ...d, tasks: r.tasks }))
     if (r.finished.length) {
       const names = r.tasks.filter((t) => r.finished.includes(t.id)).map((t) => t.title)
-      setToast({ text: `Done: ${names.length > 1 ? `${names.length} tasks` : names[0]}${r.spawned.length ? ' (next one added)' : ''}${cleared ? '. Do First is clear.' : ''}`,
+      setToast({ stamp: true, text: `Done: ${names.length > 1 ? `${names.length} tasks` : names[0]}${r.spawned.length ? ' (next one added)' : ''}${cleared ? '. Do First is clear.' : ''}`,
         undo: () => { setData((d) => ({ ...d, tasks: settle(d.tasks, d.tasks.filter((t) => !r.spawned.includes(t.id)).map((t) => (r.finished.includes(t.id) ? { ...t, done: false } : t))).tasks })); setToast(null) } })
     }
   }
@@ -124,16 +125,16 @@ export default function App() {
     setData((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== t.id) }))
     setToast({ text: `Deleted: ${t.title}`, undo: () => { setData((d) => ({ ...d, tasks: [...d.tasks, t] })); setToast(null) } })
   }
-  const logo = (cls) => <img key={cheer} src="/favicon.svg" alt="" className={`${cls} ${cheer ? 'cheer' : ''}`} />
+  const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar id={data.avatar} /></span>
 
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 hidden border-b border-line bg-white md:block">
         <div className="mx-auto max-w-[1400px] px-8 pt-3">
         <div className="flex items-center justify-between">
-          <button className="flex items-center gap-3 rounded-xl py-1 pr-3 text-left" onClick={() => setTab('Today')} aria-label="Desker, go to Today">
-            {logo('h-10 w-10')}
-            <span><span className="block text-lg font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
+          <button className="flex items-center gap-3 py-1 pr-3 text-left" onClick={() => setTab('Today')} aria-label="Desker, go to Today">
+            {logo()}
+            <span><span className="block text-base font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
           </button>
           <div className="flex items-center gap-2">
             <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Ask the AI agent</button>
@@ -142,7 +143,7 @@ export default function App() {
         </div>
         <nav className="-mb-px mt-2 flex gap-6" aria-label="Sections">
           {TABS.map((t) => (
-            <button key={t} className={`border-b-2 py-2 text-sm ${tab === t ? 'border-accent font-medium text-ink' : 'border-transparent text-slate-600 hover:text-ink'}`}
+            <button key={t} className={`border-b-2 py-2 text-base ${tab === t ? 'border-accent font-medium text-ink' : 'border-transparent text-slate-600 hover:text-ink'}`}
               aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>{t}</button>
           ))}
         </nav>
@@ -151,17 +152,17 @@ export default function App() {
 
       <div className="min-w-0">
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
-          <div className="flex items-center gap-2">{logo('h-8 w-8')}<span className="text-lg font-semibold">{tab}</span></div>
+          <div className="flex items-center gap-2">{logo()}<span className="text-base font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
             <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1400px] px-4 pb-32 pt-6 md:px-8 md:pt-8">
-          {saveError && <p role="alert" className="mb-4 rounded-2xl bg-[#f6d5cf] p-3 text-sm text-[#7a1a14]">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
+        <main className="mx-auto w-full max-w-[1400px] px-4 pb-32 pt-4 md:px-8 md:pt-8">
+          {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
           {missed.length > 0 && tab !== 'Today' && !replanOpen && (
-            <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[#fdf1ee] p-4 text-sm">
+            <div role="status" className="px-panel mb-4 flex flex-wrap items-center gap-3 p-3">
               <span><b className="font-medium">{missed.length} planned task{missed.length === 1 ? '' : 's'}</b> slipped past {missed.length === 1 ? 'its' : 'their'} time: {missed.slice(0, 3).map((t) => t.title).join(', ')}{missed.length > 3 ? '…' : ''}</span>
               <button className={`${btn} ${BLUE}`} onClick={openReplan}>Replan my week</button>
             </div>
@@ -190,9 +191,10 @@ export default function App() {
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
       )}
       {toast && (
-        <div role="status" className="fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl bg-ink px-4 py-3 text-sm text-white md:bottom-6 md:left-8 md:right-auto md:mx-0">
-          <span className="min-w-0 break-words">{toast.text}</span>
-          <button className="shrink-0 rounded-full px-3 py-1 font-medium text-primary" onClick={toast.undo}>Undo</button>
+        <div role="status" className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-sm items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
+          {toast.stamp && <Hanko key={toast.text} />}
+          <span className="min-w-0 flex-1 break-words">{toast.text}</span>
+          <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Sections">

@@ -3,8 +3,7 @@ import { post } from '../api.js'
 import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy, energyProfile, ranges } from '../energy.js'
 import { METHODS } from '../methods.js'
-import { PageHead } from '../art.jsx'
-import { Icon } from '../icons.jsx'
+import { Scene } from '../px.jsx'
 import Review from '../Review.jsx'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
@@ -16,7 +15,7 @@ function Energy({ log, reset }) {
   const [sure, setSure] = useState(false)
   const p = energyProfile(log)
   return (
-    <div className="text-sm">
+    <div className="text-base">
       {p.enough
         ? <p className="text-slate-700">Usually high energy: {ranges(p.high) || 'no clear hours yet'}. Usually low: {ranges(p.low) || 'no clear hours yet'}. The AI agent and Replan put demanding work in your high hours.</p>
         : <p className="text-slate-600">Tap your energy level a few times a day. After {8 - p.n > 0 ? `${8 - p.n} more` : 'a few more'} check-ins, Desker learns when you do your best work.</p>}
@@ -37,11 +36,11 @@ function Energy({ log, reset }) {
   )
 }
 
-const Tile = ({ label, caption, children }) => (
-  <div className={`${panel} !p-4 lg:col-span-3`}>
-    <p className="text-sm text-slate-600">{label}</p>
-    <div className="mt-1 text-3xl leading-tight">{children}</div>
-    <p className="mt-1 text-sm text-slate-600">{caption}</p>
+const Tile = ({ label, caption, children, keep }) => (
+  <div className="px-rule pb-2 lg:col-span-3">
+    <p className="text-slate-700">{label}</p>
+    <div className="text-2xl">{children}</div>
+    <p className={`text-xs text-slate-700 ${keep ? '' : 'hidden lg:block'}`}>{caption}</p>
   </div>
 )
 
@@ -106,44 +105,51 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
   const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
   const todays = [...open].sort((a, b) => (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9')).slice(0, 5)
-  const card = 'rounded-xl border border-line bg-white p-4'
+  const card = 'px-sunk p-3'
+  const link = 'min-h-11 underline hover:text-yoru-0'
 
   return (
     <>
-      <PageHead title={`${greeting()}.`} v={0} icon={<span className="scale-150"><Icon name="Today" /></span>}
-        sub={<>{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{missed.length > 0 && <button className="ml-2 text-accent underline" onClick={onReplan}>Replan my week</button>}</>} />
+      <header className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:gap-8">
+        <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
+          <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
+          <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
+          {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
+        </div>
+        <div className="order-1 lg:order-2"><Scene avatar={data.avatar} /></div>
+      </header>
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
-          <section role="dialog" aria-modal="true" aria-label="Getting started" className="w-full max-w-md rounded-t-3xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-semibold">Start in three steps</h2>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
-              <li>Add one goal you care about. <button className="text-accent underline" onClick={() => go('Goals')}>Goals</button></li>
-              <li>Add a task with a date, or import a syllabus. <button className="text-accent underline" onClick={() => go('Tasks')}>Tasks</button></li>
-              <li>Ask the <button className="text-accent underline" onClick={() => { closeGuide(); openAgent() }}>AI agent</button> to plan your week.</li>
+        <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
+          <section role="dialog" aria-modal="true" aria-label="Getting started" className="px-panel w-full max-w-md bg-yuki-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-base">Start in three steps</h2>
+            <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
+              <li>Add one goal you care about. <button className={link} onClick={() => go('Goals')}>Goals</button></li>
+              <li>Add a task with a date, or import a syllabus. <button className={link} onClick={() => go('Tasks')}>Tasks</button></li>
+              <li>Ask the <button className={link} onClick={() => { closeGuide(); openAgent() }}>AI agent</button> to plan your week.</li>
             </ol>
             <button autoFocus className={`${btn} ${BLUE} mt-4 w-full`} onClick={closeGuide}>Got it</button>
           </section>
         </div>
       )}
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-12 lg:gap-4">
-        <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="tabular-nums hover:text-accent" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
-        <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span className="tabular-nums">{thisWeek.length}</span></Tile>
-        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span className="tabular-nums">{stats.week}</span></Tile>
+      <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 lg:mb-6 lg:grid-cols-12 lg:gap-x-6">
+        <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
+        <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
+        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
         <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
-          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className="w-24 rounded-lg bg-transparent tabular-nums placeholder:text-slate-500 focus:bg-white" placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
         </Tile>
       </div>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-12">
-        <section className={`${panel} lg:col-span-9`} aria-label="Right now">
-          <h2 className="text-sm font-semibold">Right now</h2>
+      <div className="mb-6 grid gap-6 lg:grid-cols-12">
+        <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
+          <h2 className="px-tab px-tab-beni inline-block">Right now</h2>
           {cur ? (
             <div className={`${card} mt-3`}>
-              <p className="text-sm text-slate-600">{focus ? 'You are doing' : pick ? 'You picked' : 'Try'}</p>
-              <p className="mt-1 break-words text-2xl font-medium leading-tight">{cur.title}</p>
-              <p className="mt-1 text-sm text-slate-700">{cur.method}{cur.minutes ? ` · ${cur.minutes} min` : ''} · {cur.why}</p>
+              <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Try'}</p>
+              <p className="mt-1 break-words text-2xl">{cur.title}</p>
+              <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => setFocus({ ...cur, at: Date.now() })}>{focus ? 'Done' : 'Start'}</button>
                 {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
@@ -153,14 +159,14 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
 
           <div className="mt-4 flex flex-wrap items-end gap-4">
-            <label className="flex flex-col gap-1 text-sm">Minutes free right now
+            <label className="flex flex-col gap-1">Minutes free right now
               <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
             </label>
-            <div className="flex flex-col gap-1 text-sm">
+            <div className="flex flex-col gap-1">
               <span id="energy-label">Your energy right now</span>
-              <div role="group" aria-labelledby="energy-label" className="flex gap-1 rounded-full bg-white p-1">
+              <div role="group" aria-labelledby="energy-label" className="px-seg">
                 {['low', 'medium', 'high'].map((l) => (
-                  <button key={l} aria-pressed={energy === l} className={`${btn} !py-1 capitalize !transition-none ${energy === l ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`}
+                  <button key={l} aria-pressed={energy === l} className="px-btn capitalize"
                     onClick={() => { setEnergy(l); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }}>{l}</button>
                 ))}
               </div>
@@ -169,79 +175,80 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </div>
 
           <details className="mt-4">
-            <summary className="cursor-pointer text-sm text-accent">More ways to choose</summary>
+            <summary className="underline">More ways to choose</summary>
             <div className="mt-3 space-y-4">
               <ul className="grid gap-3 sm:grid-cols-2">
                 {picks.map(({ m, r }) => (
                   <li key={m.name} className={`${card} flex flex-col justify-between`}>
                     <div>
-                      <p className="text-sm font-medium text-accent">{m.name} <span className="font-normal text-slate-700">· {m.how}</span></p>
+                      <p>{m.name}</p>
+                      <p className="text-xs text-slate-700">{m.how}</p>
                       {r ? <>
-                        <p className="mt-1 break-words font-medium">{r.t.title}</p>
-                        <p className="mt-1 text-sm text-slate-700">{r.t.hours ? `${r.t.hours}h · ` : ''}{r.why}</p>
-                      </> : <p className="mt-1 text-sm text-slate-600">{open.length ? 'Nothing fits your minutes.' : 'No open tasks yet.'}</p>}
+                        <p className="mt-1 break-words">{r.t.title}</p>
+                        <p className="mt-1 text-xs text-slate-700">{r.t.hours ? `${r.t.hours}h. ` : ''}{r.why}</p>
+                      </> : <p className="mt-1 text-slate-700">{open.length ? 'Nothing fits your minutes.' : 'No open tasks yet.'}</p>}
                     </div>
-                    {r && <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => choose(m, r.t, r.why)}>Pick this</button>}
+                    {r && <button className={`${btn} ${BLUE} mt-3 self-start`} onClick={() => choose(m, r.t, r.why)}>Pick this</button>}
                   </li>
                 ))}
               </ul>
               <div className="flex flex-wrap items-center gap-3">
                 <button className={`${btn} ${ghost}`} disabled={busy} onClick={ask}>{busy ? 'Thinking…' : opts ? 'Ask the AI again' : 'Ask the AI for a second opinion'}</button>
-                <span className="text-sm text-slate-600">It also weighs your mood, calendar and hobbies.</span>
-                {error && <span role="alert" className="text-sm text-danger">{error}</span>}
+                <span className="text-xs text-slate-700">It also weighs your mood, calendar and hobbies.</span>
+                {error && <span role="alert" className="text-danger">{error}</span>}
               </div>
               {opts && (
                 <ul className="grid gap-3 sm:grid-cols-2">
                   {opts.map((o, i) => (
                     <li key={i} className={`${card} flex flex-col justify-between`}>
                       <div>
-                        <p className="text-sm font-medium text-accent">{o.method}</p>
-                        <p className="mt-1 break-words font-medium">{o.title}</p>
-                        <p className="mt-1 text-sm text-slate-700">{o.minutes ? `${o.minutes} min · ` : ''}{o.why}</p>
+                        <p>{o.method}</p>
+                        <p className="mt-1 break-words">{o.title}</p>
+                        <p className="mt-1 text-xs text-slate-700">{o.minutes ? `${o.minutes} min. ` : ''}{o.why}</p>
                       </div>
-                      <button className={`${btn} mt-3 self-start ${BLUE}`} onClick={() => startOpt(o)}>Do this now</button>
+                      <button className={`${btn} ${BLUE} mt-3 self-start`} onClick={() => startOpt(o)}>Do this now</button>
                     </li>
                   ))}
                 </ul>
               )}
               <div>
-                <p className="mb-1 text-sm font-medium">Your energy pattern</p>
+                <p className="mb-1">Your energy pattern</p>
                 <Energy log={data.energyLog || []} reset={() => setData((d) => ({ ...d, energyLog: [] }))} />
               </div>
             </div>
           </details>
         </section>
 
-        <section className={`${panel} lg:col-span-3`} aria-label="Coming up">
+        <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Coming up <span className="ml-1 rounded-full bg-white px-2 text-xs font-normal">{soon.length}</span></h2>
-            <button className="text-sm text-accent underline" onClick={() => goTab('Tasks')}>View all</button>
+            <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
+            <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3">
             {soon.slice(0, 5).map((x) => (
-              <li key={x.id} className={card + ' !p-3'}>
-                <p className="break-words text-sm">{x.title}</p>
-                <p className="text-xs text-slate-600">{x.kind} · {x.date === today ? 'Today' : fmtDate(x.date)}</p>
+              <li key={x.id} className="px-rule py-2">
+                <p className="break-words">{x.title}</p>
+                <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
               </li>
             ))}
-            {!soon.length && <li className="text-sm text-slate-600">Nothing due soon.</li>}
+            {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask the AI agent to plan tomorrow.</li>}
           </ul>
         </section>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <section className={`${panel} lg:col-span-6`} aria-label="Your tasks">
+      <div className="grid gap-6 lg:grid-cols-12">
+        <section className="lg:col-span-6" aria-label="Your tasks">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Your tasks <span className="ml-1 rounded-full bg-white px-2 text-xs font-normal">{open.length}</span></h2>
-            <button className="text-sm text-accent underline" onClick={() => goTab('Tasks')}>View all</button>
+            <h2>Your tasks <span className="text-xs text-slate-700">{open.length}</span></h2>
+            <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
             <input className={`${input} min-w-0 flex-1`} placeholder="Add a task" aria-label="Task" value={quick} onChange={(e) => setQuick(e.target.value)} />
-            <button className={`${btn} ${BLUE}`}>Add</button>
+            <button className={`${btn} ${BLUE}`}>Add task</button>
           </form>
-          <ul className="mt-3 space-y-2">
+          <ul className="mt-3">
             {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
-            {!todays.length && <li className="text-sm text-slate-600">No open tasks. Add one above.</li>}
+            {!todays.length && <li className="text-slate-700">Nothing due today. Add a task or ask the AI agent to plan tomorrow.</li>}
           </ul>
         </section>
         <div className="lg:col-span-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>

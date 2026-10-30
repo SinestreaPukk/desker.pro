@@ -53,6 +53,8 @@ write('check', 8, 8, {'K': 'yoru-2', 'W': 'yuki-0', 'f': 'yuki-1', 'G': 'matsu-1
 # dotted divider: 1 art px on, 1 off; 2x1 tile
 write('divider', 4, 1, {'a': 'yuki-2'}, [('rest', ['a.a.'])], 'Dotted divider tile.')
 
+write('backdrop', 2, 2, {'a': 'yoru-2', 'b': 'yoru-1'}, [('rest', ['ab', 'ba'])], 'Dialog backdrop: solid checker, no opacity.')
+
 # ---------------------------------------------------------------- hanko stamp (16x16, 3 frames)
 def hanko(f):
     g = [['.'] * 16 for _ in range(16)]
