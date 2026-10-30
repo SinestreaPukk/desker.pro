@@ -78,7 +78,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         <span className="flex gap-1">
           <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
           <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
-            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : 'Split with AI'}
+            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : '✨ Break into tasks'}
           </button>
           <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
         </span>
@@ -98,45 +98,49 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         <button className={`${btn} ${ghost}`}>Add</button>
       </form>
 
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-        {ratio && ratio !== 1 && <span className="text-xs text-slate-600">Your timed tasks take about {ratio}x your estimates; the AI allows for that.</span>}
-        <label className="flex items-center gap-1">Hours I need
-          <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
-            onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
-        </label>
-        <label className="flex items-center gap-1">Project
-          <select className={input} value={dl.projectId ?? ''} onChange={(e) => {
-            const projectId = e.target.value === '' ? undefined : +e.target.value
-            patch({ projectId }); setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, projectId } : t))) // its tasks follow
-          }}>
-            <option value="">None</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-          </select>
-        </label>
-        <label className="flex items-center gap-1">Date
-          <input type="date" className={input} value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
-        </label>
-        <label className="flex items-center gap-1">Time
-          <input type="time" className={input} value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-        </label>
-        <button className="text-accent-dark underline" onClick={() => setOpen(!open)}>{open ? 'Hide context' : dl.context ? 'Edit context' : 'Add context'}</button>
-      </div>
-      {open && (
-        <textarea className={`${input} mt-2 w-full`} rows={4} aria-label="Context"
-          placeholder="Not sure how long it takes? Paste a syllabus, topics, notes, or say how ready you feel."
-          value={dl.context || ''} onChange={(e) => patch({ context: e.target.value })} />
-      )}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-        <label className={`${btn} cursor-pointer ${ghost} ${reading ? 'pointer-events-none opacity-50' : ''}`}>
-          {reading ? 'Reading…' : 'Attach photo or file'}
-          <input type="file" className="sr-only" accept="image/*,application/pdf,.txt,.md,.csv,.json,.ics" disabled={reading}
-            onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) attach({ file: f }, f.name) }} />
-        </label>
-        <form className="flex min-w-48 flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); if (link.trim()) attach({ url: link.trim() }, link.trim()) }}>
-          <input className={`${input} min-w-0 flex-1`} aria-label="Web link" placeholder="Paste a link (syllabus, assignment page)" value={link} onChange={(e) => setLink(e.target.value)} />
-          <button className={`${btn} ${ghost}`} disabled={reading || !link.trim()}>Read</button>
-        </form>
-      </div>
+      <details className="mt-3">
+        <summary className="cursor-pointer text-sm text-accent">Edit details and context</summary>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          {ratio && ratio !== 1 && <span className="text-xs text-slate-600">Your timed tasks take about {ratio}x your estimates; the AI allows for that.</span>}
+          <label className="flex items-center gap-1">Hours I need
+            <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
+              onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
+          </label>
+          <label className="flex items-center gap-1">Project
+            <select className={input} value={dl.projectId ?? ''} onChange={(e) => {
+              const projectId = e.target.value === '' ? undefined : +e.target.value
+              patch({ projectId }); setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, projectId } : t))) // its tasks follow
+            }}>
+              <option value="">None</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-1">Date
+            <input type="date" className={input} value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
+          </label>
+          <label className="flex items-center gap-1">Time
+            <input type="time" className={input} value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
+          </label>
+          <button className="text-accent-dark underline" onClick={() => setOpen(!open)}>{open ? 'Hide context' : dl.context ? 'Edit context' : 'Add context'}</button>
+        </div>
+        {open && (
+          <textarea className={`${input} mt-2 w-full`} rows={4} aria-label="Context"
+            placeholder="Not sure how long it takes? Paste a syllabus, topics, notes, or say how ready you feel."
+            value={dl.context || ''} onChange={(e) => patch({ context: e.target.value })} />
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <label className={`${btn} cursor-pointer ${ghost} ${reading ? 'pointer-events-none opacity-50' : ''}`}>
+            {reading ? 'Reading…' : 'Attach photo or file'}
+            <input type="file" className="sr-only" accept="image/*,application/pdf,.txt,.md,.csv,.json,.ics" disabled={reading}
+              onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) attach({ file: f }, f.name) }} />
+          </label>
+          <form className="flex min-w-48 flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); if (link.trim()) attach({ url: link.trim() }, link.trim()) }}>
+            <input className={`${input} min-w-0 flex-1`} aria-label="Web link" placeholder="Paste a link (syllabus, assignment page)" value={link} onChange={(e) => setLink(e.target.value)} />
+            <button className={`${btn} ${ghost}`} disabled={reading || !link.trim()}>Read</button>
+          </form>
+        </div>
+
+      </details>
 
       {error && <p className="mt-2 text-sm text-danger">{error}</p>}
       {res?.question && (

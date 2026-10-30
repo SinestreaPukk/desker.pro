@@ -21,49 +21,54 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
       </div>
       <input className={`${input} w-full !text-lg font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <label className={field}>Plan for<input type="date" className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
-        <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
         <label className={field}>Due date<input type="date" className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value || undefined })} /></label>
-        <label className={field}>Hours<input type="number" min="0" step="0.5" className={input} placeholder="Not sure" value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} /></label>
-        <label className={field}>Project
-          <select className={input} value={t.projectId ?? ''} onChange={(e) => update(t.id, { projectId: e.target.value === '' ? undefined : +e.target.value })}>
-            <option value="">None (Inbox)</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-          </select>
-        </label>
-        <label className={field}>Deadline
-          <select className={input} value={t.deadlineId ?? ''} onChange={(e) => {
-            const dl = deadlines.find((d) => d.id === +e.target.value)
-            update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId } : { deadlineId: undefined })
-          }}>
-            <option value="">None</option>
-            {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title} · {fmtDate(d.date)}</option>)}
-          </select>
-        </label>
         <label className={field}>Repeat
           <select className={input} value={t.repeat || ''} onChange={(e) => update(t.id, { repeat: e.target.value || undefined })}>
             {REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
-      </div>
-      <div className="mt-4"><Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
-      <div className="mt-4 rounded-2xl bg-panel p-3 text-sm">
-        <p className="font-medium">Big job?</p>
-        <p className="text-slate-600">The AI works out if it is one task or several. If several, you choose whether to split the work.</p>
-        {!bd?.out && <button className={`${btn} mt-2 ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : 'Check with AI'}</button>}
-        {bd?.error && <p className="mt-2 text-danger">{bd.error}</p>}
-        {bd?.note && <p className="mt-2 text-slate-700">{bd.note}</p>}
-        {bd?.out && (
-          <div className="mt-2">
-            <p>{bd.out.summary} This needs {bd.out.options.length} tasks. Split the work?</p>
-            <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h · by {fmtDate(o.due)}</span></li>)}</ul>
-            <div className="mt-2 flex gap-2">
-              <button className={`${btn} ${BLUE}`} onClick={() => split(t, bd.out)}>Yes, split</button>
-              <button className={`${btn} ${ghost}`} onClick={() => dismiss(t, bd.out)}>No, keep as one</button>
-            </div>
+        <div className={`${field} col-span-2`}>Hours I need
+          <div className="flex gap-2">
+            <input type="number" min="0" step="0.5" className={`${input} w-28`} aria-label="Hours I need" placeholder="Not sure" value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />
+            <button type="button" className={`${btn} ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : '✨ Estimate'}</button>
           </div>
-        )}
+        </div>
       </div>
+      {bd?.error && <p className="mt-2 text-sm text-danger">{bd.error}</p>}
+      {bd?.note && <p className="mt-2 text-sm text-slate-700">{bd.note}</p>}
+      {bd?.out && (
+        <div className="mt-2 rounded-2xl bg-panel p-3 text-sm">
+          <p>{bd.out.summary} This needs {bd.out.options.length} tasks. Split the work?</p>
+          <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
+          <div className="mt-2 flex gap-2">
+            <button className={`${btn} ${BLUE}`} onClick={() => split(t, bd.out)}>Yes, split</button>
+            <button className={`${btn} ${ghost}`} onClick={() => dismiss(t, bd.out)}>No, keep as one</button>
+          </div>
+        </div>
+      )}
+      <details className="mt-4">
+        <summary className="cursor-pointer text-sm text-accent">More options</summary>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className={field}>Do it on<input type="date" className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
+          <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
+          <label className={field}>Project
+            <select className={input} value={t.projectId ?? ''} onChange={(e) => update(t.id, { projectId: e.target.value === '' ? undefined : +e.target.value })}>
+              <option value="">None (Inbox)</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+          </label>
+          <label className={field}>Deadline
+            <select className={input} value={t.deadlineId ?? ''} onChange={(e) => {
+              const dl = deadlines.find((d) => d.id === +e.target.value)
+              update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId } : { deadlineId: undefined })
+            }}>
+              <option value="">None</option>
+              {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title} · {fmtDate(d.date)}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="mt-4"><Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
+      </details>
       <button className={`${btn} mt-6 text-danger hover:bg-slate-100`} onClick={onDelete}>Delete task</button>
     </div>
   )
@@ -75,7 +80,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const [sel, setSel] = useState(null) // task id open in the detail panel
   const quickRef = useRef(null)
   const [bd, setBd] = useState(null) // AI check of the open task: { id, busy | error | note | out }
-  const OK = (d, max) => /^\d{4}-\d\d-\d\d$/.test(d) && d <= max
+  const OK = (d, max) => /^\d{4}-\d\d-\d\d$/.test(d) && (!max || d <= max)
   const [view, setView] = useState('List')
   const [over, setOver] = useState(null) // quadrant under a dragged task
   const [busy, setBusy] = useState(false)
@@ -116,12 +121,11 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const unranked = open.filter((t) => t.q === undefined)
   const analyse = async (t) => {
     const date = t.due || t.when
-    if (!date) return setBd({ id: t.id, error: 'Set a due date first, so the plan can fit before it.' })
     setBd({ id: t.id, busy: true })
     try {
       const out = await post('/api/deadline', {
         goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-        deadline: { title: t.title, date, hours: t.hours ?? null, context: '' }, asked: 2, ratio: ratioOf(tasks), // asked: 2 = no follow-up questions here
+        deadline: { title: t.title, date: date || null, hours: t.hours ?? null, context: '' }, asked: 2, ratio: ratioOf(tasks), // asked: 2 = no follow-up questions here
       })
       if (!Array.isArray(out.options) || !out.options.length) throw new Error('Unexpected answer from AI')
       if (out.options.length === 1) {
@@ -134,8 +138,8 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   // Splitting turns the task into a deadline that owns the new tasks.
   const split = (t, out) => {
     const date = t.due || t.when, id = Date.now()
-    setDeadlines([...deadlines, { id, title: t.title, date, hours: Number.isFinite(out.hours) ? out.hours : null, context: '', projectId: t.projectId }])
-    setTasks(addTasks(tasks.filter((x) => x.id !== t.id), out.options.map((o) => ({ title: o.title, due: OK(o.due, date) ? o.due : date, hours: Number(o.hours) || undefined, deadlineId: id, projectId: t.projectId }))))
+    if (date) setDeadlines([...deadlines, { id, title: t.title, date, hours: Number.isFinite(out.hours) ? out.hours : null, context: '', projectId: t.projectId }])
+    setTasks(addTasks(tasks.filter((x) => x.id !== t.id), out.options.map((o) => ({ title: o.title, ...(OK(o.due, date) ? { due: o.due } : date ? { due: date } : {}), hours: Number(o.hours) || undefined, ...(date && { deadlineId: id }), projectId: t.projectId }))))
     setSel(null); setBd(null)
   }
   const dismiss = (t, out) => {
