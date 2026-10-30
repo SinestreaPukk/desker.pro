@@ -6,9 +6,8 @@ export function Hero({ className = '' }) {
 
 // Card cover strip. The same task id always gets the same slice of the scene.
 export function Cover({ seed = 0, className = '' }) {
-  return <div className={`${className} overflow-hidden`} style={{ position: 'relative', height: 'calc(16 * var(--px))', background: 'var(--color-kori-1)' }} aria-hidden="true">
-    <img src="/pixel/scene-morning.png" alt="" className="px-art" style={{ position: 'absolute', top: 'calc(-28 * var(--px))', left: `calc(${-(Math.abs(seed) * 37) % 130} * var(--px))`, width: 'calc(192 * var(--px))', maxWidth: 'none' }} />
-  </div>
+  const x = `calc(${-(Math.abs(seed) * 37) % 130} * var(--px))`
+  return <div className={`${className} px-art`} aria-hidden="true" style={{ height: 'calc(16 * var(--px))', backgroundColor: 'var(--color-kori-1)', backgroundImage: 'url(/pixel/scene-morning.png)', backgroundRepeat: 'repeat-x', backgroundSize: 'calc(192 * var(--px)) auto', backgroundPosition: `${x} calc(-28 * var(--px))` }} />
 }
 
 const BANNERS = {
