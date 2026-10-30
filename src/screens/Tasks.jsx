@@ -7,6 +7,7 @@ import AddBox from '../components/AddBox.jsx'
 import Row from '../components/Row.jsx'
 import Syllabus from '../Syllabus.jsx'
 import { DeadlineCard } from './Deadlines.jsx'
+import { fmtDuration } from '../format.js'
 import { post } from '../api.js'
 
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
@@ -39,7 +40,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
       {bd?.out && (
         <div className="mt-2 rounded-2xl bg-panel p-3 text-sm">
           <p>{bd.out.summary} This needs {bd.out.options.length} tasks. Split the work?</p>
-          <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
+          <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{fmtDuration(o.hours)}{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
           <div className="mt-2 flex gap-2">
             <button className={`${btn} ${BLUE}`} onClick={() => split(t, bd.out)}>Yes, split</button>
             <button className={`${btn} ${ghost}`} onClick={() => dismiss(t, bd.out)}>No, keep as one</button>
@@ -132,7 +133,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       if (out.options.length === 1) {
         const h = Number(out.options[0].hours) || out.hours
         if (h) update(t.id, { hours: h })
-        setBd({ id: t.id, note: `One task is enough${h ? ` (about ${h}h)` : ''}. It stays a single task.` })
+        setBd({ id: t.id, note: `One task is enough${h ? ` (about ${fmtDuration(h)})` : ''}. It stays a single task.` })
       } else setBd({ id: t.id, out })
     } catch (err) { setBd({ id: t.id, error: err.message }) }
   }

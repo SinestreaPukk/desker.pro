@@ -3,6 +3,7 @@ import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { REPEATS, todayStr, fmtDate } from '../shared.jsx'
+import { fmtDuration } from '../format.js'
 import { parseQuick, inList } from '../lists.js'
 
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv') }
@@ -112,7 +113,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           </label>
         )}
       </div>
-      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && `${hours}h`, f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
+      {parsed && (due || start || hours) && <p className="mt-2 text-sm text-slate-600" aria-live="polite">{[begin && due !== begin ? `${fmtDate(begin)} → ${fmtDate(due)}` : due && fmtDate(due), start, hours && fmtDuration(+hours), f.repeat && REPEATS.find(([v]) => v === f.repeat)[1].toLowerCase()].filter(Boolean).join(' · ')}</p>}
       {isDl && parsed && !due && <p className="mt-2 text-sm text-slate-600">Pick a date (or type one, like "Monday") to add the deadline.</p>}
       {est && !est.busy && (
         <div className="mt-3 rounded-xl bg-pale p-3 text-sm" role="status">
@@ -130,9 +131,9 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
           {est.out && (
             <div>
               <p>{est.out.summary}</p>
-              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className="rounded-lg bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{o.hours}h{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
+              {est.out.options.length > 1 && <ul className="mt-2 space-y-1">{est.out.options.map((o, i) => <li key={i} className="rounded-lg bg-white px-3 py-1.5"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{fmtDuration(o.hours)}{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>}
               <div className="mt-2 flex flex-wrap gap-2">
-                {Number.isFinite(est.out.hours) && <button type="button" className={`${btn} ${BLUE}`} onClick={() => { set({ hours: String(est.out.hours) }); setEst(null) }}>Use {est.out.hours}h</button>}
+                {Number.isFinite(est.out.hours) && <button type="button" className={`${btn} ${BLUE}`} onClick={() => { set({ hours: String(est.out.hours) }); setEst(null) }}>Use {fmtDuration(est.out.hours)}</button>}
                 {est.out.options.length > 1 && <button type="button" className={`${btn} ${ghost}`} onClick={steps}>Add as {est.out.options.length} steps</button>}
                 <button type="button" className={`${btn} hover:bg-white`} onClick={() => setEst(null)}>Dismiss</button>
               </div>

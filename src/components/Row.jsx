@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { btn, input, rowCard, Q } from '../ui.js'
 import { Cover } from '../art.jsx'
 import { isMissed } from '../tasks.js'
+import { fmtDuration } from '../format.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
 
 // One task: checkbox, title, one line of facts, a Start action and a menu for the rest.
@@ -23,7 +24,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   const facts = [
     t.due && <span key="d" className={t.due < today && !t.done ? 'font-medium text-danger' : ''}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ' ↻' : ''}</span>,
     t.when && <span key="w">Plan {fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
-    t.hours > 0 && <span key="h">{t.hours}h</span>,
+    t.hours > 0 && <span key="h">{fmtDuration(t.hours)}</span>,
     q !== undefined && !cover && !project && <span key="q">{Q[q].name}</span>,
     project && <span key="p">{project}</span>,
   ].filter(Boolean)

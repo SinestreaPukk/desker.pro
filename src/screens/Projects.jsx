@@ -3,6 +3,7 @@ import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
 import { progress, unlink } from '../projects.js'
 import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
+import { fmtDuration } from '../format.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
 
 const KINDS = ['Investment', 'Exam', 'Test', 'Study', 'Work', 'Trip', 'Personal']
@@ -62,7 +63,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           <h3 className="break-words font-semibold">{p.title} <span className="ml-1 rounded-full bg-pale px-2 py-0.5 text-xs font-normal text-accent-dark">{p.kind || 'Project'}</span></h3>
           <p className="text-sm text-slate-600">
             {p.date ? `Ends ${fmtDate(p.date)}` : 'No end date'}{goal && ` · ${goal.title}`}
-            {pr.total > 0 && ` · ${pr.done}/${pr.total} done`}{pr.hoursLeft > 0 && ` · ${pr.hoursLeft}h left`}
+            {pr.total > 0 && ` · ${pr.done}/${pr.total} done`}{pr.hoursLeft > 0 && ` · ${fmtDuration(pr.hoursLeft)} left`}
           </p>
         </div>
         <span className="flex gap-1">
@@ -88,7 +89,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
             <span className={`min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
-            <span className="shrink-0 text-xs text-slate-600">{t.hours ? `${t.hours}h` : ''}{t.due ? ` · ${fmtDate(t.due)}` : ''}</span>
+            <span className="shrink-0 text-xs text-slate-600">{t.hours ? fmtDuration(t.hours) : ''}{t.due ? ` · ${fmtDate(t.due)}` : ''}</span>
           </li>
         ))}
         {!mine.length && <li className="text-sm text-slate-600">No tasks yet. Add one, or let the AI break it down.</li>}
@@ -136,7 +137,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
               <li key={i}>
                 <label className={`flex cursor-pointer gap-2 rounded-2xl border p-2 text-sm ${picked.includes(i) ? 'border-accent bg-accent/10' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                   <input type="checkbox" checked={picked.includes(i)} onChange={() => toggle(i)} />
-                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{o.hours}h{o.due ? ` · by ${o.due}` : ''}</span></span>
+                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{fmtDuration(o.hours)}{o.due ? ` · by ${o.due}` : ''}</span></span>
                 </label>
               </li>
             ))}

@@ -3,6 +3,7 @@ import { post, uid } from '../api.js'
 import { BLUE, btn, input, ghost, panel, Q } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
+import { fmtDuration } from '../format.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
 
 function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
@@ -219,7 +220,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
               {d && (
                 <div className="mb-1 flex justify-between text-xs text-slate-500">
                   <button className="chip -m-1 rounded px-1 py-0.5 hover:bg-slate-100" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
-                  {hrs > 0 && <span className={limit && hrs > limit ? 'font-medium text-danger' : ''}>{hrs}h</span>}
+                  {hrs > 0 && <span className={limit && hrs > limit ? 'font-medium text-danger' : ''}>{fmtDuration(hrs)}</span>}
                 </div>
               )}
               <div className="space-y-0.5">

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
+import { fmtDuration } from '../format.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
 
 export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio }) {
@@ -77,7 +78,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
           <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-          {dl.hours != null && <span className="text-sm text-slate-600">{dl.hours}h</span>}
+          {dl.hours != null && <span className="text-sm text-slate-600">{fmtDuration(dl.hours)}</span>}
         </span>
         {linked > 0 && <span className="text-sm tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={`rounded-full px-3 py-0.5 text-sm ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-[#fdf1ee] text-[#7a1a14]' : 'bg-pale text-accent-dark'}`}>
@@ -96,7 +97,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
             <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
-            {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
+            {t.hours > 0 && <span className="text-xs text-slate-600">{fmtDuration(t.hours)}</span>}
           </li>
         ))}
       </ul>
@@ -177,7 +178,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               <li key={i}>
                 <label className={`flex cursor-pointer gap-2 rounded-2xl border p-2 text-sm ${picked.includes(i) ? 'border-accent bg-accent/10' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
                   <input type="checkbox" checked={picked.includes(i)} onChange={() => toggle(i)} />
-                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{o.hours}h · by {o.due}</span></span>
+                  <span><b className="font-medium">{o.title}</b><br /><span className="text-slate-600">{fmtDuration(o.hours)} · by {o.due}</span></span>
                 </label>
               </li>
             ))}
