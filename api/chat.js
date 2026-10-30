@@ -1,7 +1,9 @@
 // Planning chatbot: asks about readiness / time, then returns plan updates. Prompt and key stay server-side.
 import { guard, askJSON } from './_ai.js'
+import guideHandler from './_guideHandler.js'
 
 export default async function handler(req, res) {
+  if (req.body?.mode?.startsWith('guide')) return guideHandler(req, res)
   if (!(await guard(req, res))) return
   const { goals, tasks, hobbies, deadlines = [], projects = [], freeHours, freeToday, mood, busy = [], messages, pattern, ratio } = req.body || {}
   if (![goals, tasks, hobbies, deadlines, projects, busy, messages].every(Array.isArray) || tasks.length > 50 || goals.length > 50 || messages.length > 40

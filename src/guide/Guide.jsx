@@ -32,7 +32,7 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
     if (cur.result && !confirm('Building again replaces the goals you edited and have not saved. Continue?')) return
     setStage('building')
     try {
-      const out = await post('/api/guide', { areas: g.areas, qa: qaOf(steps, cur.answers, cur.areas) })
+      const out = await post('/api/chat', { mode: 'guide', areas: g.areas, qa: qaOf(steps, cur.answers, cur.areas) })
       setG((x) => ({ ...x, result: fromAI(out) }))
       setStage('review')
     } catch (err) { setG((x) => ({ ...x, error: err.message })); setStage('error') }

@@ -10,7 +10,7 @@ function Card({ g, areas, patch, remove }) {
   const [rw, setRw] = useState(null) // { busy } | { title, why, firstStep } | { error }
   const rewrite = async () => {
     setRw({ busy: true })
-    try { setRw(await post('/api/guide', { mode: 'rewrite', goal: { title: g.title, area: g.area, level: LEVELS[g.level].name, why: g.why } })) } catch (e) { setRw({ error: e.message }) }
+    try { setRw(await post('/api/chat', { mode: 'guide-rewrite', goal: { title: g.title, area: g.area, level: LEVELS[g.level].name, why: g.why } })) } catch (e) { setRw({ error: e.message }) }
   }
   return (
     <li className={`${rowCard} p-3`}>
