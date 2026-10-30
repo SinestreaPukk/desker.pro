@@ -188,13 +188,13 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
         <h2 className="text-center font-semibold">{title}</h2>
         <Button aria-label={`Next ${view}`} variant="secondary" onClick={() => shift(1)}>→</Button>
       </div>
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 rounded-full border border-line bg-white p-1" role="group" aria-label="Calendar view">
           {VIEWS.map((v) => (
             <button key={v} className={`${btn} !px-3 !py-1 capitalize !transition-none ${view === v ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>
           ))}
         </div>
-        <span className="flex gap-2">
+        <span className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={onReplan}>Replan my week</Button>
           <Button variant="secondary" onClick={() => setAnchor(new Date())}>Today</Button>
         </span>
@@ -222,7 +222,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
             <div key={i} className={`min-h-16 rounded p-1 ${d ? 'border border-line bg-white' : ''} ${d && key(d) === today ? 'ring-2 ring-accent' : ''}`}>
               {d && (
                 <div className="mb-1 flex justify-between text-xs text-slate-500">
-                  <button className="chip -m-1 rounded px-1 py-0.5 hover:bg-slate-100" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
+                  <button className="chip inline-flex min-h-6 min-w-6 items-center justify-center rounded px-1 py-0.5 hover:bg-slate-100 max-md:min-h-11 max-md:w-full" aria-label={`Add task due ${key(d)}`} onClick={() => setAdding(key(d))}>{d}</button>
                   {hrs > 0 && <span className={limit && hrs > limit ? 'font-medium text-danger' : ''}>{fmtDuration(hrs)}</span>}
                 </div>
               )}

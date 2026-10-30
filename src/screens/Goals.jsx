@@ -85,7 +85,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       <form className={`${panel} mb-6`} onSubmit={submit}>
         <div className="flex flex-wrap items-center gap-3">
           <input className={`${input} min-w-48 flex-1`} placeholder="Goal" aria-label="Goal" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
-          <select className={input} aria-label="Level" value={d.level} onChange={(e) => setD({ ...d, level: +e.target.value })}>
+          <select className={`${input} max-w-full`} aria-label="Level" value={d.level} onChange={(e) => setD({ ...d, level: +e.target.value })}>
             {LEVELS.map((l, i) => <option key={l.name} value={i}>{l.name} ({l.hint})</option>)}
           </select>
           <input className={`${input} w-40`} list="goal-areas" placeholder="Area (optional)" aria-label="Area" value={d.area || ''} onChange={(e) => setD({ ...d, area: e.target.value || undefined })} />

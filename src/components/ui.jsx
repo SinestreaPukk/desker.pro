@@ -7,7 +7,8 @@ const VARIANT = {
   ghost: 'text-accent hover:bg-pale',
   destructive: 'border border-danger bg-white text-danger hover:bg-danger-tint',
 }
-export const Button = ({ variant = 'primary', className = '', type = 'button', ...p }) => <button type={type} className={`${btn} ${VARIANT[variant]} ${className}`} {...p} />
+// No default type: inside a form a plain Button submits, like <button>. Pass type="button" for the rest, as before.
+export const Button = ({ variant = 'primary', className = '', ...p }) => <button className={`${btn} ${VARIANT[variant]} ${className}`} {...p} />
 
 export const SectionHeader = ({ title, action, id, as: H = 'h2' }) => (
   <div className="flex items-center justify-between gap-3">
