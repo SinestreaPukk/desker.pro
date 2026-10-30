@@ -76,7 +76,7 @@ hr { border: 0; height: var(--px); background: url(/pixel/divider.png) 0 0 / cal
 .px-btn-primary { border-image: url(/pixel/btn-primary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
 .px-btn-secondary { border-image: url(/pixel/btn-secondary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
 .px-btn-danger { border-image: url(/pixel/btn-danger.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
-.px-tab { padding: 0 var(--px); font-size: 16px; line-height: 20px; color: var(--color-yuki-0); }
+.px-tab { padding: 0 var(--px); font-size: 20px; line-height: 24px; color: var(--color-yuki-0); }
 .px-tab-beni { border-image: url(/pixel/tab-beni.png) 3 fill / calc(3 * var(--px)) stretch; }
 .px-tab-kori { border-image: url(/pixel/tab-kori.png) 3 fill / calc(3 * var(--px)) stretch; }
 .px-tab-matsu { border-image: url(/pixel/tab-matsu.png) 3 fill / calc(3 * var(--px)) stretch; }
