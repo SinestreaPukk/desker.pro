@@ -2,6 +2,8 @@
 
 `npm run pixel:lint` exits 0 (no errors). `pixel_lint.py sprite` still reports warnings below. Coordinates are x,y in the 1x sprite; sheet.png coordinates add 24 (avatars) or 16 (hanko) to x for the second frame.
 
+> Only `av-main` remains. The per-avatar rows below describe sprites removed in the one-avatar change; they live in git history.
+
 ## Intentional
 
 | Sprite | Warning | Why it stays |

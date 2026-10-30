@@ -70,7 +70,7 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
-  if (!data) return <div className="flex items-center gap-3 p-6"><Avatar id="shimaenaga" /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
+  if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere
@@ -125,7 +125,7 @@ export default function App() {
     setData((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== t.id) }))
     setToast({ text: `Deleted: ${t.title}`, undo: () => { setData((d) => ({ ...d, tasks: [...d.tasks, t] })); setToast(null) } })
   }
-  const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar id={data.avatar} /></span>
+  const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar /></span>
 
   return (
     <div className="min-h-dvh">

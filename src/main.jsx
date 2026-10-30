@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource/pixelify-sans'
-import '@fontsource/fusion-pixel-12px-proportional-jp'
 import './index.css'
 import App from './App.jsx'
 

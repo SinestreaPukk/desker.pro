@@ -109,6 +109,8 @@ def main():
             for x in range(W):
                 n = g[y][x]; px[x, y] = rgb(remap.get(n, n)) + (255,)
         im.save(out / f'scene-{name}.png')
+    motion = {n: {'cloud': '#%02X%02X%02X' % rgb(r.get('yuki-0', 'yuki-0')), 'shade': '#%02X%02X%02X' % rgb(r.get('yuki-1', 'yuki-1')), 'spark': '#%02X%02X%02X' % rgb(r.get('yuki-0', 'yuki-0'))} for n, r in REMAP.items()}
+    (ROOT / 'src/scene-motion.json').write_text(json.dumps(motion, indent=2) + '\n')
     (out / 'scene.json').write_text(json.dumps({'width': W, 'height': H, 'avatar': AVATAR, 'variants': list(REMAP)}))
     print('built scene x3', W, H)
 

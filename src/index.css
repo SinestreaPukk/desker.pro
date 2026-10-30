@@ -2,9 +2,9 @@
 
 @theme {
   /* Yuki: a quiet snowy morning drawn in pixels. Colours are yuki16 only; shading comes from the ramps, never opacity. */
-  --font-sans: 'Pixelify Sans', 'Fusion Pixel 12px Proportional JP', ui-monospace, monospace;
+  --font-sans: 'Pixelify Sans', ui-monospace, monospace;
   --font-serif: 'Pixelify Sans', ui-monospace, monospace;
-  --font-meta: 'Fusion Pixel 12px Proportional JP', 'Pixelify Sans', ui-monospace, monospace;
+  --font-mono: 'Pixelify Sans', ui-monospace, monospace;
   /* Pixelify Sans: a game-style pixel face that stays readable. Sizes: 16 (small), 20 (body), 32, 48. */
   --text-xs: 16px; --text-xs--line-height: 20px;
   --text-sm: 20px; --text-sm--line-height: 28px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */

@@ -67,17 +67,17 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-line px-3 py-2">
-        <Avatar id="shimaenaga" label="Desker AI agent" />
+        <Avatar label="Desker AI agent" />
         {onClose && <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>}
       </header>
       <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
         <div className="mr-auto flex items-start gap-2">
-          <Avatar id="shimaenaga" />
+          <Avatar />
           <div className={`${bubble} px-sunk`}>Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?</div>
         </div>
         {msgs.map((m, i) => (
           <div key={i} className={`flex items-start gap-2 ${m.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
-            {m.role !== 'user' && <Avatar id="shimaenaga" />}
+            {m.role !== 'user' && <Avatar />}
             <div className={`${bubble} ${m.role === 'user' ? 'px-btn-primary' : 'px-sunk'}`}>
             {m.label ?? m.content}
             {m.goals?.length > 0 && (
@@ -96,7 +96,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
           </div>
         ))}
         {busy && (
-          <div className="mr-auto flex items-center gap-2" role="status" aria-label="AI agent is typing"><Avatar id="shimaenaga" /><span className="px-sunk flex gap-1 px-3 py-3">
+          <div className="mr-auto flex items-center gap-2" role="status" aria-label="AI agent is typing"><Avatar /><span className="px-sunk flex gap-1 px-3 py-3">
             <span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} /></span>
           </div>
         )}

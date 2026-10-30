@@ -1,0 +1,17 @@
+{
+  "morning": {
+    "cloud": "#F4F7F6",
+    "shade": "#DDE6EA",
+    "spark": "#F4F7F6"
+  },
+  "dusk": {
+    "cloud": "#DDE6EA",
+    "shade": "#D49E95",
+    "spark": "#DDE6EA"
+  },
+  "night": {
+    "cloud": "#B4C5D1",
+    "shade": "#3B4262",
+    "spark": "#B4C5D1"
+  }
+}

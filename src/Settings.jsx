@@ -3,7 +3,6 @@ import { btn, BLUE, ghost, input } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { uid } from './api.js'
-import { Avatar, AVATARS, DEFAULT_AVATAR } from './px.jsx'
 import { Icon } from './icons.jsx'
 
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
@@ -75,17 +74,6 @@ export default function Settings({ data, setData, row: inSidebar }) {
             <input type="checkbox" checked={rem} onChange={(e) => toggle(e.target.checked)} />
           </label>
           <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
-          <fieldset>
-            <legend>Your avatar</legend>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {AVATARS.map(([id, name]) => (
-                <label key={id} className="px-sunk flex cursor-pointer justify-center py-1 has-checked:outline-2 has-checked:outline-ink has-focus-visible:outline-2 has-focus-visible:outline-ink">
-                  <input type="radio" name="avatar" className="sr-only" checked={(data.avatar || DEFAULT_AVATAR) === id} onChange={() => setData((d) => ({ ...d, avatar: id }))} />
-                  <Avatar id={id} label={name} />
-                </label>
-              ))}
-            </div>
-          </fieldset>
           <hr />
           <p className="text-xs text-slate-700">Your data lives on our server under an anonymous id tied to this browser. Export a backup to keep it safe or to move it.</p>
           <div className="text-xs text-slate-700">

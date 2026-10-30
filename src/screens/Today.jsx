@@ -116,7 +116,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
           {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
-        <div className="order-1 lg:order-2"><Scene avatar={data.avatar} /></div>
+        <div className="order-1 lg:order-2"><Scene /></div>
       </header>
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (

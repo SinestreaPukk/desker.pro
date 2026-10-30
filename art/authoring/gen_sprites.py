@@ -136,114 +136,38 @@ def body_feet(c, letters):
     c.shape(BODY, letters, top=-1)  # the head's bottom outline is the body's top: no double line
     for x in range(5, 19): c.put(x, 21, 'K')
 
-FUR_SNOW = 'WwsS'
+# the one avatar (placeholder until the real picture is supplied): a spiky-haired kid with round dark glasses and a blue tee from the kit's mood reference, redrawn on the grid
+def hero(c, blink):
+    head = {2: (7, 16), 3: (6, 17), 4: (5, 18), 5: (5, 18), 6: (5, 18), 7: (5, 18), 8: (5, 18), 9: (5, 18), 10: (5, 18), 11: (5, 18), 12: (6, 17)}
+    c.shape(head, 'RRRk')
+    for x in (8, 11, 15): c.put(x, 1, 'K')                       # hair spikes
+    for x in (8, 9, 12, 15, 16): c.put(x, 2, 'R')
+    for (x, y) in ((8, 3), (9, 3), (8, 4), (13, 4), (14, 5), (15, 5)): c.put(x, y, 'h')  # hair highlights, upper left
+    for x in range(7, 17): c.put(x, 7, 'R')                       # bangs
+    for (x, y) in ((11, 7), (12, 7), (14, 7), (7, 7)): c.put(x, y, 'k')
+    for y in range(8, 12):
+        for x in range(7, 17): c.put(x, y, 's' if x >= 15 else 'S')  # face, shaded on the right
+    for y in (8, 9): c.put(6, y, 'R'); c.put(17, y, 'k')           # sideburns
+    for x0 in (7, 13):                                            # round dark lenses with a glint
+        for x in range(x0, x0 + 4):
+            c.put(x, 8, 'S' if blink else 'K'); c.put(x, 9, 'K')
+        if not blink: c.put(x0 + 1, 8, 'W')
+    c.put(11, 8, 'K'); c.put(12, 8, 'K') if not blink else None
+    c.put(11, 10, 's'); c.put(12, 10, 's')                       # nose
+    c.put(11, 11, 'K'); c.put(12, 11, 'K')                       # mouth
+    c.shape({13: (6, 17), 14: (6, 17), 15: (6, 17), 16: (6, 17), 17: (6, 17)}, 'BBcc', top=-1, bottom=17)   # tee; the chin outline is its top
+    for (x, y) in ((8, 14), (9, 14), (8, 15)): c.put(x, y, 'b')    # shirt highlight, upper left
+    for y in (14, 15): c.put(4, y, 'K'); c.put(5, y, 'B'); c.put(18, y, 'c'); c.put(19, y, 'K')   # sleeves
+    for y in (16, 17): c.put(4, y, 'K'); c.put(5, y, 'S'); c.put(18, y, 's'); c.put(19, y, 'K')   # forearms
+    for x in (4, 5, 18, 19): c.put(x, 18, 'K')                     # hands
+    c.shape({18: (7, 16), 19: (7, 16), 20: (7, 16)}, 'QQPP', top=-1, bottom=20)
+    for x in (9, 10, 13, 14): c.put(x, 21, 'S')
+    for x in (8, 11, 12, 15): c.put(x, 21, 'K')
+    for y in (22, 23):
+        for (x0, x1) in ((7, 10), (13, 16)):
+            for x in range(x0, x1 + 1):
+                c.put(x, y, 'K' if (x in (x0, x1) or y == 23) else ('Q' if x < x1 - 1 else 'P'))
+avatar('av-main', {'R': 'beni', 'h': 'hada-1', 'k': 'kuri', 'S': 'hada-0', 's': 'hada-1', 'W': 'yuki-0', 'B': 'kori-2', 'b': 'kori-1', 'c': 'yoru-0', 'P': 'yoru-1', 'Q': 'yoru-0'}, hero,
+       'The only avatar for now: spiky-haired kid, round dark glasses, blue tee. Redrawn from the kit mood reference, in palette.')
 
-# yuki-usagi: snow rabbit, beni berry eyes, matsu leaf ears
-def rabbit(c, blink):
-    for y in range(1, 6):
-        c.row(y, 5, 'KKKK' if y == 1 else 'KGgK'); c.row(y, 15, 'KKKK' if y == 1 else 'KGgK')
-    c.row(6, 5, 'KGgKKKKKKKKGgK')
-    c.shape(HEAD, FUR_SNOW, top=6)
-    c.row(6, 5, 'KGgKKKKKKKKGgK'); c.row(7, 6, 'GgWWWWWWWWGg')
-    eyes(c, blink, 'b'); c.row(13, 11, 'KK'); c.row(13, 5, 'PP'); c.row(13, 17, 'PP')
-    body_feet(c, FUR_SNOW)
-avatar('av-usagi', {'W': 'yuki-0', 'w': 'yuki-1', 's': 'yuki-2', 'S': 'yuki-3', 'G': 'matsu-0', 'g': 'matsu-1', 'b': 'beni', 'P': 'hada-1'}, rabbit,
-       'Yuki-usagi: snow rabbit, beni berry eyes, matsu leaf ears. Light upper-left.')
-
-# kitsune in a knit scarf
-def fox(c, blink):
-    ears = ['.K............K', '.KK..........KK', '.KFK........KFK', '.KFFK......KFFK', '.KFdFK....KFdFK', '.KFddFK..KFddFK']
-    for i, r in enumerate(ears):
-        c.row(1 + i, 4, r.replace('.', ' '))
-    FUR = 'WwsS'
-    c.shape(HEAD, FUR, top=7)
-    c.row(6, 5, 'KFddFKKKFddFK'[0:0]) if False else None
-    for x in (11, 12): c.put(x, 6, 'K')
-    eyes(c, blink)
-    c.row(13, 4, 'WMMMWWWKKWWWWMMW'); c.row(14, 4, 'WWMMMMMMMMMMMMss'); c.row(15, 5, 'WWMMMMMMMMss')
-    body_feet(c, FUR)
-    c.row(16, 5, 'KKKKKKKKKKKKKK')
-    c.row(17, 5, 'KaAaAaAaAaAaAaAK'[1:15] if False else 'KaAaAaAaAaAaAK'); c.row(18, 5, 'KAaAaAaAaAaAaK')
-avatar('av-kitsune', {'W': 'hada-1', 'w': 'kuri', 's': 'kuri', 'S': 'yoru-1', 'F': 'hada-1', 'd': 'hada-0', 'M': 'yuki-0', 'a': 'kori-1', 'A': 'kori-2'}, fox,
-       'Kitsune in a knit scarf (kori-1/kori-2 stripes).')
-
-# nihonzaru: snow monkey with steam wisp
-def monkey(c, blink):
-    FUR = 'WwsS'
-    c.shape(HEAD, FUR, top=7)
-    for y, s in ((10, 'KKK'), (13, 'KKK')):
-        c.row(y, 1, s); c.row(y, 20, s)
-    for y in (11, 12):
-        c.row(y, 0, 'KPPK'); c.row(y, 20, 'KPPK')
-    for y, s in ((10, 'WWWWPPPPPPPPWWWW'), (11, 'WWPPPPPPPPPPPPww'), (12, 'WWPPPPPPPPPPPPww'), (13, 'WWPPPPPBBPPPPPww'), (14, 'WWPPPPKKKKPPPPww')):
-        c.row(y, 4, s)
-    eyes(c, blink, 'K', xs=(8, 14)) if False else None
-    for x in (8, 15):
-        c.put(x, 11, 'K' if not blink else 'P'); c.put(x, 12, 'K')
-    c.row(15, 5, 'WWWWWWWWWWwwss')
-    body_feet(c, FUR)
-    for (x, y) in [(11, 5), (12, 4), (11, 3), (12, 2), (11, 1), (15, 4), (14, 3), (15, 2)]: c.put(x, y, 'x')
-avatar('av-nihonzaru', {'W': 'yuki-2', 'w': 'yuki-3', 's': 'yoru-0', 'S': 'yoru-1', 'P': 'hada-1', 'B': 'kuri', 'x': 'yuki-2'}, monkey,
-       'Nihonzaru: snow monkey, steam wisp (2 strands).')
-
-# tanuki under a straw kasa
-def tanuki(c, blink):
-    FUR = 'WwsS'
-    c.shape(HEAD, FUR, top=10)
-    cone = {3: (10, 13), 4: (9, 14), 5: (8, 15), 6: (7, 16), 7: (6, 17), 8: (4, 19), 9: (3, 20)}
-    for y, (x0, x1) in cone.items():
-        for x in range(x0, x1 + 1):
-            c.put(x, y, 'K' if x in (x0, x1) or y == 3 else ('q' if (x >= x1 - 2 or y == 9) else 'h'))
-    for x in range(2, 22): c.put(x, 10, 'K')
-    for y in (11, 12, 13):
-        for x in list(range(6, 10)) + list(range(14, 18)): c.put(x, y, 'D')
-    for x in (8, 15):
-        c.put(x, 11, 'W' if not blink else 'D'); c.put(x, 12, 'W')
-    c.row(13, 9, 'MMMMMMMM'); c.row(13, 11, 'KK'); c.row(14, 7, 'MMMMMMMMMMMM'); c.row(15, 8, 'MMMMMMMM')
-    body_feet(c, FUR)
-    for y in (17, 18, 19):
-        c.row(y, 9, 'MMMMMM')
-avatar('av-tanuki', {'W': 'kuri', 'w': 'yoru-0', 's': 'yoru-1', 'S': 'yoru-1', 'h': 'hada-0', 'q': 'hada-1', 'D': 'yoru-1', 'M': 'hada-0'}, tanuki,
-       'Tanuki under a straw kasa (hada ramp as straw).')
-
-# shiba in an earflap hat
-def shiba(c, blink):
-    FUR = 'WwsS'
-    for i, r in enumerate(['.K............K', '.KK..........KK', '.KFK........KFK', '.KFFK......KFFK']):
-        c.row(3 + i, 4, r.replace('.', ' '))
-    c.shape(HEAD, FUR, top=7)
-    for x in range(5, 19): c.put(x, 7, 'K')
-    for y in (8, 9):
-        for x in range(4, 20): c.put(x, y, 'K' if x in (4, 19) else ('j' if y == 8 else 'h'))
-    for x in range(5, 19): c.put(x, 6 if x < 5 else 6, 'K') if False else None
-    for y in range(10, 14):
-        for x in (3, 4, 5, 18, 19, 20): c.put(x, y, 'K' if (x in (3, 20) or y == 13) else 'h')
-    eyes(c, blink)
-    c.row(13, 8, 'MMMMMMMM'); c.row(13, 11, 'KK'); c.row(14, 7, 'MMMMMMMMMMMM'); c.row(15, 8, 'MMMMMMMM')
-    body_feet(c, FUR)
-avatar('av-shiba', {'W': 'hada-1', 'w': 'kuri', 's': 'kuri', 'S': 'yoru-1', 'F': 'hada-1', 'M': 'yuki-0', 'h': 'kori-2', 'j': 'kori-1'}, shiba,
-       'Shiba in an earflap hat (kori-2 knit, kori-1 band).')
-
-# chibi person with beanie and scarf; hair colourway by palette swap
-def person(c, blink):
-    SK = 'WwsS'
-    c.shape(HEAD, SK, top=9)
-    beanie = {3: (9, 14), 4: (7, 16), 5: (6, 17), 6: (5, 18), 7: (5, 18), 8: (4, 19)}
-    for y, (x0, x1) in beanie.items():
-        for x in range(x0, x1 + 1):
-            c.put(x, y, 'K' if (x in (x0, x1) or y == 3) else ('j' if y >= 7 else ('b' if x < x1 - 2 else 'c')))
-    for x in range(4, 20): c.put(x, 9, 'K')
-    for y in range(10, 14):
-        for x in list(range(4, 6)) + list(range(18, 20)): c.put(x, y, 'H')
-    for x in (8, 15):
-        c.put(x, 11, 'K' if not blink else 'W'); c.put(x, 12, 'K')
-    c.row(13, 5, 'PP'); c.row(13, 17, 'PP'); c.row(14, 10, 'KKKK') if False else c.row(14, 11, 'KK')
-    c.shape(BODY, 'JjkK', top=-1)
-    for x in range(5, 19): c.put(x, 21, 'K')
-    c.row(16, 5, 'KKKKKKKKKKKKKK')
-    c.row(17, 5, 'KgGgGgGgGgGgK'[:14] if False else 'KgGgGgGgGgGgGK'); c.row(18, 5, 'KGgGgGgGgGgGgK')
-for tag, hair in (('a', 'kuri'), ('b', 'yoru-1'), ('c', 'hada-1')):
-    avatar(f'av-person-{tag}', {'W': 'hada-0', 'w': 'hada-1', 's': 'hada-1', 'S': 'kuri', 'H': hair, 'b': 'kori-2', 'c': 'yoru-0', 'j': 'kori-1', 'P': 'hada-1',
-                                'J': 'yuki-2', 'k': 'yuki-3', 'g': 'matsu-0', 'G': 'matsu-1'}, person,
-           f'Chibi person, beanie and scarf, hair colourway {tag}.')
 print('wrote', len(list(OUT.glob('*.sprite.txt'))), 'sprites')
