@@ -21,21 +21,13 @@ import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
 import { btn } from './ui.js'
+import { Banner } from './art.jsx'
 import { Button, EmptyState, Skeleton } from './components/ui.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
 const TABS = Object.keys(PATHS)
 const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
-
-// Page titles for every page but Today (which has its own greeting header).
-const SUBTITLE = {
-  Tasks: 'Everything you need to do, ranked by deadline and by the goal it serves.',
-  Goals: 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.',
-  Projects: 'Something bigger than a task: an investment, an exam, a launch. It owns the tasks that get it done.',
-  Calendar: 'Planned tasks, deadlines and your calendar events in one place.',
-}
-const PageTitle = ({ tab }) => <header className="mb-6"><h1 className="greeting text-xl">{tab}</h1><p className="mt-1 max-w-2xl text-sm text-slate-600">{SUBTITLE[tab]}</p></header>
 
 export default function App() {
   const [tab, setTabState] = useState(tabOf)
@@ -195,7 +187,7 @@ export default function App() {
             </div>
           )}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
-          {SUBTITLE[tab] && <PageTitle tab={tab} />}
+          <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} openAgent={askAgent} onReplan={openReplan} onReview={openReview} onGuide={openGuideDefault} />}

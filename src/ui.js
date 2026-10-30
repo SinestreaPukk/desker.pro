@@ -1,5 +1,5 @@
 // Shared class names. Desker is soft: pill buttons, 20px tonal panels, 14px row cards, one pastel-blue action.
-export const BLUE = 'bg-accent-dark text-white hover:bg-ink' // the one primary action: solid, never looks disabled
+export const BLUE = 'border border-accent/30 bg-primary font-semibold text-ink hover:bg-primary-hover' // the one soft-blue action; the border keeps it clearly a button, and real disabled buttons go grey
 export const btn = 'rounded-full px-4 py-2 text-sm font-medium transition cursor-pointer disabled:cursor-not-allowed disabled:border disabled:!bg-slate-100 disabled:!text-slate-500 disabled:!border-slate-200'
 export const ghost = 'border border-control bg-white hover:bg-slate-100'
 export const input = 'rounded-xl border border-control bg-white px-3 py-2 placeholder:text-slate-500'

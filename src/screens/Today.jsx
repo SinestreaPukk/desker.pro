@@ -6,6 +6,8 @@ import { METHODS } from '../methods.js'
 import { fmtDuration, relDate, fmtDate } from '../format.js'
 import { input, LEVELS } from '../ui.js'
 import { Button, Card, EmptyState, ReasonLine, StatTile } from '../components/ui.jsx'
+import { PageHead } from '../art.jsx'
+import { Icon } from '../icons.jsx'
 import Mirror from './Mirror.jsx'
 import GetStarted, { stepsOf } from './GetStarted.jsx'
 import { track } from '../track.js'
@@ -127,14 +129,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     onDismiss={() => { setHidden(true); try { localStorage.setupHidden = '1' } catch { /* blocked: shows again next visit */ } }} />
 
   const header = (
-    <header className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 md:mb-6">
-      <div>
-        <h1 className="greeting text-xl">{greeting()}.</h1>
-        <p className="text-sm text-slate-600">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-      </div>
+    <PageHead title={`${greeting()}.`} v={0} icon={<span className="scale-125 md:scale-150"><Icon name="Today" /></span>}
+      sub={new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}>
       {/* TODO(roadmap: streaks): swap this derived streak for the stored one */}
-      {stats.streak > 1 && <span className="rounded-full bg-pale px-3 py-1 text-sm font-medium text-accent-dark">{stats.streak}-day streak</span>}
-    </header>
+      {stats.streak > 1 && <span className="mt-2 inline-block rounded-full bg-pale px-3 py-1 text-sm font-medium text-accent-dark">{stats.streak}-day streak</span>}
+    </PageHead>
   )
   if (newUser) return <>{header}{setup}</>
 
