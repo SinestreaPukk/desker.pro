@@ -2,7 +2,8 @@ import { useState, useRef } from 'react'
 import { addTasks, doneStats } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, Q, LEVELS } from '../ui.js'
 import { quadrant, prioritise, REPEATS, Happy, todayStr, fmtDate, ratioOf } from '../shared.jsx'
-import { parseQuick, inList, groupByDate } from '../lists.js'
+import { inList, groupByDate } from '../lists.js'
+import AddBox from '../components/AddBox.jsx'
 import Row from '../components/Row.jsx'
 import Syllabus from '../Syllabus.jsx'
 import { DeadlineCard } from './Deadlines.jsx'
@@ -70,7 +71,6 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
 
 export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines }) {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
-  const [text, setText] = useState('')
   const [list, setList] = useState('today')
   const [sel, setSel] = useState(null) // task id open in the detail panel
   const quickRef = useRef(null)
@@ -84,33 +84,11 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const [added, setAdded] = useState(0) // how many tasks the dump box just added, to offer sorting them
 
   const today = todayStr()
-  const parsed = text.trim() ? parseQuick(text, projects) : null
-  const submit = (e) => {
-    e.preventDefault()
-    if (!parsed) return
-    // a new task lands where you are looking: in the open project, or dated today on the Today list
-    const base = list.startsWith('p:') ? { projectId: Number(list.slice(2)) } : list === 'today' ? { due: today } : {}
-    const d = deadlines.find((x) => x.id === +pickDl)
-    const link = d ? { deadlineId: d.id, due: d.date, projectId: d.projectId } : pickProj ? { projectId: +pickProj } : {}
-    setTasks(addTasks(tasks, [{ ...base, ...link, ...Object.fromEntries(Object.entries(parsed).filter(([, v]) => v !== undefined)) }]))
-    setText('')
-  }
   const update = (id, patch) => setTasks(tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   // Placing a task yourself sticks: the AI skips it unless you ask to re-rank everything.
   const move = (id, qi) => update(id, qi === ''
     ? { important: undefined, urgent: undefined, goalId: undefined, reason: undefined, manual: false }
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
-  const [mode, setMode] = useState('Task') // the add box makes either; both get the same weight
-  const [pickDl, setPickDl] = useState('') // task mode: deadline the new task belongs to
-  const [pickProj, setPickProj] = useState('')
-  const [dl, setDl] = useState({ title: '', date: '', time: '', hours: '', projectId: '' })
-  const addDeadline = (e) => {
-    e.preventDefault()
-    if (!dl.title.trim() || !dl.date) return
-    setDeadlines([...deadlines, { id: Date.now(), title: dl.title.trim(), date: dl.date, time: dl.time || undefined, hours: dl.hours === '' ? undefined : +dl.hours, projectId: dl.projectId === '' ? undefined : +dl.projectId }])
-    setDl({ title: '', date: '', time: '', hours: '', projectId: '' })
-    setList('all') // a deadline outside Today would otherwise vanish from view
-  }
   const lines = dump.split('\n').map((l) => l.trim()).filter(Boolean)
   const addDump = (e) => {
     e.preventDefault()
@@ -219,54 +197,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
 
   return (
     <>
-      <form className={`${panel} mb-4`} onSubmit={mode === 'Task' ? submit : addDeadline}>
-        <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 rounded-full bg-panel p-1">
-          {['Task', 'Deadline'].map((m) => (
-            <button key={m} type="button" aria-pressed={mode === m} className={`${btn} !py-1 ${mode === m ? 'bg-white font-medium text-ink' : 'text-slate-600'}`} onClick={() => setMode(m)}>{m}</button>
-          ))}
-        </div>
-        {mode === 'Task' ? (
-          <>
-            <div className="flex gap-2">
-              <input ref={quickRef} className={`${input} min-w-0 flex-1`} placeholder='Add a task, e.g. "Call dentist tomorrow 3pm #taxes"' aria-label="Add a task" value={text} onChange={(e) => setText(e.target.value)} />
-              <button className={`${btn} ${BLUE}`} disabled={!parsed}>Add</button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2 text-sm">
-              {deadlines.length > 0 && (
-                <select className={input} aria-label="For deadline" value={pickDl} onChange={(e) => setPickDl(e.target.value)}>
-                  <option value="">No deadline</option>
-                  {[...deadlines].filter((d) => !d.done).sort((a, b) => a.date.localeCompare(b.date)).map((d) => <option key={d.id} value={d.id}>For {d.title} · {fmtDate(d.date)}</option>)}
-                </select>
-              )}
-              {projects.length > 0 && !pickDl && (
-                <select className={input} aria-label="Project" value={pickProj} onChange={(e) => setPickProj(e.target.value)}>
-                  <option value="">No project</option>
-                  {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-                </select>
-              )}
-            </div>
-            {parsed && (parsed.due || parsed.start || parsed.hours || parsed.projectId) && (
-              <p className="mt-2 text-sm text-slate-600" aria-live="polite">
-                {[parsed.due && fmtDate(parsed.due), parsed.start, parsed.hours && `${parsed.hours}h`, parsed.projectId && projects.find((p) => p.id === parsed.projectId)?.title].filter(Boolean).join(' · ')}
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="flex flex-wrap items-end gap-2">
-            <input className={`${input} min-w-48 flex-1`} aria-label="Deadline name" placeholder="Deadline, e.g. Statics midterm" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
-            <label className="flex flex-col gap-1 text-xs text-slate-600">Date<input type="date" className={input} value={dl.date} onChange={(e) => setDl({ ...dl, date: e.target.value })} /></label>
-            <label className="flex flex-col gap-1 text-xs text-slate-600">Time<input type="time" className={input} value={dl.time} onChange={(e) => setDl({ ...dl, time: e.target.value })} /></label>
-            <label className="flex flex-col gap-1 text-xs text-slate-600">Hours needed<input type="number" min="0" step="0.5" className={`${input} w-24`} placeholder="Not sure" value={dl.hours} onChange={(e) => setDl({ ...dl, hours: e.target.value })} /></label>
-            {projects.length > 0 && (
-              <select className={input} aria-label="Project" value={dl.projectId} onChange={(e) => setDl({ ...dl, projectId: e.target.value })}>
-                <option value="">No project</option>
-                {projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
-              </select>
-            )}
-            <button className={`${btn} ${BLUE}`} disabled={!dl.title.trim() || !dl.date}>Add deadline</button>
-            <p className="w-full text-xs text-slate-600">Then press Split with AI on its card to break it into tasks.</p>
-          </div>
-        )}
+      <AddBox inputRef={quickRef} tasks={tasks} setTasks={setTasks} deadlines={deadlines} setDeadlines={setDeadlines} projects={projects} goals={goals} ratio={ratioOf(tasks)} list={list} setList={setList}>
         <details className="mt-3">
           <summary className="cursor-pointer text-sm text-accent">Add many at once</summary>
           <div className="mt-3">
@@ -275,7 +206,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
             <button type="button" className={`${btn} mt-2 ${BLUE}`} disabled={!lines.length} onClick={addDump}>{lines.length > 1 ? `Add ${lines.length} tasks` : 'Add task'}</button>
           </div>
         </details>
-      </form>
+      </AddBox>
 
       <Syllabus deadlines={deadlines} setDeadlines={setDeadlines} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} />
 
