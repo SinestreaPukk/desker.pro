@@ -1,0 +1,18 @@
+# Primary button. Fill yoru-1, text yuki-0.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+h yoru-0
+f yoru-1
+s yoru-2
+d yuki-2
+frame rest
+.KKKKKK.
+KhhhhhhK
+KffffffK
+KffffffK
+KffffffK
+KssssssK
+.KKKKKK.
+.dddddd.

@@ -1,0 +1,17 @@
+# Quadrant tab. Outline yoru-2.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+h yuki-3
+f yuki-3
+s yuki-3
+frame rest
+.KKKKKK.
+KhhhhhhK
+KffffffK
+KffffffK
+KffffffK
+KssssssK
+.KKKKKK.
+........

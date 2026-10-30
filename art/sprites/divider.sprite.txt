@@ -1,0 +1,7 @@
+# Dotted divider tile.
+size 4 1
+palette yuki16
+. transparent
+a yuki-2
+frame rest
+a.a.

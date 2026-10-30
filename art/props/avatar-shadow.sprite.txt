@@ -1,0 +1,9 @@
+# Footprint shadow in the snow under the scene avatar.
+size 24 3
+palette yuki16
+. transparent
+s yuki-2
+frame rest
+....ssssssssssssssss....
+...ssssssssssssssssss...
+....ssssssssssssssss....

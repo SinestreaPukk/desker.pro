@@ -1,0 +1,15 @@
+# Secondary container on the page background.
+size 8 8
+palette yuki16
+. transparent
+K yuki-2
+f yuki-1
+frame rest
+.KKKKKK.
+KffffffK
+KffffffK
+KffffffK
+KffffffK
+KffffffK
+.KKKKKK.
+........

@@ -1,0 +1,24 @@
+# Icon: i-calendar.
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+a kori-1
+w yuki-0
+frame rest
+................
+....K......K....
+....K......K....
+.KKKKKKKKKKKKKK.
+.KaaaaaaaaaaaaK.
+.KKKKKKKKKKKKKK.
+.KwwwwwwwwwwwwK.
+.KwKKwwKKwwKKwK.
+.KwKKwwKKwwKKwK.
+.KwwwwwwwwwwwwK.
+.KwKKwwKKwwwwwK.
+.KwKKwwKKwwwwwK.
+.KwwwwwwwwwwwwK.
+.KKKKKKKKKKKKKK.
+................
+................

@@ -1,0 +1,26 @@
+# Checkbox states. Used at 2x (16px) with a padded 44px hit area.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+f yuki-1
+G matsu-1
+frame off
+KKKKKKKK
+KffffffK
+KfWWWWWK
+KfWWWWWK
+KfWWWWWK
+KfWWWWWK
+KWWWWWWK
+KKKKKKKK
+frame on
+KKKKKKKK
+KffffffK
+KfWWWWWK
+KfWWWGWK
+KfGWGWWK
+KfWGWWWK
+KWWWWWWK
+KKKKKKKK

@@ -1,0 +1,17 @@
+# Container frame. Soft outline so content, not chrome, carries the page.
+size 8 8
+palette yuki16
+. transparent
+K yuki-3
+f yuki-0
+s yuki-1
+d yuki-2
+frame rest
+.KKKKKK.
+KffffffK
+KffffffK
+KffffffK
+KffffffK
+KssssssK
+.KKKKKK.
+.dddddd.

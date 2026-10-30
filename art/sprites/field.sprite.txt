@@ -1,0 +1,16 @@
+# Input frame: sunk fill with an inner top-left edge.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+f yuki-1
+h yuki-2
+frame rest
+.KKKKKK.
+KhhhhhhK
+Khffffff
+Khffffff
+Khffffff
+KffffffK
+.KKKKKK.
+........

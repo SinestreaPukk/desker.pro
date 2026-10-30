@@ -1,0 +1,25 @@
+# Icon: i-tasks.
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+b beni
+a kori-1
+w yuki-1
+frame rest
+KKKKKKK..KKKKKKK
+KbbbbbK..KaaaaaK
+KbbbbbK..KaaaaaK
+KbbbbbK..KaaaaaK
+KbbbbbK..KaaaaaK
+KbbbbbK..KaaaaaK
+KKKKKKK..KKKKKKK
+................
+................
+KKKKKKK..KKKKKKK
+KaaaaaK..KwwwwwK
+KaaaaaK..KwwwwwK
+KaaaaaK..KwwwwwK
+KaaaaaK..KwwwwwK
+KaaaaaK..KwwwwwK
+KKKKKKK..KKKKKKK

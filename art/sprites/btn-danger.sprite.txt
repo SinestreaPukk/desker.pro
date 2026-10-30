@@ -1,0 +1,18 @@
+# Slice = 3 on every side. Notched corners, no rounding.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+h beni
+f beni
+s yoru-1
+d yuki-2
+frame rest
+.KKKKKK.
+KhhhhhhK
+KffffffK
+KffffffK
+KffffffK
+KssssssK
+.KKKKKK.
+.dddddd.
