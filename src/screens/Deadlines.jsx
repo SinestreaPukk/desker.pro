@@ -57,6 +57,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
     })))
     setRes(null)
   }
+  const upd = (id, patch) => setTasks(tasks.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   const addOwn = (e) => {
     e.preventDefault()
     if (!own.trim()) return
@@ -68,26 +69,42 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   return (
     <li className="rounded-xl border border-line bg-white">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 p-4 pb-2">
-        <span className="min-w-0 flex-1">
-          <span className={`block break-words font-semibold ${dl.done ? 'text-slate-500 line-through' : ''}`}>{dl.title}</span>
-          <span className="block text-sm text-slate-600">{[fmtDate(dl.date) + (dl.time ? ` ${dl.time}` : ''), dl.hours != null && `${dl.hours}h`].filter(Boolean).join(' · ')}</span>
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${dl.done ? 'text-slate-500 line-through' : ''}`}
+            aria-label="Deadline name (click to rename)" defaultValue={dl.title} maxLength={200} onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+            onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== dl.title) patch({ title: v }); else e.target.value = dl.title }} />
+          <input type="date" className="w-36 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
+            value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
+          <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-sm text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
+            value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
+          {dl.hours != null && <span className="text-sm text-slate-600">{dl.hours}h</span>}
         </span>
         {linked > 0 && <span className="text-sm tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={`rounded-full px-3 py-0.5 text-sm ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-[#fdf1ee] text-[#7a1a14]' : 'bg-pale text-accent-dark'}`}>
           {dl.done ? 'Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
         </span>
       </div>
-      <ul className="space-y-1 px-4 pb-2">
+      <ul className="space-y-1 px-4 pb-1">
         {mine.map((t) => (
-          <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
-            <span className={`min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
-            <span className="shrink-0 text-xs text-slate-600">{[t.hours && `${t.hours}h`, t.due && fmtDate(t.due)].filter(Boolean).join(' · ')}</span>
+          <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-1 gap-y-1 text-sm">
+            <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => upd(t.id, { done: !t.done })} />
+            <input key={t.title} size={Math.max(6, Math.min(40, t.title.length + 1))} className={`min-w-0 max-w-full rounded-lg border border-transparent bg-transparent px-2 py-1 hover:border-control focus:border-accent focus:bg-white ${t.done ? 'text-slate-500 line-through' : ''}`}
+              aria-label="Task name (click to rename)" defaultValue={t.title} maxLength={200}
+              onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) upd(t.id, { title: v }); else e.target.value = t.title }} />
+            <input type="date" className="w-36 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
+              value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
+            <input type="time" className="w-24 rounded-lg border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
+              value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
+            {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
           </li>
         ))}
       </ul>
+      <form className="px-4 pb-3" onSubmit={addOwn}>
+        <input className="w-full rounded-lg border border-transparent bg-transparent px-2 py-2 text-sm placeholder:text-slate-500 hover:border-control focus:border-accent focus:bg-white" aria-label={`Add a task to ${dl.title}`} placeholder="+ Add a task (press Enter)" value={own} onChange={(e) => setOwn(e.target.value)} />
+      </form>
       <details className="group border-t border-line">
-        <summary className="cursor-pointer px-4 py-2 text-sm text-accent">{linked ? 'Add tasks, edit, AI' : 'Break into tasks, edit'}</summary>
+        <summary className="cursor-pointer px-4 py-2 text-sm text-accent">{linked ? 'More: AI, hours, project, context' : 'Break into tasks with AI, more'}</summary>
         <div className="border-t border-line p-4 pt-3">
       <div className="mb-3 flex flex-wrap gap-2">
         <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
@@ -97,10 +114,6 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
       </div>
 
-      <form className="mt-2 flex gap-2" onSubmit={addOwn}>
-        <input className={`${input} min-w-0 flex-1`} aria-label={`New task for ${dl.title}`} placeholder="Add your own task for this deadline" value={own} onChange={(e) => setOwn(e.target.value)} />
-        <button className={`${btn} ${ghost}`}>Add</button>
-      </form>
 
       <details className="mt-3">
         <summary className="cursor-pointer text-sm text-accent">Edit details and context</summary>
