@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
 import { btn, input, rowCard, Q } from '../ui.js'
-import { Cover } from '../art.jsx'
 import { isMissed } from '../tasks.js'
 import { fmtDuration } from '../format.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
 
 // One task: checkbox, title, one line of facts, a Start action and a menu for the rest.
-export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project }) {
+export default function Row({ t, update, onEdit, onDelete, move, onStart, inBox, project }) {
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
   const [sub, setSub] = useState('')
@@ -25,13 +24,12 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
     t.due && <span key="d" className={t.due < today && !t.done ? 'font-medium text-danger' : ''}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ' ↻' : ''}</span>,
     t.when && <span key="w">Plan {fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
     t.hours > 0 && <span key="h">{fmtDuration(t.hours)}</span>,
-    q !== undefined && !cover && !project && <span key="q">{Q[q].name}</span>,
+    q !== undefined && !inBox && !project && <span key="q">{Q[q].name}</span>,
     project && <span key="p">{project}</span>,
   ].filter(Boolean)
   const item = 'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-slate-100'
   return (
     <li className={`${rowCard} px-3 py-2`}>
-      {cover && <Cover seed={t.id} className="-mx-3 -mt-2 mb-2 block h-14 w-[calc(100%+1.5rem)] rounded-t-[0.8125rem]" />}
       <div className="flex items-center gap-2">
         <span className="hidden shrink-0 cursor-grab text-slate-400 md:block" draggable title="Drag to another box" aria-hidden="true"
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { post } from '../api.js'
 import { BLUE, btn, ghost, input, rowCard, LEVELS } from '../ui.js'
 import { areaTag } from './questions.js'
+import { Button } from '../components/ui.jsx'
 
 const BADGE = ['Vision', 'Long', 'Mid', 'Short']
 const Tag = ({ a }) => <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${areaTag(a)}`}>{a}</span>
@@ -40,8 +41,8 @@ function Card({ g, areas, patch, remove }) {
               <p className="text-slate-600">Before: {g.title}</p>
               <p>After: {rw.title}</p>
               <div className="mt-2 flex gap-2">
-                <button className={`${btn} ${BLUE}`} onClick={() => { patch({ title: rw.title, ...(rw.why && { why: rw.why }), ...(rw.firstStep && { firstStep: rw.firstStep }) }); setRw(null) }}>Use new</button>
-                <button className={`${btn} ${ghost}`} onClick={() => setRw(null)}>Keep mine</button>
+                <Button variant="primary" onClick={() => { patch({ title: rw.title, ...(rw.why && { why: rw.why }), ...(rw.firstStep && { firstStep: rw.firstStep }) }); setRw(null) }}>Use new</Button>
+                <Button variant="secondary" onClick={() => setRw(null)}>Keep mine</Button>
               </div>
             </>
           )}
@@ -120,8 +121,8 @@ export default function GuideReview({ result, setResult, areas, onClose, onBack,
       </main>
       <div className="border-t border-line bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto flex max-w-2xl gap-2">
-          <button className={`${btn} ${ghost} min-h-11`} onClick={onBack}>Back to answers</button>
-          <button className={`${btn} ${BLUE} ml-auto min-h-11 px-6`} disabled={!vision.trim() && !goals.some((g) => g.title.trim())} onClick={onSave}>Save to my goals</button>
+          <Button variant="secondary" className="min-h-11" onClick={onBack}>Back to answers</Button>
+          <Button variant="primary" className="ml-auto min-h-11 px-6" disabled={!vision.trim() && !goals.some((g) => g.title.trim())} onClick={onSave}>Save to my goals</Button>
         </div>
       </div>
     </>

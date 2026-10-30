@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
 import { progress, unlink } from '../projects.js'
-import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
+import { BLUE, btn, input, panel, LEVELS } from '../ui.js'
 import { fmtDuration } from '../format.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
+import { Button } from '../components/ui.jsx'
 
 const KINDS = ['Investment', 'Exam', 'Test', 'Study', 'Work', 'Trip', 'Personal']
 
@@ -67,7 +68,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           </p>
         </div>
         <span className="flex gap-1">
-          <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>{busy ? 'Thinking…' : 'Break down with AI'}</button>
+          <Button variant="primary" disabled={busy} onClick={() => plan()}>{busy ? 'Thinking…' : 'Break down with AI'}</Button>
           <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${p.title}`}
             onClick={() => { if (confirm(`Delete ${p.title}? Its ${pr.total} tasks stay, without a project.`)) remove() }}>Delete</button>
         </span>
@@ -96,7 +97,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
       </ul>
       <form className="mt-2 flex gap-2" onSubmit={addOne}>
         <input className={`${input} min-w-0 flex-1`} aria-label={`New task for ${p.title}`} placeholder="Add a task to this project" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <button className={`${btn} ${ghost}`}>Add</button>
+        <Button variant="secondary">Add</Button>
       </form>
 
       <details className="mt-2 text-sm">
@@ -125,7 +126,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           <p className="mb-2 font-medium">{res.question}</p>
           <div className="flex gap-2">
             <input className={`${input} min-w-0 flex-1`} aria-label="Your answer" value={answer} onChange={(e) => setAnswer(e.target.value)} />
-            <button className={`${btn} ${BLUE}`} disabled={busy}>Answer</button>
+            <Button variant="primary" disabled={busy}>Answer</Button>
           </div>
         </form>
       )}
@@ -169,7 +170,7 @@ export default function Projects({ goals, projects, setProjects, tasks, setTasks
         <input type="date" aria-label="End date (optional)" title="End date (optional)" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
         <textarea className={`${input} w-full`} rows={2} aria-label="Context" placeholder="What is it about? Scope, budget, topics, how ready you feel (optional)"
           value={d.context} onChange={(e) => setD({ ...d, context: e.target.value })} />
-        <button className={`${btn} ${BLUE}`}>Add project</button>
+        <Button variant="primary">Add project</Button>
       </form>
       {!projects.length && <p className="text-sm text-slate-600">No projects yet. A project groups the tasks of something bigger: an investment plan, a final exam, a launch.</p>}
       <ul className="space-y-3">

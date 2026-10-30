@@ -18,14 +18,22 @@ import Calendar from './screens/Calendar.jsx'
 import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
-import { BLUE, btn, ghost } from './ui.js'
-import { Banner } from './art.jsx'
+import { btn } from './ui.js'
 import { Button, EmptyState, Skeleton } from './components/ui.jsx'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
 const TABS = Object.keys(PATHS)
 const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
+
+// Page titles for every page but Today (which has its own greeting header).
+const SUBTITLE = {
+  Tasks: 'Everything you need to do, ranked by deadline and by the goal it serves.',
+  Goals: 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.',
+  Projects: 'Something bigger than a task: an investment, an exam, a launch. It owns the tasks that get it done.',
+  Calendar: 'Planned tasks, deadlines and your calendar events in one place.',
+}
+const PageTitle = ({ tab }) => <header className="mb-6"><h1 className="greeting text-xl">{tab}</h1><p className="mt-1 max-w-2xl text-sm text-slate-600">{SUBTITLE[tab]}</p></header>
 
 export default function App() {
   const [tab, setTabState] = useState(tabOf)
@@ -145,7 +153,7 @@ export default function App() {
             <span><span className="block text-lg font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
           </button>
           <div className="flex items-center gap-2">
-            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
+            <Button variant="secondary" className="flex items-center gap-2" onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</Button>
             <Settings data={data} setData={setData} />
           </div>
         </div>
@@ -162,7 +170,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo('h-8 w-8')}<span className="text-lg font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
-            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
+            <button className={`${btn} flex items-center gap-2 whitespace-nowrap border border-control hover:bg-panel`} onClick={() => askAgent()}><Icon name="Agent" />Ask the AI agent</button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
@@ -172,11 +180,11 @@ export default function App() {
           {missed.length > 0 && tab !== 'Today' && !replanOpen && (
             <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[#fdf1ee] p-4 text-sm">
               <span><b className="font-medium">{missed.length} planned task{missed.length === 1 ? '' : 's'}</b> slipped past {missed.length === 1 ? 'its' : 'their'} time: {missed.slice(0, 3).map((t) => t.title).join(', ')}{missed.length > 3 ? '…' : ''}</span>
-              <button className={`${btn} ${BLUE}`} onClick={openReplan}>Replan my week</button>
+              <Button variant="primary" onClick={openReplan}>Replan my week</Button>
             </div>
           )}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
-          <Banner tab={tab} />
+          {SUBTITLE[tab] && <PageTitle tab={tab} />}
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} openAgent={askAgent} onReplan={openReplan} onReview={openReview} onGuide={openGuideDefault} />}

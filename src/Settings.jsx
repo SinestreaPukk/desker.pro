@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { btn, BLUE, ghost } from './ui.js'
+import { btn, ghost } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { uid } from './api.js'
+import { Button } from './components/ui.jsx'
 
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
 const store = {
@@ -85,11 +86,11 @@ export default function Settings({ data, setData, row: inSidebar }) {
               if (c !== uid && confirm('Switch to this workspace? Export a backup first if this device has data you want to keep.')) { localStorage.uid = c; location.reload() }
             }}>
               <input name="code" className="min-w-0 flex-1 rounded-lg bg-panel px-2 py-1 font-mono" placeholder="Paste a sync code" aria-label="Sync code to use" />
-              <button className={`${btn} ${ghost}`}>Use</button>
+              <Button variant="secondary">Use</Button>
             </form>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className={`${btn} ${ghost}`} onClick={exportData}>Export JSON</button>
+            <Button variant="secondary" onClick={exportData}>Export JSON</Button>
             <label className={`${btn} inline-flex cursor-pointer items-center ${ghost}`}>Import JSON
               <input type="file" className="sr-only" accept="application/json,.json" onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) readFile(f) }} />
             </label>
@@ -98,8 +99,8 @@ export default function Settings({ data, setData, row: inSidebar }) {
             <div role="alert" className="rounded-xl bg-amber/15 p-2 text-sm">
               Replace everything with this file ({incoming.tasks.length} tasks, {incoming.goals.length} goals)? This cannot be undone.
               <div className="mt-2 flex gap-2">
-                <button className={`${btn} ${BLUE}`} onClick={() => { setData(migrate(incoming)); setIncoming(null); setMsg('Backup restored.') }}>Replace</button>
-                <button className={`${btn} ${ghost}`} onClick={() => setIncoming(null)}>Cancel</button>
+                <Button variant="primary" onClick={() => { setData(migrate(incoming)); setIncoming(null); setMsg('Backup restored.') }}>Replace</Button>
+                <Button variant="secondary" onClick={() => setIncoming(null)}>Cancel</Button>
               </div>
             </div>
           )}

@@ -61,3 +61,8 @@ export function ReasonLine({ task, goals, onLink }) {
     </p>
   )
 }
+
+// Warning for anything that is a key to the workspace. Words + icon, not colour alone.
+export const PrivateWarning = ({ children }) => (
+  <p className="mt-2 flex gap-2 rounded-xl bg-danger-tint p-3 text-sm text-ink"><span aria-hidden="true">⚠</span><span><b className="font-medium">Keep it private.</b> {children}</span></p>
+)

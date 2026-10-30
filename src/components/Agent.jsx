@@ -3,6 +3,7 @@ import { post } from '../api.js'
 import { BLUE, btn, input, LEVELS } from '../ui.js'
 import { weekReview } from '../review.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
+import { Button } from './ui.jsx'
 
 export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }) {
   const [msgs, setMsgs] = useState([])
@@ -84,7 +85,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }
                       onClick={() => addGoals(i, [k])}>{g.added ? 'Added' : 'Add goal'}</button>
                   </li>
                 ))}
-                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE} !py-1.5`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
+                {m.goals.some((g) => !g.added) && <li><Button variant="primary" className="!py-1.5" onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</Button></li>}
               </ul>
             )}
           </div>

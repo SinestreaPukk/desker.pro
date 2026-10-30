@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { addTasks, doneStats } from '../tasks.js'
-import { BLUE, btn, ghost, input, panel, Q, LEVELS } from '../ui.js'
+import { BLUE, btn, input, panel, Q, LEVELS } from '../ui.js'
 import { quadrant, rankTasks, REPEATS, Happy, todayStr, fmtDate, ratioOf } from '../shared.jsx'
 import { inList, groupSoon } from '../lists.js'
 import AddBox from '../components/AddBox.jsx'
@@ -9,6 +9,7 @@ import Syllabus from '../Syllabus.jsx'
 import { DeadlineCard } from './Deadlines.jsx'
 import { fmtDuration } from '../format.js'
 import { post } from '../api.js'
+import { Button } from '../components/ui.jsx'
 
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
 // The Eisenhower matrix and AI sorting are one switch away.
@@ -18,7 +19,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
     <div className="fixed inset-0 z-30 overflow-y-auto bg-white p-5 md:inset-y-0 md:left-auto md:w-[26rem] md:border-l md:border-line" role="dialog" aria-label="Task details" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className="mb-4 flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} />{t.done ? 'Done' : 'Mark done'}</label>
-        <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>
+        <Button variant="secondary" onClick={onClose}>Close</Button>
       </div>
       <input className={`${input} w-full !text-lg font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -31,7 +32,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
         <div className={`${field} col-span-2`}>Hours I need
           <div className="flex gap-2">
             <input type="number" min="0" step="0.5" className={`${input} w-28`} aria-label="Hours I need" placeholder="Not sure" value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />
-            <button type="button" className={`${btn} ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : '✨ Estimate'}</button>
+            <Button type="button" variant="secondary" disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : '✨ Estimate'}</Button>
           </div>
         </div>
       </div>
@@ -42,8 +43,8 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
           <p>{bd.out.summary} This needs {bd.out.options.length} tasks. Split the work?</p>
           <ul className="mt-2 space-y-1">{bd.out.options.map((o, i) => <li key={i} className="rounded-xl bg-white px-3 py-2"><b className="font-medium">{o.title}</b> <span className="text-slate-600">{fmtDuration(o.hours)}{o.due ? ` · by ${fmtDate(o.due)}` : ''}</span></li>)}</ul>
           <div className="mt-2 flex gap-2">
-            <button className={`${btn} ${BLUE}`} onClick={() => split(t, bd.out)}>Yes, split</button>
-            <button className={`${btn} ${ghost}`} onClick={() => dismiss(t, bd.out)}>No, keep as one</button>
+            <Button variant="primary" onClick={() => split(t, bd.out)}>Yes, split</Button>
+            <Button variant="secondary" onClick={() => dismiss(t, bd.out)}>No, keep as one</Button>
           </div>
         </div>
       )}
@@ -145,8 +146,8 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   }
   const deadlineOf = (t) => deadlines.find((d) => d.id === t.deadlineId)
   const projectName = (t) => projects.find((p) => p.id === t.projectId)?.title
-  const row = (t, cover) => (
-    <Row key={t.id} t={t} cover={cover} project={projectName(t) || (deadlineOf(t) && `For ${deadlineOf(t).title}`)} update={update} move={move} onStart={startTask} onEdit={() => setSel(t.id)} onDelete={() => deleteTask(t)} />
+  const row = (t, inBox) => (
+    <Row key={t.id} t={t} inBox={inBox} project={projectName(t) || (deadlineOf(t) && `For ${deadlineOf(t).title}`)} update={update} move={move} onStart={startTask} onEdit={() => setSel(t.id)} onDelete={() => deleteTask(t)} />
   )
   const lists = [['plan', 'Tasks'], ['inbox', 'Inbox'],
     ...projects.map((p) => [`p:${p.id}`, p.title]), ['done', 'Completed']]
@@ -215,7 +216,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       {added > 0 && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-pale p-4 text-sm">
           <span>Added {added} task{added === 1 ? '' : 's'}. Sort them into the matrix?</span>
-          <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => run()}>{busy ? 'Sorting…' : 'Sort with AI'}</button>
+          <Button variant="primary" disabled={busy} onClick={() => run()}>{busy ? 'Sorting…' : 'Sort with AI'}</Button>
           <button className={`${btn} hover:bg-white`} onClick={() => setAdded(0)}>Later</button>
         </div>
       )}
@@ -227,8 +228,8 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
           ))}
         </div>
         {view === 'Matrix' && <>
-        <button className={`${btn} ${BLUE}`} disabled={!canSort} onClick={() => run()}>{busy ? 'Prioritising…' : 'Prioritise with AI'}</button>
-        {open.some((t) => t.manual) && <button className={`${btn} ${ghost}`} disabled={busy} onClick={() => run(true)}>Re-rank everything</button>}
+        <Button variant="primary" disabled={!canSort} onClick={() => run()}>{busy ? 'Prioritising…' : 'Prioritise with AI'}</Button>
+        {open.some((t) => t.manual) && <Button variant="secondary" disabled={busy} onClick={() => run(true)}>Re-rank everything</Button>}
         {!busy && !canSort && <span className="text-sm text-slate-600">{all.length ? 'Everything is already placed.' : 'Add a task first.'}</span>}
         {!goals.length && <button className="text-sm text-accent underline" onClick={() => goTab('Goals')}>Link goals for better ranking.</button>}
         </>}

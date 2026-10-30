@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import Mirror from './Mirror.jsx'
 import { areaTag } from '../guide/questions.js'
+import { Button } from '../components/ui.jsx'
 
 function Hobbies({ hobbies, setHobbies }) {
   const [v, setV] = useState('')
@@ -17,7 +18,7 @@ function Hobbies({ hobbies, setHobbies }) {
       <p className="mb-3 text-sm text-slate-600">Hobbies and things that make you happy. The AI agent schedules them between your tasks.</p>
       <form className="mb-3 flex gap-2" onSubmit={add}>
         <input className={`${input} min-w-0 flex-1`} placeholder="e.g. Play guitar" aria-label="New hobby" value={v} onChange={(e) => setV(e.target.value)} />
-        <button className={`${btn} ${BLUE}`}>Add</button>
+        <Button variant="primary">Add</Button>
       </form>
       <ul className="flex flex-wrap gap-2">
         {hobbies.map((h) => (
@@ -40,15 +41,15 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
   if (draft) return (
     <div className={`${panel} mb-6 flex flex-wrap items-center gap-3`}>
       <p className="min-w-48 flex-1">You have a goal guide in progress.</p>
-      <button className={`${btn} ${BLUE}`} onClick={() => onGuide('resume')}>Resume where you left off</button>
-      <button className={`${btn} ${ghost}`} onClick={() => confirm('Start over? Your answers will be cleared.') && onGuide('fresh')}>Start over</button>
+      <Button variant="primary" onClick={() => onGuide('resume')}>Resume where you left off</Button>
+      <Button variant="secondary" onClick={() => confirm('Start over? Your answers will be cleared.') && onGuide('fresh')}>Start over</Button>
     </div>
   )
   if (!goals.length && !guide?.skipped) return (
     <div className={`${panel} mb-6`}>
       <h2 className="text-lg font-semibold">Not sure what your goals are? Take the 10-minute guide</h2>
       <p className="mb-3 text-sm text-slate-600">A few short questions, then the AI drafts goals you can edit before saving.</p>
-      <div className="flex gap-2"><button className={`${btn} ${BLUE}`} onClick={() => onGuide('start')}>Start</button><button className={`${btn} ${ghost}`} onClick={setSkipped}>Skip</button></div>
+      <div className="flex gap-2"><Button variant="primary" onClick={() => onGuide('start')}>Start</Button><Button variant="secondary" onClick={setSkipped}>Skip</Button></div>
     </div>
   )
   return (
@@ -77,7 +78,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       {fresh?.offer && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-pale p-4 text-sm">
           <span className="min-w-48 flex-1">Goals saved. Create tasks from your first steps?</span>
-          <button className={`${btn} ${BLUE}`} onClick={onMakeTasks}>Create tasks</button>
+          <Button variant="primary" onClick={onMakeTasks}>Create tasks</Button>
           <button className={`${btn} hover:bg-white`} onClick={onDismissOffer}>No thanks</button>
         </div>
       )}
@@ -92,8 +93,8 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={!!d.happiness} onChange={(e) => setD({ ...d, happiness: e.target.checked })} /> Happiness goal
           </label>
-          <button className={`${btn} ${BLUE}`}>{d.id ? 'Save' : 'Add'}</button>
-          {d.id && <button type="button" className={`${btn} ${ghost}`} onClick={() => setD(blank)}>Cancel</button>}
+          <Button variant="primary">{d.id ? 'Save' : 'Add'}</Button>
+          {d.id && <Button type="button" variant="secondary" onClick={() => setD(blank)}>Cancel</Button>}
         </div>
       </form>
       {areas.length > 0 && (
@@ -103,7 +104,7 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
       )}
       <div className="flex flex-col items-center gap-2">
         {LEVELS.map((l, i) => (
-          <section key={l.name} className={`w-full ${l.w} ${l.cls} rounded-2xl p-5`}>
+          <section key={l.name} style={{ borderColor: l.color }} className={`w-full ${l.w} ${l.cls} rounded-2xl border-l-4 p-5`}>
             <h2 className="text-center text-lg font-semibold">{l.name} <span className="text-sm font-normal text-slate-800">{l.hint}</span></h2>
             <ul className="mt-3 space-y-2">
               {!shown.some((g) => g.level === i) && <li className="text-center text-sm text-slate-800">No goals yet</li>}

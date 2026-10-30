@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { post } from '../api.js'
-import { BLUE, btn, ghost, input } from '../ui.js'
+import { btn, input } from '../ui.js'
 import { AREAS, PHASES, stepsFor, minutesLeft, tagItems, chipLabel, qaOf, fromAI, toSave } from './questions.js'
 import GuideReview from './GuideReview.jsx'
+import { Button } from '../components/ui.jsx'
 
 const chip = (on) => `chip min-h-11 rounded-full border px-4 py-2 text-sm transition ${on ? 'border-accent bg-pale text-ink' : 'border-control bg-white text-slate-700 hover:bg-pale'}`
 const EMPTY = { vision: '', summary: '', letGo: [], goals: [] }
@@ -64,8 +65,8 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
       <p className="text-lg">Couldn't build your goals. Try again.</p>
       <p className="mt-1 text-sm text-slate-600">{g.error} Your answers are saved.</p>
       <div className="mt-5 flex flex-col gap-2">
-        <button className={`${btn} ${BLUE} min-h-11`} onClick={build}>Try again</button>
-        <button className={`${btn} ${ghost} min-h-11`} onClick={() => { setG((x) => ({ ...x, result: x.result || EMPTY })); setStage('review') }}>Write my goals myself</button>
+        <Button variant="primary" className="min-h-11" onClick={build}>Try again</Button>
+        <Button variant="secondary" className="min-h-11" onClick={() => { setG((x) => ({ ...x, result: x.result || EMPTY })); setStage('review') }}>Write my goals myself</Button>
         <button className={`${btn} min-h-11 hover:bg-panel`} onClick={() => setStage('ask')}>Back to answers</button>
       </div>
     </div>)
@@ -103,7 +104,7 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
                 {[...AREAS, ...g.custom].map((x) => <button key={x} type="button" className={chip(g.areas.includes(x))} aria-pressed={g.areas.includes(x)} onClick={() => toggleArea(x)}>{x}</button>)}
                 <form className="flex gap-2" onSubmit={addCustom}>
                   <input className={`${input} w-44`} aria-label="Add your own area" placeholder="+ Add your own" value={custom} onChange={(e) => setCustom(e.target.value)} />
-                  {custom.trim() && <button className={`${btn} ${ghost}`}>Add</button>}
+                  {custom.trim() && <Button variant="secondary">Add</Button>}
                 </form>
               </div>
             )}
@@ -154,9 +155,9 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
   )
   const foot = (
     <div className="mx-auto flex max-w-2xl items-center gap-2">
-      <button className={`${btn} ${ghost} min-h-11`} disabled={i === 0} onClick={() => go(i - 1)}>Back</button>
+      <Button variant="secondary" className="min-h-11" disabled={i === 0} onClick={() => go(i - 1)}>Back</Button>
       {s.kind !== 'areas' && <button className={`${btn} min-h-11 hover:bg-panel`} onClick={() => { set(s.id, undefined); last ? setTimeout(build, 0) : go(i + 1) }}>Skip question</button>}
-      <button className={`${btn} ${BLUE} ml-auto min-h-11 px-6`} disabled={!ready} onClick={next} title="Cmd/Ctrl+Enter">{last ? (g.result ? 'Rebuild my goals' : 'Build my goals') : 'Next'}</button>
+      <Button variant="primary" className="ml-auto min-h-11 px-6" disabled={!ready} onClick={next} title="Cmd/Ctrl+Enter">{last ? (g.result ? 'Rebuild my goals' : 'Build my goals') : 'Next'}</Button>
     </div>
   )
   return shell(body, foot)

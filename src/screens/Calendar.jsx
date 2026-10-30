@@ -5,6 +5,7 @@ import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
 import { fmtDuration } from '../format.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
+import { Button, PrivateWarning } from '../components/ui.jsx'
 
 function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
   const goal = goals.find((g) => g.id === t.goalId)
@@ -91,14 +92,16 @@ function CalendarSync({ data, setData }) {
             <a className={link} href={`${feed}&download=1`}>Download .ics</a>
           </div>
           {local && <p className="mt-2 text-xs text-slate-600">Subscribing only works on the deployed site, because Google cannot reach localhost. Download works anywhere.</p>}
-          <p className="mt-2 text-xs text-slate-600">Keep this link private: anyone with it can see your tasks. Google refreshes subscribed calendars about once a day.</p>
+          {/* TODO(roadmap: read-only calendar link): a separate link that cannot open the workspace */}
+          <PrivateWarning>This link contains your sync code, so anyone who has it can see your tasks and open your workspace.</PrivateWarning>
+          <p className="mt-2 text-xs text-slate-600">Google refreshes subscribed calendars about once a day.</p>
         </section>
         <section>
           <h3 className="mb-1 text-sm font-semibold">Bring your calendar into Desker</h3>
           <p className="mb-2 text-sm text-slate-600">The AI agent plans around your meetings and classes. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file.</p>
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) run({ url: url.trim() }) }}>
             <input className={`${input} min-w-0 flex-1`} aria-label="Calendar link" placeholder="https://… or webcal://…" value={url} onChange={(e) => setUrl(e.target.value)} />
-            <button className={`${btn} ${BLUE}`} disabled={loading || !url.trim()}>{loading ? 'Reading…' : 'Import'}</button>
+            <Button variant="primary" disabled={loading || !url.trim()}>{loading ? 'Reading…' : 'Import'}</Button>
           </form>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <label className={`${link} cursor-pointer ${loading ? 'pointer-events-none opacity-50' : ''}`}>Upload .ics
@@ -181,9 +184,9 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     <>
       <CalendarSync data={data} setData={setData} />
       <div className="mb-3 flex items-center justify-between gap-2">
-        <button aria-label={`Previous ${view}`} className={`${btn} ${ghost}`} onClick={() => shift(-1)}>←</button>
+        <Button aria-label={`Previous ${view}`} variant="secondary" onClick={() => shift(-1)}>←</Button>
         <h2 className="text-center font-semibold">{title}</h2>
-        <button aria-label={`Next ${view}`} className={`${btn} ${ghost}`} onClick={() => shift(1)}>→</button>
+        <Button aria-label={`Next ${view}`} variant="secondary" onClick={() => shift(1)}>→</Button>
       </div>
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex gap-1 rounded-full border border-line bg-white p-1" role="group" aria-label="Calendar view">
@@ -192,8 +195,8 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           ))}
         </div>
         <span className="flex gap-2">
-          <button className={`${btn} ${ghost}`} onClick={onReplan}>Replan my week</button>
-          <button className={`${btn} ${ghost}`} onClick={() => setAnchor(new Date())}>Today</button>
+          <Button variant="secondary" onClick={onReplan}>Replan my week</Button>
+          <Button variant="secondary" onClick={() => setAnchor(new Date())}>Today</Button>
         </span>
       </div>
       {view !== 'month' && (
@@ -248,8 +251,8 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           <h2 className="w-full font-semibold">Add a task due {adding}</h2>
           <input className={`${input} min-w-48 flex-1`} autoFocus aria-label="Task title" placeholder="e.g. Statics quiz" value={dl.title} onChange={(e) => setDl({ ...dl, title: e.target.value })} />
           <input type="number" min="0" step="0.5" aria-label="Hours needed" className={`${input} w-36`} placeholder="Hours (opt.)" value={dl.hours} onChange={(e) => setDl({ ...dl, hours: e.target.value })} />
-          <button className={`${btn} ${BLUE}`}>Add task</button>
-          <button type="button" className={`${btn} ${ghost}`} onClick={() => setAdding(null)}>Cancel</button>
+          <Button variant="primary">Add task</Button>
+          <Button type="button" variant="secondary" onClick={() => setAdding(null)}>Cancel</Button>
           <p className="w-full text-xs text-slate-600">Open it in Tasks to split big work into smaller tasks with AI.</p>
         </form>
       )}
