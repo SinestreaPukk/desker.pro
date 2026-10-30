@@ -154,11 +154,12 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   )
   const lists = [['plan', 'Tasks'], ['inbox', 'Inbox'],
     ...projects.map((p) => [`p:${p.id}`, p.title]), ['done', 'Completed']]
-  const inCurrent = tasks.filter((t) => inList(t, list, today))
+  const shownDeadlines = [...deadlines].filter((dl) => (list === 'done' ? dl.done : !dl.done && inList({ due: dl.date }, list, today))).sort((a, b) => a.date.localeCompare(b.date))
+  const inDeadline = new Set(list === 'plan' ? shownDeadlines.map((d) => d.id) : []) // those tasks are listed inside their deadline, not twice
+  const inCurrent = tasks.filter((t) => inList(t, list, today) && !inDeadline.has(t.deadlineId))
   const groups = list === 'done'
     ? [{ name: 'Completed', tasks: [...inCurrent].sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)) }]
     : groupSoon(inCurrent, today)
-  const shownDeadlines = [...deadlines].filter((dl) => inList({ due: dl.date }, list, today)).sort((a, b) => a.date.localeCompare(b.date))
   const listView = (
     <div className="md:grid md:grid-cols-[13rem_1fr] md:items-start md:gap-6">
       <nav aria-label="Lists" className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:mb-0 md:flex-col md:gap-1 md:overflow-visible md:px-0">

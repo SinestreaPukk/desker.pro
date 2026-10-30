@@ -18,16 +18,14 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
     const id = setTimeout(() => document.addEventListener('click', off), 0)
     return () => { clearTimeout(id); document.removeEventListener('click', off) }
   }, [menu])
-  const tag = 'rounded-full px-2 py-0.5 text-xs'
+  // Core facts only, one muted line: when it is due, the planned slot, effort, project. Everything else lives in the task panel.
+  const today = new Date().toLocaleDateString('sv')
   const facts = [
-    q !== undefined && !cover && <span key="q" className={`${tag} ${Q[q].cls}`}>{Q[q].name}</span>,
-    project && <span key="p" className={`${tag} bg-panel text-slate-700`}>{project}</span>,
-    t.due && <span key="d" className={`${tag} bg-pale text-accent-dark`}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}</span>,
-    t.when && <span key="w" className={`${tag} bg-[#e3f4ec] text-[#1f6b4a]`}>{fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
-    t.hours > 0 && <span key="h" className={`${tag} bg-panel text-slate-700`}>{t.hours}h</span>,
-    subs.length > 0 && <span key="s" className={`${tag} bg-panel text-slate-700`}>{subs.filter((x) => x.done).length}/{subs.length} steps</span>,
-    t.repeat && <span key="r" className={`${tag} bg-[#efeafb] text-[#4b3b8f]`}>Repeats {t.repeat}</span>,
-    t.spent > 0 && <span key="f" className={`${tag} bg-panel text-slate-700`}>{t.spent < 1 / 120 ? '<1' : Math.round(t.spent * 60)} min focused</span>,
+    t.due && <span key="d" className={t.due < today && !t.done ? 'font-medium text-danger' : ''}>{t.from ? `${fmtDate(t.from)} → ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ' ↻' : ''}</span>,
+    t.when && <span key="w">Plan {fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
+    t.hours > 0 && <span key="h">{t.hours}h</span>,
+    q !== undefined && !cover && !project && <span key="q">{Q[q].name}</span>,
+    project && <span key="p">{project}</span>,
   ].filter(Boolean)
   const item = 'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-slate-100'
   return (
@@ -58,10 +56,11 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
           )}
         </span>
       </div>
-      {facts.length > 0 && <div className="flex flex-wrap gap-1 pb-1 pl-9 pt-1">{facts}</div>}
+      {facts.length > 0 && <p className="flex flex-wrap gap-x-2 pb-1 pl-9 text-xs text-slate-600">{facts.flatMap((f, i) => (i ? [<span key={`s${i}`} aria-hidden="true">·</span>, f] : [f]))}</p>}
       {open && (
         <div className="space-y-3 pb-1 pl-9 pt-3 text-sm">
           <Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} label="Feeling about it" />
+          <p className="text-slate-600">{[Q[q]?.name, t.repeat && `Repeats ${t.repeat}`, subs.length > 0 && `${subs.filter((x) => x.done).length}/${subs.length} steps`, t.spent > 0 && `${t.spent < 1 / 120 ? '<1' : Math.round(t.spent * 60)} min focused`].filter(Boolean).join(' · ')}</p>
           <p><b className="font-medium">Why here?</b> {t.reason || (q === undefined ? 'Not ranked yet. Use Prioritise with AI, or move it yourself below.' : 'No reason saved.')}</p>
           <div className="flex flex-wrap items-center gap-3">
             <label className="flex items-center gap-2">Move to

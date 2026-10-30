@@ -17,6 +17,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const days = Math.ceil((new Date(dl.date) - new Date(new Date().toLocaleDateString('sv'))) / 864e5)
   const mine = tasks.filter((t) => t.deadlineId === dl.id)
   const linked = mine.length
+  const nextTask = mine.filter((t) => !t.done).sort((a, b) => (a.due || '9').localeCompare(b.due || '9'))[0]
   const [own, setOwn] = useState('')
 
   const plan = async (context = dl.context) => {
@@ -66,25 +67,32 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
 
   return (
-    <li className="rounded-xl border border-line bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className={`break-words font-semibold ${dl.done ? 'text-slate-500 line-through' : ''}`}>{dl.title}</h3>
-          <p className="text-sm text-slate-600">
-            {fmtDate(dl.date)}{dl.time ? ` ${dl.time}` : ''} · {dl.done ? 'done' : days < 0 ? 'passed' : days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} left`}
-            {dl.hours != null && ` · ${dl.hours}h needed`}{linked > 0 && ` · ${linked} task${linked === 1 ? '' : 's'} added`}
-          </p>
-        </div>
-        <span className="flex gap-1">
-          <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
-          <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
-            {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? '✨ Add more with AI' : '✨ Break into tasks'}
-          </button>
-          <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
-        </span>
+    <li className="rounded-xl border border-line bg-white">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 p-4 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 flex-1">
+            <span className={`block break-words font-semibold ${dl.done ? 'text-slate-500 line-through' : ''}`}>{dl.title}</span>
+            <span className="block text-sm text-slate-600">
+              {fmtDate(dl.date)}{dl.time ? ` ${dl.time}` : ''}{dl.hours != null && ` · ${dl.hours}h`}
+              {nextTask && ` · Next: ${nextTask.title}${nextTask.due ? `, ${fmtDate(nextTask.due)}` : ''}`}
+            </span>
+          </span>
+          {linked > 0 && <span className="text-sm tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
+          <span className={`rounded-full px-3 py-0.5 text-sm ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-[#fdf1ee] text-[#7a1a14]' : 'bg-pale text-accent-dark'}`}>
+            {dl.done ? 'Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
+          </span>
+          <span className="text-slate-500 transition group-open:rotate-90" aria-hidden="true">›</span>
+        </summary>
+        <div className="border-t border-line p-4 pt-3">
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button className={`${btn} ${dl.done ? BLUE : ghost}`} onClick={() => { patch({ done: !dl.done }); if (!dl.done) setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, done: true } : t))) }}>{dl.done ? 'Reopen' : 'Mark done'}</button>
+        <button className={`${btn} ${BLUE}`} disabled={busy} onClick={() => plan()}>
+          {busy ? 'Thinking…' : res?.options ? 'Re-plan' : linked ? '✨ Add more with AI' : '✨ Break into tasks'}
+        </button>
+        <button className={`${btn} text-danger hover:bg-slate-50`} aria-label={`Delete ${dl.title}`} onClick={remove}>Delete</button>
       </div>
 
-      <ul className="mt-3 space-y-1">
+      <ul className="space-y-1">
         {mine.map((t) => (
           <li key={t.id} className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
@@ -171,6 +179,8 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           <button className={`${btn} ml-2 ${ghost}`} onClick={() => setRes(null)}>Keep as is</button>
         </div>
       )}
+        </div>
+      </details>
     </li>
   )
 }

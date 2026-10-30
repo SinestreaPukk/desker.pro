@@ -64,12 +64,12 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
   }
 
   return (
-    <form className={`${panel} mb-4`} onSubmit={add}>
+    <form className={`${panel} group mb-4`} onSubmit={add}>
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder='What needs doing? e.g. "Statics quiz Monday 3pm"' aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />
         <button className={`${btn} ${BLUE}`} disabled={!parsed}>Add</button>
       </div>
-      <div className="mt-3 flex flex-wrap items-end gap-3">
+      <div className={`mt-3 flex-wrap items-end gap-3 ${parsed ? 'flex' : 'hidden group-focus-within:flex'}`}> {/* options appear once you start typing */}
         <div className={label}>When
           <div className="flex items-center gap-1">
             <input type="date" className={ctl} aria-label="Date" value={f.date || parsed?.due || ''} onChange={(e) => set({ date: e.target.value })} />
