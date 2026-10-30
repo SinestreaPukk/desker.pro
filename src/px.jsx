@@ -23,12 +23,13 @@ function Snow() {
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const c = ref.current, g = c.getContext('2d')
-    const flakes = Array.from({ length: 36 }, (_, i) => ({ x: (i * 53) % 192, y: (i * 31) % 62, v: 1 + (i % 3) === 2 ? 2 : 1, d: i % 2 ? 1 : -1 }))
+    const flakes = Array.from({ length: 12 }, (_, i) => ({ x: (i * 53) % 192, y: (i * 31) % 62, v: 1 + (i % 3) === 2 ? 2 : 1, d: i % 2 ? 1 : -1 }))
     const draw = () => {
       g.clearRect(0, 0, 192, 80); g.fillStyle = '#F4F7F6'
       flakes.forEach((f) => { g.fillRect(f.x, f.y, 1, 1) })
     }
-    const step = () => flakes.forEach((f, i) => { f.y = (f.y + f.v) % 64; if (i % 4 === 0) f.x = (f.x + f.d + 192) % 192 })
+    let t = 0 // calm: a dozen flakes, each falls one art pixel every other tick
+    const step = () => { t++; flakes.forEach((f, i) => { if (t % 2 === 0) f.y = (f.y + 1) % 64; if (i % 4 === 0 && t % 4 === 0) f.x = (f.x + f.d + 192) % 192 }) }
     draw()
     let id = setInterval(() => { step(); draw() }, 125)
     const vis = () => { clearInterval(id); if (!document.hidden) id = setInterval(() => { step(); draw() }, 125) }
