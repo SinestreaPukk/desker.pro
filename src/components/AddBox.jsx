@@ -73,7 +73,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
   return (
     <form className={`${panel} group mb-4`} onSubmit={add}>
       <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 rounded-full bg-white p-1">
-        {['Task', 'Deadline'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary font-medium text-ink' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
+        {['Deadline', 'Task'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary font-medium text-ink' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
       </div>
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder={isDl ? 'Deadline, e.g. "Statics midterm Monday 3pm"' : 'What needs doing? e.g. "Call dentist tomorrow 3pm"'} aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />
