@@ -136,38 +136,6 @@ def body_feet(c, letters):
     c.shape(BODY, letters, top=-1)  # the head's bottom outline is the body's top: no double line
     for x in range(5, 19): c.put(x, 21, 'K')
 
-# the one avatar (placeholder until the real picture is supplied): a spiky-haired kid with round dark glasses and a blue tee from the kit's mood reference, redrawn on the grid
-def hero(c, blink):
-    head = {2: (7, 16), 3: (6, 17), 4: (5, 18), 5: (5, 18), 6: (5, 18), 7: (5, 18), 8: (5, 18), 9: (5, 18), 10: (5, 18), 11: (5, 18), 12: (6, 17)}
-    c.shape(head, 'RRRk')
-    for x in (8, 11, 15): c.put(x, 1, 'K')                       # hair spikes
-    for x in (8, 9, 12, 15, 16): c.put(x, 2, 'R')
-    for (x, y) in ((8, 3), (9, 3), (8, 4), (13, 4), (14, 5), (15, 5)): c.put(x, y, 'h')  # hair highlights, upper left
-    for x in range(7, 17): c.put(x, 7, 'R')                       # bangs
-    for (x, y) in ((11, 7), (12, 7), (14, 7), (7, 7)): c.put(x, y, 'k')
-    for y in range(8, 12):
-        for x in range(7, 17): c.put(x, y, 's' if x >= 15 else 'S')  # face, shaded on the right
-    for y in (8, 9): c.put(6, y, 'R'); c.put(17, y, 'k')           # sideburns
-    for x0 in (7, 13):                                            # round dark lenses with a glint
-        for x in range(x0, x0 + 4):
-            c.put(x, 8, 'S' if blink else 'K'); c.put(x, 9, 'K')
-        if not blink: c.put(x0 + 1, 8, 'W')
-    c.put(11, 8, 'K'); c.put(12, 8, 'K') if not blink else None
-    c.put(11, 10, 's'); c.put(12, 10, 's')                       # nose
-    c.put(11, 11, 'K'); c.put(12, 11, 'K')                       # mouth
-    c.shape({13: (6, 17), 14: (6, 17), 15: (6, 17), 16: (6, 17), 17: (6, 17)}, 'BBcc', top=-1, bottom=17)   # tee; the chin outline is its top
-    for (x, y) in ((8, 14), (9, 14), (8, 15)): c.put(x, y, 'b')    # shirt highlight, upper left
-    for y in (14, 15): c.put(4, y, 'K'); c.put(5, y, 'B'); c.put(18, y, 'c'); c.put(19, y, 'K')   # sleeves
-    for y in (16, 17): c.put(4, y, 'K'); c.put(5, y, 'S'); c.put(18, y, 's'); c.put(19, y, 'K')   # forearms
-    for x in (4, 5, 18, 19): c.put(x, 18, 'K')                     # hands
-    c.shape({18: (7, 16), 19: (7, 16), 20: (7, 16)}, 'QQPP', top=-1, bottom=20)
-    for x in (9, 10, 13, 14): c.put(x, 21, 'S')
-    for x in (8, 11, 12, 15): c.put(x, 21, 'K')
-    for y in (22, 23):
-        for (x0, x1) in ((7, 10), (13, 16)):
-            for x in range(x0, x1 + 1):
-                c.put(x, y, 'K' if (x in (x0, x1) or y == 23) else ('Q' if x < x1 - 1 else 'P'))
-avatar('av-main', {'R': 'beni', 'h': 'hada-1', 'k': 'kuri', 'S': 'hada-0', 's': 'hada-1', 'W': 'yuki-0', 'B': 'kori-2', 'b': 'kori-1', 'c': 'yoru-0', 'P': 'yoru-1', 'Q': 'yoru-0'}, hero,
-       'The only avatar for now: spiky-haired kid, round dark glasses, blue tee. Redrawn from the kit mood reference, in palette.')
+# The avatar is the kit's shimaenaga (pixel-kit/art/sprites/shimaenaga.sprite.txt), copied unchanged to art/sprites/av-main.sprite.txt.
 
 print('wrote', len(list(OUT.glob('*.sprite.txt'))), 'sprites')
