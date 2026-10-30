@@ -1,17 +1,34 @@
 {
+  "night": {
+    "back": "#8394AE",
+    "front": "#DDE6EA",
+    "glint": "#8394AE"
+  },
   "morning": {
-    "cloud": "#F4F7F6",
-    "shade": "#DDE6EA",
-    "spark": "#F4F7F6"
+    "back": "#B4C5D1",
+    "front": "#F4F7F6",
+    "glint": "#DDE6EA"
   },
   "dusk": {
-    "cloud": "#DDE6EA",
-    "shade": "#D49E95",
-    "spark": "#DDE6EA"
+    "back": "#8394AE",
+    "front": "#F0D2C2",
+    "glint": "#F0D2C2"
   },
-  "night": {
-    "cloud": "#B4C5D1",
-    "shade": "#3B4262",
-    "spark": "#B4C5D1"
-  }
+  "shimmer": [
+    [
+      25,
+      51,
+      6
+    ],
+    [
+      23,
+      54,
+      8
+    ],
+    [
+      24,
+      57,
+      5
+    ]
+  ]
 }

@@ -86,7 +86,7 @@ test('reduced motion removes the snow and the blink', async ({ browser }) => {
   await page.waitForSelector('.px-scene')
   const anim = await page.locator('.px-avatar-scene').evaluate((el) => getComputedStyle(el).animationName)
   expect(anim).toBe('none')
-  const flakes = await page.locator('.px-flake').evaluate((c: HTMLCanvasElement) => c.getContext('2d')!.getImageData(0, 0, 192, 80).data.some((v) => v !== 0))
+  const flakes = await page.locator('.px-flake').evaluateAll((cs: HTMLCanvasElement[]) => cs.some((c) => c.getContext('2d')!.getImageData(0, 0, 192, 80).data.some((v) => v !== 0)))
   expect(flakes, 'nothing is drawn').toBe(false)
   await ctx.close()
 })

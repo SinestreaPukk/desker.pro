@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 import motion from './scene-motion.json'
 
 // The one avatar (24x24, idle + blink). It is the logo, the user in the scene, and the coach's face.
+// In the banner it is the branchless scene pose (av-scene), perched on the post; everywhere else the UI sprite.
 export const Avatar = ({ scene, label = '', style }) => (
   <span role={label ? 'img' : undefined} aria-label={label || undefined} aria-hidden={label ? undefined : 'true'}
-    className={`px-avatar ${scene ? 'px-avatar-scene' : ''}`} style={{ backgroundImage: 'url(/pixel/av-main.sheet.png)', ...style }} />
+    className={`px-avatar ${scene ? 'px-avatar-scene' : ''}`} style={{ backgroundImage: `url(/pixel/${scene ? 'av-scene' : 'av-main'}.sheet.png)`, ...style }} />
 )
 
 // Completion seal: three frames, one pass.
@@ -13,36 +14,25 @@ export const Hanko = () => <span className="px-hanko" aria-hidden="true" />
 // Local time picks the palette of the same scene: morning, dusk or night.
 export const sceneVariant = (d = new Date()) => { const h = d.getHours(); return h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 19 ? 'dusk' : 'night' }
 
-// Calm motion on a 192x80 canvas, whole art-pixel steps at 8 fps: two clouds drifting a pixel a second, a few sparkles
-// on the lake that come and go, and half a dozen flakes. Paused while hidden, absent under reduced motion.
-const CLOUDS = [
-  { x: 24, y: 5, rows: ['.......ccc..........', '....ccccccccc..cc...', '..cccccccccccccccccc', 'sssssssssssssssssss.'] },
-  { x: 120, y: 13, rows: ['....cccc......', '.ccccccccc.cc.', 'cccccccccccccc', 'sssssssssssss.'] },
-]
-const SPARKS = [[58, 52], [72, 58], [84, 51], [97, 61], [112, 55], [127, 60], [139, 52], [150, 58], [66, 62], [104, 50]]
-function Motion({ variant }) {
+// Calm motion on a 192x80 canvas, whole art-pixel steps at 8 fps. Two layers so snow falls behind and in front of the avatar:
+// slow dim flakes behind, a few quicker bright ones in front. The back layer also slides three dashes on the moon's path at 2 fps.
+// Paused while hidden, absent under reduced motion.
+function Motion({ variant, front }) {
   const ref = useRef(null)
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const col = motion[variant], g = ref.current.getContext('2d')
-    const clouds = CLOUDS.map((c) => ({ ...c, w: c.rows[0].length }))
-    const flakes = Array.from({ length: 6 }, (_, i) => ({ x: 20 + i * 30, y: (i * 11) % 60 }))
+    const flakes = Array.from({ length: front ? 4 : 7 }, (_, i) => ({ x: (front ? 31 : 17) + i * (front ? 47 : 27), y: (i * (front ? 23 : 13)) % 66 }))
     let t = 0
     const draw = () => {
       g.clearRect(0, 0, 192, 80)
-      clouds.forEach((c) => c.rows.forEach((r, j) => [...r].forEach((ch, i) => {
-        if (ch === '.') return
-        g.fillStyle = ch === 'c' ? col.cloud : col.shade
-        g.fillRect(c.x + i, c.y + j, 1, 1)
-      })))
-      g.fillStyle = col.spark
-      SPARKS.forEach(([x, y], i) => { if (((t >> 3) + i) % 3 === 0) g.fillRect(x, y, 1, 1) })
+      g.fillStyle = front ? col.front : col.back
       flakes.forEach((f) => g.fillRect(f.x, f.y, 1, 1))
+      if (!front) { g.fillStyle = col.glint; motion.shimmer.forEach(([x, y, w]) => g.fillRect(x + ((t >> 2) & 1), y, w - ((t >> 2) & 1), 1)) }
     }
     const step = () => {
       t++
-      if (t % 8 === 0) clouds.forEach((c) => { c.x = c.x > 192 ? -c.w : c.x + 1 })
-      if (t % 2 === 0) flakes.forEach((f) => { f.y = (f.y + 1) % 64 })
+      flakes.forEach((f) => { if (t % (front ? 2 : 4) === 0) { f.y = (f.y + 1) % 66; if (t % (front ? 16 : 24) === 0) f.x = (f.x + 1) % 192 } })
       draw()
     }
     draw()
@@ -50,19 +40,20 @@ function Motion({ variant }) {
     const vis = () => { clearInterval(id); if (!document.hidden) id = setInterval(step, 125) }
     document.addEventListener('visibilitychange', vis)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis) }
-  }, [variant])
+  }, [variant, front])
   return <canvas ref={ref} width="192" height="80" className="px-flake" aria-hidden="true" />
 }
 
-// The banner: one lakeside scene at --px-scene, the user's avatar standing on the shore. Variant by local time.
+// The banner: one lakeside scene at --px-scene, the shimaenaga perched on a dock post. Variant by local time.
 export function Scene() {
   const v = sceneVariant()
   return (
     <div className="px-scene" role="img" aria-label={`A snowy lake at ${v === 'morning' ? 'morning' : v === 'dusk' ? 'dusk' : 'night'}`}>
       <img src={`/pixel/scene-${v}.png`} alt="" width="192" height="80" className="px-art" />
       <div style={{ position: 'absolute', left: 'calc(50% - 96 * var(--px-scene))', top: 'calc(-1 * var(--crop) * var(--px-scene))', width: 'calc(192 * var(--px-scene))', height: 'calc(80 * var(--px-scene))' }}>
-        <Avatar scene style={{ position: 'absolute', left: 'calc(72 * var(--px-scene))', top: 'calc(50 * var(--px-scene))' }} />
         <Motion variant={v} />
+        <Avatar scene style={{ position: 'absolute', left: 'calc(114 * var(--px-scene))', top: 'calc(43 * var(--px-scene))' }} />
+        <Motion variant={v} front />
       </div>
     </div>
   )
