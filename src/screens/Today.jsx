@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { post } from '../api.js'
 import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy, energyProfile, ranges } from '../energy.js'
@@ -8,6 +8,7 @@ import { input, LEVELS } from '../ui.js'
 import { Button, Card, EmptyState, ReasonLine, StatTile } from '../components/ui.jsx'
 import Mirror from './Mirror.jsx'
 import GetStarted, { stepsOf } from './GetStarted.jsx'
+import { track } from '../track.js'
 import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar } from '../shared.jsx'
 
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
@@ -118,6 +119,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   ]
   const fun = funPool.length && gap >= 0.5 ? funPool[Math.floor(Date.now() / 864e5) % funPool.length] : null
 
+  useEffect(() => { if (cur) track('do_now_shown', { linked: !!curTask?.goalId }) }, [cur?.taskId ?? cur?.title])
+
   const steps = stepsOf({ data, goals, tasks }, !!cur)
   const newUser = !goals.length && !tasks.length && !deadlines.length
   const setup = <GetStarted steps={steps} goals={goals} tasks={tasks} setTasks={setTasks} goTab={goTab} onGuide={onGuide} hero={newUser}
@@ -163,7 +166,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {/* TODO(roadmap: focus timer): the Phase 1 timer plugs in here. Today setFocus opens the existing simple timer. */}
-                  <Button className="!px-8 !py-3 !text-base" onClick={focus ? finish : () => setFocus({ ...cur, at: Date.now() })}>{focus ? 'Done' : 'Start'}</Button>
+                  <Button className="!px-8 !py-3 !text-base" onClick={focus ? finish : () => { track('do_now_started', { linked: !!curTask?.goalId }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</Button>
                   {focus && <Button variant="secondary" onClick={openTimer}>Open timer</Button>}
                   {(focus || pick) && <Button variant="ghost" onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</Button>}
                   <Button variant="secondary" onClick={() => openAgent('Help me plan my day')}>Help me plan my day</Button>

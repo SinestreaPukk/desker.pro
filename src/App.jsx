@@ -14,6 +14,8 @@ import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
 import Projects from './screens/Projects.jsx'
 import { unlink } from './projects.js'
+import { track, trackOpen, trackSteps } from './track.js'
+import { stepsOf } from './screens/GetStarted.jsx'
 import Calendar from './screens/Calendar.jsx'
 import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
@@ -59,6 +61,7 @@ export default function App() {
     const id = setTimeout(() => setToast(null), 7000)
     return () => clearTimeout(id)
   }, [toast])
+  useEffect(trackOpen, [])
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState(false)
@@ -77,6 +80,11 @@ export default function App() {
         .then((r) => setSaveError(!r.ok)).catch(() => setSaveError(true))
     }, 500)
     return () => clearTimeout(id)
+  }, [data])
+  useEffect(() => { // onboarding_step_completed: any page can finish a step, so it is watched here, where everything stays mounted
+    if (!data) return
+    const hasNext = data.tasks.some((t) => !t.done && !t.fun)
+    trackSteps(stepsOf({ data, goals: data.goals, tasks: data.tasks }, hasNext).filter((s) => s.done).map((s) => s.key), data.goals.length + data.tasks.length > 0)
   }, [data])
   if (!data) return (
     <main className="mx-auto max-w-[1100px] space-y-4 p-4 md:p-8" aria-busy={!loadError}>
@@ -101,7 +109,7 @@ export default function App() {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it yourself.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const focusTask = focus && tasks.find((t) => t.id === focus.taskId)
   const missed = tasks.filter((t) => isMissed(t))
-  const openReplan = () => { setAgentOpen(false); setTab('Calendar'); setReplanOpen(true) }
+  const openReplan = () => { track('replan_week_clicked'); setAgentOpen(false); setTab('Calendar'); setReplanOpen(true) }
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
@@ -113,6 +121,7 @@ export default function App() {
   }
   const saveGuide = (guide) => setData((d) => ({ ...d, guide: { ...guide, updatedAt: Date.now() } }))
   const finishGuide = (added) => {
+    track('goals_guide_completed', { goals: added.length })
     setData((d) => ({ ...d, goals: [...d.goals, ...added], guide: { ...d.guide, result: undefined, done: true } }))
     setGuideOpen(false); setFresh({ ids: added.map((g) => g.id), offer: added.some((g) => g.firstStep) })
     setTimeout(() => setFresh((f) => f && { ...f, ids: [] }), 5000)
@@ -127,6 +136,8 @@ export default function App() {
   // Every task change goes through settle(): it stamps doneAt, adds the next copy of finished repeating tasks, and feeds Undo.
   const setTasks = (next) => {
     const r = settle(tasks, next)
+    const was = new Map(tasks.map((t) => [t.id, t.goalId]))
+    next.forEach((t) => { if (t.goalId && was.has(t.id) && !was.get(t.id)) track('task_linked_to_goal') })
     const doFirst = (list) => list.some((t) => !t.done && !t.fun && quadrant(t) === 0)
     const cleared = r.finished.length > 0 && doFirst(tasks) && !doFirst(r.tasks)
     if (cleared) setCheer((n) => n + 1)

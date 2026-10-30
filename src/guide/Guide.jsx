@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { post } from '../api.js'
 import { btn, input } from '../ui.js'
+import { track } from '../track.js'
 import { AREAS, PHASES, stepsFor, minutesLeft, tagItems, chipLabel, qaOf, fromAI, toSave } from './questions.js'
 import GuideReview from './GuideReview.jsx'
 import { Button } from '../components/ui.jsx'
@@ -22,6 +23,7 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
   const steps = useMemo(() => stepsFor(g.areas), [g.areas])
   const i = Math.min(g.step, steps.length - 1)
   const s = steps[i]
+  useEffect(() => { track('goals_guide_step', { step: i + 1, phase: PHASES[s.phase] }) }, [i])
   const set = (id, v) => setG((x) => ({ ...x, answers: { ...x.answers, [id]: v } }))
   const go = (n) => setG((x) => ({ ...x, step: n }))
   const a = g.answers

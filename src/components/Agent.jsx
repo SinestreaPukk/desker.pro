@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
 import { BLUE, btn, input, LEVELS } from '../ui.js'
 import { weekReview } from '../review.js'
+import { track } from '../track.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
 import { Button } from './ui.jsx'
 
@@ -54,7 +55,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, ask }
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
-  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
+  const review = () => { track('weekly_review_opened'); send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review') }
   const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
   useEffect(() => { if (ask) chipClick(ask.text) }, [ask]) // buttons elsewhere in the app reuse the chips' one-tap prompts
   const addGoals = (mi, ks) => {
