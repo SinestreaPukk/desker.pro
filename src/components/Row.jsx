@@ -31,8 +31,8 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   ].filter(Boolean)
   const item = 'flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm hover:bg-slate-100'
   return (
-    <li className={`${rowCard} overflow-hidden px-3 py-2`}>
-      {cover && <Cover seed={t.id} className="-mx-3 -mt-2 mb-2 block h-14 w-[calc(100%+1.5rem)]" />}
+    <li className={`${rowCard} px-3 py-2`}>
+      {cover && <Cover seed={t.id} className="-mx-3 -mt-2 mb-2 block h-14 w-[calc(100%+1.5rem)] rounded-t-[0.8125rem]" />}
       <div className="flex items-center gap-2">
         <span className="hidden shrink-0 cursor-grab text-slate-400 md:block" draggable title="Drag to another box" aria-hidden="true"
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>
