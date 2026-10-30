@@ -95,7 +95,7 @@ export default function Guide({ guide, saveGuide, onClose, onSave }) {
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div key={s.id} className="enter mx-auto max-w-2xl">
           {s.area && <p className="mb-2 text-sm font-medium text-accent">{s.area}</p>}
-          <h1 id="q" className="text-2xl leading-snug sm:text-3xl">{s.q}</h1>
+          <h1 id="q" className="text-xl leading-snug sm:text-2xl">{s.q}</h1>
           <p id="hint" className="mt-2 text-sm text-slate-600">{s.hint}</p>
           <div className="mt-5">
             {s.kind === 'areas' && (

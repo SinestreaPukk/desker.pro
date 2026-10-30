@@ -1,7 +1,7 @@
-import { LEVELS } from './ui.js'
+import { LEVELS, FUN, NO_GOAL } from './ui.js'
 
 export const SLICES = [...LEVELS.map((l) => l.name), 'Fun', 'No goal']
-export const SLICE_COLOR = { Vision: '#af52de', 'Long-term': '#5856d6', 'Mid-term': '#007aff', 'Short-term': '#5ac8fa', Fun: '#34c759', 'No goal': '#8e8e93' }
+export const SLICE_COLOR = Object.fromEntries([...LEVELS, FUN, NO_GOAL].map((s) => [s.name, s.color]))
 const day = (d) => d.toLocaleDateString('sv')
 const zero = () => Object.fromEntries(SLICES.map((s) => [s, 0]))
 const h1 = (n) => Math.round(n * 10) / 10

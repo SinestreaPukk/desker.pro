@@ -265,7 +265,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
         </details>
       )}
       {selected && <Detail t={selected} projects={projects} deadlines={deadlines} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
-      <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full text-3xl shadow-lg md:hidden`} aria-label="Add a task"
+      <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full text-2xl shadow-lg md:hidden`} aria-label="Add a task"
         onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); quickRef.current?.focus() }}>+</button>
     </>
   )

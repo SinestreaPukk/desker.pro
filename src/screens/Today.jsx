@@ -40,7 +40,7 @@ function Energy({ log, reset }) {
 const Tile = ({ label, caption, children }) => (
   <div className={`${panel} !p-4 lg:col-span-3`}>
     <p className="text-sm text-slate-600">{label}</p>
-    <div className="mt-1 text-3xl leading-tight">{children}</div>
+    <div className="mt-1 text-2xl leading-tight">{children}</div>
     <p className="mt-1 text-sm text-slate-600">{caption}</p>
   </div>
 )
