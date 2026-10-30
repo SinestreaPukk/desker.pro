@@ -241,16 +241,16 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
       {stats.week > 0 && <p className="mb-3 text-base text-slate-600">{stats.week} task{stats.week === 1 ? '' : 's'} done this week{stats.streak > 1 ? `, ${stats.streak}-day streak` : ''}</p>}
 
       {view === 'Matrix' ? (
-        <div className="grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid items-start gap-4 sm:grid-cols-2 2xl:grid-cols-4">
           {Q.map((q, i) => {
             const rows = open.filter((t) => t.q === i)
             return (
               <section key={q.name} className={`${q.cls} p-3 ${over === i ? 'outline outline-2 outline-accent' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(i) }} onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = +e.dataTransfer.getData('text/plain'); if (tasks.some((t) => t.id === id)) move(id, i) }}>
-                <h2 className="flex items-center gap-2 px-1 text-base font-semibold"><span className={`h-2.5 w-2.5 ${q.dot}`} aria-hidden="true" />{q.name}<span className="ml-auto bg-white px-2 text-xs font-normal">{rows.length}</span></h2>
-                <p className="mt-1 px-1 text-xs text-slate-600">{q.hint}</p>
-                <ul className="mt-3 space-y-2">{rows.map((t) => row(t, true))}{!rows.length && <li className="text-base text-slate-600">Nothing here</li>}</ul>
+                <h2 className="flex items-center gap-2 px-1 text-base font-semibold"><span className={`h-2.5 w-2.5 ${q.dot}`} aria-hidden="true" />{q.name}<span className="ml-auto bg-yuki-0 px-2 text-xs font-normal text-ink">{rows.length}</span></h2>
+                <p className={`mt-1 px-1 text-xs ${q.sub}`}>{q.hint}</p>
+                <ul className="mt-3 space-y-2">{rows.map((t) => row(t, true))}{!rows.length && <li className={`text-base ${q.sub}`}>Nothing here</li>}</ul>
               </section>
             )
           })}

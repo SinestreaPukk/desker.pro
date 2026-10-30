@@ -9,10 +9,10 @@ export const rowCard = 'px-rule'
 // every task matters, just not equally: the four boxes rank by impact and timing, none means 'drop it'
 // cls = chip colours (calendar), dot = swatch, tab = panel tab frame. Do First is beni, the only accent.
 export const Q = [
-  { name: 'Do First', hint: 'Due soon, high impact', cls: 'border border-line bg-beni text-yuki-0', dot: 'bg-beni', tab: 'px-tab-beni' },
-  { name: 'Schedule', hint: 'High impact, not due yet', cls: 'border border-line bg-kori-1 text-ink', dot: 'bg-kori-2', tab: 'px-tab-kori' },
-  { name: 'Fit it in', hint: 'Due soon, lighter impact', cls: 'border border-line bg-matsu-0 text-ink', dot: 'bg-matsu-1', tab: 'px-tab-matsu' },
-  { name: 'Later', hint: 'Lighter impact, no rush', cls: 'border border-line bg-yuki-1 text-ink', dot: 'bg-yuki-3', tab: 'px-tab-yuki' },
+  { name: 'Do First', hint: 'Due soon, high impact', cls: 'border border-line bg-beni text-yuki-0', dot: 'bg-yuki-0', lit: 'bg-beni', sub: 'text-yuki-0', tab: 'px-tab-beni' },
+  { name: 'Schedule', hint: 'High impact, not due yet', cls: 'border border-line bg-kori-1 text-ink', dot: 'bg-kori-2', lit: 'bg-kori-2', sub: 'text-ink', tab: 'px-tab-kori' },
+  { name: 'Fit it in', hint: 'Due soon, lighter impact', cls: 'border border-line bg-matsu-0 text-ink', dot: 'bg-matsu-1', lit: 'bg-matsu-1', sub: 'text-ink', tab: 'px-tab-matsu' },
+  { name: 'Later', hint: 'Lighter impact, no rush', cls: 'border border-line bg-yuki-1 text-ink', dot: 'bg-yuki-3', lit: 'bg-yuki-3', sub: 'text-ink', tab: 'px-tab-yuki' },
 ]
 // Goals pyramid, narrowest (top) to widest (base): a cold ladder, deeper toward the near term
 export const LEVELS = [

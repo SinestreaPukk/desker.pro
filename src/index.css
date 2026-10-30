@@ -2,20 +2,20 @@
 
 @theme {
   /* Yuki: a quiet snowy morning drawn in pixels. Colours are yuki16 only; shading comes from the ramps, never opacity. */
-  --font-sans: 'Pixelify Sans', ui-monospace, monospace;
-  --font-serif: 'Pixelify Sans', ui-monospace, monospace;
-  --font-mono: 'Pixelify Sans', ui-monospace, monospace;
-  /* Pixelify Sans: a game-style pixel face that stays readable. Sizes: 16 (small), 20 (body), 32, 48. */
-  --text-xs: 16px; --text-xs--line-height: 20px;
-  --text-sm: 20px; --text-sm--line-height: 28px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
-  --text-base: 20px; --text-base--line-height: 28px;
-  --text-lg: 20px; --text-lg--line-height: 28px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
-  --text-xl: 32px; --text-xl--line-height: 36px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
-  --text-2xl: 32px; --text-2xl--line-height: 36px;
-  --text-3xl: 32px; --text-3xl--line-height: 36px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
-  --text-4xl: 32px; --text-4xl--line-height: 36px;
+  --font-sans: 'VT323', ui-monospace, monospace;
+  --font-serif: 'VT323', ui-monospace, monospace;
+  --font-mono: 'VT323', ui-monospace, monospace;
+  /* VT323 runs small: body 24, small 20, headings 32 and 48. */
+  --text-xs: 20px; --text-xs--line-height: 24px;
+  --text-sm: 24px; --text-sm--line-height: 28px; /* pixel-ok: token pinned to the 20/24/32/48 grid */
+  --text-base: 24px; --text-base--line-height: 28px;
+  --text-lg: 24px; --text-lg--line-height: 28px; /* pixel-ok: token pinned to the 20/24/32/48 grid */
+  --text-xl: 32px; --text-xl--line-height: 40px; /* pixel-ok: token pinned to the 20/24/32/48 grid */
+  --text-2xl: 32px; --text-2xl--line-height: 40px;
+  --text-3xl: 32px; --text-3xl--line-height: 40px; /* pixel-ok: token pinned to the 20/24/32/48 grid */
+  --text-4xl: 32px; --text-4xl--line-height: 40px;
   --text-5xl: 48px; --text-5xl--line-height: 56px;
-  --text-7xl: 48px; --text-7xl--line-height: 56px; /* pixel-ok: token pinned to the type scale (16/20/32/48) */
+  --text-7xl: 48px; --text-7xl--line-height: 56px; /* pixel-ok: token pinned to the 20/24/32/48 grid */
   --font-weight-medium: 400; --font-weight-semibold: 400; --font-weight-bold: 400;
   --radius-lg: 0; --radius-xl: 0; --radius-2xl: 0; --radius-3xl: 0;
 
@@ -51,7 +51,7 @@
 @media (min-width: 640px) { :root { --px-scene: 4px; } }
 
 html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bg); }
-body { background: var(--bg); font-family: var(--font-sans); font-size: 20px; line-height: 28px; word-spacing: 2px; font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'clig' 0; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
+body { background: var(--bg); font-family: var(--font-sans); font-size: 24px; line-height: 28px; font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'clig' 0; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
 b, strong { font-weight: 400; color: var(--color-yoru-2); }
 .px-art { image-rendering: pixelated; }
 ::selection { background: var(--color-kori-1); color: var(--ink); }
@@ -158,6 +158,6 @@ details > summary { cursor: pointer; }
 /* Phones: 44px touch targets (calendar day chips stay compact) */
 @media (max-width: 767px) {
   button:not(.chip), a.inline-flex, select, textarea, input:not([type='checkbox']):not([type='range']):not([type='file']), summary { min-height: 44px; }
-  input:not([type='checkbox']):not([type='range']):not([type='file']), select, textarea { font-size: 16px; }
+  input:not([type='checkbox']):not([type='range']):not([type='file']), select, textarea { font-size: 24px; }
   label:has(> input[type='checkbox']), label:has(input[type='range']), summary { min-height: 44px; display: flex; align-items: center; }
 }

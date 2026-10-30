@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
-import '@fontsource/pixelify-sans'
+import '@fontsource/vt323'
 import './index.css'
 import App from './App.jsx'
 

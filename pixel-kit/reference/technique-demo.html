@@ -1,0 +1,15 @@
+<!doctype html><html><head><style>
+:root{--px:2px;--bg:#F4F7F6;--ink:#252A40}
+body{margin:0;background:var(--bg);font-family:monospace}
+.wrap{display:flex;gap:calc(6*var(--px));align-items:flex-end;padding:calc(6*var(--px))}
+.art{image-rendering:pixelated}
+.btn{border-style:solid;border-width:calc(3*var(--px));border-image:url(../art/build/btn-frame.png) 3 fill / calc(3*var(--px)) stretch;
+ image-rendering:pixelated;background:none;padding:var(--px) calc(4*var(--px));color:var(--ink);font-size:16px;line-height:16px;cursor:pointer}
+.btn:active{transform:translateY(var(--px))}
+.av{width:calc(24*var(--px));height:calc(24*var(--px));background:url(../art/build/shimaenaga.sheet.png) 0 0/calc(48*var(--px)) calc(24*var(--px));animation:blink 4s steps(1) infinite}
+@keyframes blink{0%,94%{background-position:0 0}95%,100%{background-position:calc(-24*var(--px)) 0}}
+</style></head><body><div class="wrap">
+<div id="av" class="art av"></div>
+<button id="btn" class="btn">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</button>
+<button id="btn2" class="btn">Start today</button>
+</div></body></html>

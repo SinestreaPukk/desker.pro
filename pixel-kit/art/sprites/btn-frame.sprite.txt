@@ -1,0 +1,18 @@
+# 9-slice frame for buttons and panels. Slice = 3 on every side.
+# Corners are notched by one pixel (no rounded corners anywhere).
+# Use: border-image: url(btn-frame.png) 3 fill / calc(3 * var(--px)) stretch;
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+s yuki-2
+frame rest
+.KKKKKK.
+KWWWWWWK
+KWWWWWWK
+KWWWWWWK
+KWWWWWWK
+KssssssK
+.KKKKKK.
+.ssssss.

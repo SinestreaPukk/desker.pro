@@ -1,13 +1,18 @@
+import { Q } from './ui.js'
 import { Icon } from './icons.jsx'
 // Page banners reuse the one lakeside scene: a strip of its sky and mountains, slid sideways per page. Today gets the full scene (px.jsx).
 export function Hero({ className = '' }) {
   return <div className={`px-strip ${className}`} aria-hidden="true"><img src="/pixel/scene-morning.png" alt="" className="px-art" /></div>
 }
 
-// Card cover strip. The same task id always gets the same slice of the scene.
-export function Cover({ seed = 0, className = '' }) {
-  return <div className={`${className} overflow-hidden`} style={{ position: 'relative', height: 'calc(16 * var(--px))', background: 'var(--color-kori-1)' }} aria-hidden="true">
-    <img src="/pixel/scene-morning.png" alt="" className="px-art" style={{ position: 'absolute', top: 'calc(-28 * var(--px))', left: `calc(${-(Math.abs(seed) * 37) % 130} * var(--px))`, width: 'calc(192 * var(--px))', maxWidth: 'none' }} />
+// Card cover strip: a mini 2x2 matrix with this task's box lit.
+export function Cover({ q, className = '' }) {
+  if (q === undefined) return null
+  const cell = 'calc(4 * var(--px))'
+  return <div className={`${className} flex items-center gap-3 bg-yuki-1 px-2`} style={{ height: 'calc(12 * var(--px))' }} aria-hidden="true">
+    <div className="grid shrink-0" style={{ gridTemplateColumns: `repeat(2, ${cell})`, gridAutoRows: cell, gap: 'var(--px)' }}>
+      {Q.map((x, i) => <span key={x.name} className={i === q ? x.lit : 'bg-yuki-2'} />)}
+    </div>
   </div>
 }
 
