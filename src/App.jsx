@@ -191,7 +191,7 @@ export default function App() {
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
       )}
       {toast && (
-        <div role="status" className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-sm items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
+        <div role="status" className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
           {toast.stamp && <Hanko key={toast.text} />}
           <span className="min-w-0 flex-1 break-words">{toast.text}</span>
           <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>

@@ -98,7 +98,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
               if (c !== uid && confirm('Switch to this workspace? Export a backup first if this device has data you want to keep.')) { localStorage.uid = c; location.reload() }
             }}>
               <input name="code" className={`${input} min-w-0 flex-1 font-mono text-xs`} placeholder="Paste a sync code" aria-label="Sync code to use" />
-              <button className={`${btn} ${ghost}`}>Use</button>
+              <button className={`${btn} ${ghost}`}>Use code</button>
             </form>
           </div>
           <div className="flex flex-wrap gap-2">

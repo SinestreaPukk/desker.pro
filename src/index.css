@@ -47,7 +47,8 @@
 
 /* Two art-pixel units: --px for UI, --px-scene for the banner. Every border, offset and sprite is an integer multiple. */
 :root { --px: 2px; --px-scene: 2px; --bg: var(--color-yuki-0); --ink: var(--color-yoru-2); }
-@media (min-width: 1024px) { :root { --px-scene: 4px; } }
+/* 4px from 640px up: at 2px a tablet-width banner would leave flat bars either side of the scene. The wide window crops the scene's sides instead. */
+@media (min-width: 640px) { :root { --px-scene: 4px; } }
 
 html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bg); }
 body { background: var(--bg); font-family: var(--font-sans); font-size: 16px; line-height: 24px; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
@@ -129,11 +130,14 @@ details > summary { cursor: pointer; }
 /* Phones crop the empty top of the sky (16 art px) so the first step stays on screen */
 .px-scene { --crop: 24; position: relative; overflow: hidden; background: var(--color-kori-1); width: 100%; height: calc((80 - var(--crop)) * var(--px-scene)); }
 .px-scene > img { position: absolute; left: 50%; top: calc(-1 * var(--crop) * var(--px-scene)); width: calc(192 * var(--px-scene)); height: calc(80 * var(--px-scene)); margin-left: calc(-96 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
-@media (min-width: 1024px) { .px-scene { --crop: 0; width: calc(192 * var(--px-scene)); flex: none; } .px-scene > img { left: 0; margin-left: 0; } }
+@media (min-width: 640px) { .px-scene { --crop: 0; }
+  .px-scene { height: calc(80 * var(--px-scene)); } }
+@media (min-width: 1024px) { .px-scene { width: calc(192 * var(--px-scene)); flex: none; } .px-scene > img { left: 0; margin-left: 0; } }
 .px-scene > .px-avatar { position: absolute; }
 .px-flake { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
-.px-strip { height: calc(24 * var(--px-scene)); overflow: hidden; position: relative; background: var(--color-kori-1); }
-.px-strip > img { position: absolute; top: calc(-24 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
+.px-strip { height: calc(24 * var(--px-scene)); overflow: hidden; position: relative; background: var(--color-kori-1); width: 100%; }
+.px-strip > img { position: absolute; left: 50%; top: calc(-32 * var(--px-scene)); margin-left: calc(-96 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
+@media (min-width: 1024px) { .px-strip { width: calc(192 * var(--px-scene)); flex: none; } .px-strip > img { left: 0; margin-left: 0; } }
 
 /* Dialog backdrop and dotted row rule */
 .px-backdrop { background: url(/pixel/backdrop.png) 0 0 / calc(2 * var(--px)) calc(2 * var(--px)); image-rendering: pixelated; }

@@ -1,9 +1,7 @@
 import { Icon } from './icons.jsx'
 // Page banners reuse the one lakeside scene: a strip of its sky and mountains, slid sideways per page. Today gets the full scene (px.jsx).
-const SHIFT = [0, 48, 96, 144] // art px, whole numbers
-
-export function Hero({ v = 0, className = '' }) {
-  return <div className={`px-strip ${className}`} aria-hidden="true"><img src="/pixel/scene-morning.png" alt="" className="px-art" style={{ left: `calc(${-SHIFT[v % 4]} * var(--px-scene))` }} /></div>
+export function Hero({ className = '' }) {
+  return <div className={`px-strip ${className}`} aria-hidden="true"><img src="/pixel/scene-morning.png" alt="" className="px-art" /></div>
 }
 
 // Card cover strip. The same task id always gets the same slice of the scene.
@@ -19,14 +17,16 @@ const BANNERS = {
   Calendar: ['Calendar', 'Planned tasks, deadlines and your calendar events in one place.'],
 }
 
-// Page head: scene strip, then the title with its pixel icon.
-export function PageHead({ title, sub, v = 0, icon, children }) {
+// Page head: title and sentence on the left, a strip of the scene on the right (above on small screens).
+export function PageHead({ title, sub, icon, children }) {
   return (
-    <header className="mb-8 md:mb-10">
-      <div className="border-b border-ink"><Hero v={v} /></div>
-      <div className="mt-4 flex items-center gap-3">{icon}<h1 className="text-4xl md:text-5xl">{title}</h1></div>
-      {sub && <p className="mt-2 max-w-2xl text-slate-700">{sub}</p>}
-      {children}
+    <header className="mb-8 flex flex-col gap-4 md:mb-10 lg:flex-row lg:gap-8">
+      <Hero className="lg:order-2" />
+      <div className="min-w-0 flex-1 lg:order-1">
+        <div className="flex items-center gap-3">{icon}<h1 className="text-4xl md:text-5xl">{title}</h1></div>
+        {sub && <p className="mt-2 max-w-2xl text-slate-700">{sub}</p>}
+        {children}
+      </div>
     </header>
   )
 }
@@ -34,5 +34,5 @@ export function PageHead({ title, sub, v = 0, icon, children }) {
 export function Banner({ tab }) {
   const b = BANNERS[tab]
   if (!b) return null
-  return <PageHead title={b[0]} sub={b[1]} v={Object.keys(BANNERS).indexOf(tab) + 1} icon={<Icon name={tab} />} />
+  return <PageHead title={b[0]} sub={b[1]} icon={<Icon name={tab} />} />
 }

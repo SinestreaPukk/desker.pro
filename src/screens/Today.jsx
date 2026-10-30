@@ -105,7 +105,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
   const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
   const todays = [...open].sort((a, b) => (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9')).slice(0, 5)
-  const card = 'px-sunk p-3'
+  const card = 'px-rule pb-3'
   const link = 'min-h-11 underline hover:text-yoru-0'
 
   return (
@@ -137,7 +137,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
         <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
         <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
-          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
         </Tile>
       </div>
