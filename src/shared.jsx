@@ -76,7 +76,7 @@ export function applyPlan(d, o) {
 }
 
 export const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToday.hours : undefined)
-export const QUICK = ['Help me plan my day', 'Replan my week', 'Weekly review', 'Help me set my goals', "I'm feeling stressed", "I'm low on energy"]
+export const QUICK = ['Help me plan my day', 'Replan my week', 'Weekly review', 'Help me set my goals', 'Help me find my goals', "I'm feeling stressed", "I'm low on energy"]
 
 // "Fri 31 Oct" from yyyy-mm-dd
 export const fmtDate = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) : '')

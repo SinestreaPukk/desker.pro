@@ -16,6 +16,8 @@ import Projects from './screens/Projects.jsx'
 import { unlink } from './projects.js'
 import Calendar from './screens/Calendar.jsx'
 import Agent from './components/Agent.jsx'
+import Guide from './guide/Guide.jsx'
+import { addTasks } from './tasks.js'
 import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 
@@ -36,6 +38,8 @@ export default function App() {
   const [agentOpen, setAgentOpen] = useState(false)
   const [replanOpen, setReplanOpen] = useState(false)
   const [focusOpen, setFocusOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [fresh, setFresh] = useState(null) // goals just saved from the guide: { ids, offer }
   const [reviewReq, setReviewReq] = useState(0)
   const [, tick] = useState(0) // re-render each minute so "missed" flags stay current
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
@@ -86,6 +90,22 @@ export default function App() {
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
+  // mode: 'resume' keeps the draft, 'fresh' wipes it; otherwise start (or retake with earlier answers kept)
+  const openGuide = (mode) => {
+    if (mode === 'skip') return setData((d) => ({ ...d, guide: { ...d.guide, skipped: true } }))
+    setData((d) => ({ ...d, guide: mode === 'resume' ? d.guide : mode === 'fresh' ? undefined : { ...d.guide, step: 0, done: false, skipped: false, result: undefined } }))
+    setAgentOpen(false); setTab('Goals'); setGuideOpen(true)
+  }
+  const saveGuide = (guide) => setData((d) => ({ ...d, guide: { ...guide, updatedAt: Date.now() } }))
+  const finishGuide = (added) => {
+    setData((d) => ({ ...d, goals: [...d.goals, ...added], guide: { ...d.guide, result: undefined, done: true } }))
+    setGuideOpen(false); setFresh({ ids: added.map((g) => g.id), offer: added.some((g) => g.firstStep) })
+    setTimeout(() => setFresh((f) => f && { ...f, ids: [] }), 5000)
+  }
+  const makeTasks = () => {
+    setTasks(addTasks(tasks, goals.filter((g) => fresh.ids.includes(g.id) && g.firstStep).map((g) => ({ title: g.firstStep, goalId: g.id }))))
+    setFresh(null)
+  }
   const openReview = () => { setAgentOpen(true); setReviewReq((n) => n + 1) }
   // Every task change goes through settle(): it stamps doneAt, adds the next copy of finished repeating tasks, and feeds Undo.
   const setTasks = (next) => {
@@ -152,7 +172,7 @@ export default function App() {
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
-            {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} />}
+            {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
             {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>
@@ -160,8 +180,9 @@ export default function App() {
       </div>
 
       <aside className={`${agentOpen ? 'fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white sm:w-[26rem] sm:border-l sm:border-line' : 'hidden'}`} aria-label="AI agent" onKeyDown={(e) => e.key === 'Escape' && setAgentOpen(false)}>
-        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} reviewReq={reviewReq} />
+        <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={() => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')} reviewReq={reviewReq} />
       </aside>
+      {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (
         <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask}
           onLog={(h) => focusTask && addSpent(focusTask.id, h)}
