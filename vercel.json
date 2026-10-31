@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/(today|tasks|goals|projects|deadlines|dsb|calendar|do-now|reset-password)", "destination": "/index.html" }
+    {
+      "source": "/api/ics",
+      "destination": "/api/state?feed=1"
+    },
+    {
+      "source": "/(today|tasks|goals|projects|deadlines|dsb|calendar|do-now|reset-password)",
+      "destination": "/index.html"
+    }
   ]
 }

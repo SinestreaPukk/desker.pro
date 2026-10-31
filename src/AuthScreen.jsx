@@ -17,7 +17,7 @@ export default function AuthScreen() {
   const [msg, setMsg] = useState(new URLSearchParams(location.search).get('error') ? 'That link is invalid or has expired. Ask for a new one.' : '')
   const [busy, setBusy] = useState(false)
   const [social, setSocial] = useState([])
-  useEffect(() => { fetch('/api/providers').then((r) => r.json()).then(setSocial).catch(() => {}) }, [])
+  useEffect(() => { fetch('/api/auth/providers').then((r) => r.json()).then(setSocial).catch(() => {}) }, [])
   const go = (m) => { setMode(m); setMsg('') }
 
   const submit = async (e) => {

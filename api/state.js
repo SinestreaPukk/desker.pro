@@ -1,5 +1,6 @@
 import { limit } from './_rate.js'
 import { userOf } from './_auth.js'
+import feed from './_ics.js'
 import { loadDoc, saveDoc, hasContent, sql, SETTINGS } from './_store.js'
 
 const UID = /^[0-9a-f-]{36}$/
@@ -7,6 +8,7 @@ const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', ...SETTINGS]
 const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy']
 
 export default async function handler(req, res) {
+  if (req.query.feed) return feed(req, res) // /api/ics is rewritten here (vercel.json): the Hobby plan allows 12 functions
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
   if (!(await limit(req, res, { scope: 'state', max: 600, id: uid }))) return // autosave PUTs are frequent
