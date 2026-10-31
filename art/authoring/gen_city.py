@@ -22,6 +22,8 @@ OUT = ROOT / 'public/pixel/city'
 W, H = 160, 200
 HOR = 62          # the horizon: sky above, city below
 LEDGE = 181       # top of the wooden shelf you stand at
+SKYH = 112        # the sky gradient runs this far down, behind the skyline
+BASE_Y = 156      # where the towers stand; the street runs below
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 dith = lambda x, y, t: BAYER[y % 4][x % 4] < t * 16
 rgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) + (255,)
@@ -52,10 +54,10 @@ def make_sky(P, rng):
     im = canvas(fill=rgb(P['sky'][-1]))
     bands = [rgb(c) for c in P['sky']]
     n = len(bands)
-    for y in range(HOR + 2):
-        f = min(y / HOR, .999) * (n - 1); i = int(f); t = f - i
+    for y in range(SKYH):
+        f = min(y / SKYH, .999) * (n - 1); i = int(f); t = f - i
         for x in range(W): px(im, x, y, bands[i + 1] if i + 1 < n and dith(x, y, t) else bands[i])
-    box(im, 0, HOR + 2, W, H, bands[-1])
+    box(im, 0, SKYH, W, H, bands[-1])
     if P.get('sun'):
         cx, cy, r = P['sun']
         for rr, t in ((r + 10, .25), (r + 5, .45)): halo(im, cx, cy, rr, rgb(P['sun_halo']), t)
@@ -80,138 +82,54 @@ def make_clouds(P, rng):
                 for j in range(max(0, top - bump), h): px(im, x + off, cy + j, lo if j >= h - 2 else hi)
     return im
 
-def make_far(P, rng, lights):
-    """Hazy towers on the horizon, one tall spire with a blinking beacon."""
-    im = canvas()
-    for col, hmin, hmax in ((P['far'][1], 6, 18), (P['far'][0], 10, 30)):
-        c = rgb(col); x = -4
-        while x < W:
-            w, h = rng.randint(5, 11), rng.randint(hmin, hmax)
-            box(im, x, HOR + 3 - h, x + w - 1, HOR + 3, c); box(im, x + w - 1, HOR + 3 - h, x + w - 1, HOR + 3, shade(c, .9))
-            for wy in range(HOR + 5 - h, HOR + 1, 3):
-                for wx in range(x + 1, x + w - 1, 3):
-                    if rng.random() < P['win']['p'] * .5: px(im, wx, wy, rgb(P['win']['lit'][0]))
-            x += w + rng.randint(0, 2)
-    c = rgb(P['far'][0]); tx = rng.choice([22, 118])
-    box(im, tx - 2, HOR - 26, tx + 2, HOR + 3, c); box(im, tx - 1, HOR - 34, tx + 1, HOR - 26, c); box(im, tx, HOR - 44, tx, HOR - 34, c)
-    px(im, tx, HOR - 45, rgb('#ff6a5a')); lights.append((tx, HOR - 45, tx, HOR - 45, 'beacon'))
+# ------------------------------------------------------------------ the skyline: three tiers of towers, back to front
+TIERS = dict(far=(8, 15, 84, 120, .22, False), mid=(12, 24, 52, 104, .5, True), near=(14, 30, 118, 146, .55, True))   # width, top y, window density, blinks
+
+def tower(im, rng, P, x0, w, top, c, dens, lights, reg, tier):
+    x1, c = x0 + w - 1, shade(c, rng.uniform(.9, 1.12))
+    box(im, x0, top, x1, BASE_Y, c); box(im, x0, top, x0, BASE_Y, shade(c, 1.2)); box(im, x1, top, x1, BASE_Y, shade(c, .7)); box(im, x0, top, x1, top, shade(c, 1.3))
+    if w >= 12 and tier != 'near' and rng.random() < .45:                           # a setback crown
+        box(im, x0 + 3, top - 5, x1 - 3, top, c); box(im, x0 + 3, top - 5, x1 - 3, top - 5, shade(c, 1.3)); box(im, x1 - 3, top - 5, x1 - 3, top, shade(c, .7)); top -= 5
+    if P.get('snow'): box(im, x0, top, x1, top + 1, rgb('#f4f1ff'))
+    win = P['win']
+    for wy in range(top + 3, BASE_Y - 1, 3):
+        rowp = dens * rng.choice([.2, 1, 1, 1.5])                                    # whole floors are lit or dark, like offices
+        for wx in range(x0 + 2, x1 - 1, 2):
+            lit = rng.random() < rowp
+            col = rng.choice(win['cool']) if lit and rng.random() < win['cool_p'] else rng.choice(win['lit']) if lit else win['dim']
+            px(im, wx, wy, rgb(col))
+            if lit and reg: lights.append((wx, wy, wx, wy, 'win'))
+    if P['night'] and tier != 'far' and w >= 10 and rng.random() < .3:             # a lit crown band
+        box(im, x0 + 1, top + 1, x1 - 1, top + 1, rgb('#bfe6ff')); lights.append((x0 + 1, top + 1, x1 - 1, top + 1, 'bulb'))
+    if tier != 'near' and rng.random() < .35 and top > 14:                           # antenna with a beacon
+        ax = rng.randint(x0 + 2, x1 - 2); box(im, ax, top - 8, ax, top - 1, shade(c, .9)); px(im, ax, top - 9, rgb('#ff6a5a')); lights.append((ax, top - 9, ax, top - 9, 'beacon'))
+
+def towers(P, rng, lights, tier):
+    wmin, wmax, tmin, tmax, dens, reg = TIERS[tier]
+    c = rgb(P['tw'][tier]); im = canvas(); x = -6
+    while x < W:
+        w, top = rng.randint(wmin, wmax), rng.randint(tmin, tmax)
+        if tier == 'mid' and rng.random() < .2: top = max(40, top - rng.randint(10, 25))
+        tower(im, rng, P, x, w, top, c, dens, lights, reg and True, tier)
+        x += w + rng.randint(-2, 1)
     return im
 
-
-# ------------------------------------------------------------------ the city below: block rows, back to front
-def plan():
-    """Rows of blocks, each with the street in front of it: dicts k, s (scale), yf (front edge), dep (depth), gap (street width)."""
-    rows, yf, k = [], 168, 0
-    while True:
-        s = .88 ** k
-        dep, gap = round(14 * s), max(3, round(8 * s))
-        if dep < 2 or yf - dep - gap < HOR + 3: break
-        rows.append(dict(k=k, s=s, yf=yf, dep=dep, gap=gap)); yf -= dep + gap; k += 1
-    return rows
-sx = lambda X, s: round(80 + X * s)
-
-CROSS = list(range(-450, 451, 75))       # world x of the side streets (they converge toward the centre)
-STREET_W = 9
-SEGMENTS = [(CROSS[i] + STREET_W // 2 + 1, CROSS[i + 1] - STREET_W // 2 - 1) for i in range(len(CROSS) - 1)]
-
-def draw_ground(P, rng, rows, parks):
-    g = canvas(); road, walk = rgb(P['road']), rgb(P['walk'])
-    box(g, 0, HOR + 3, W, H, road)
-    for r in rows:
-        s = r['s']
-        for si, (a, b) in enumerate(SEGMENTS):
-            x0, x1, y0, y1 = sx(a, s), sx(b, s), r['yf'] - r['dep'], r['yf']
-            box(g, x0 - 1, y0 - 1, x1 + 1, y1 + 1, walk)
-            if (r['k'], si) in parks: box(g, x0, y0, x1, y1, rgb(P['park']))
-        bot = r['yf'] + r['gap']
-        if P.get('river') == r['k']:                                                # this street is a river, with bridges
-            box(g, 0, r['yf'] + 1, W, bot - 1, rgb(P['water'][0]))
-            for x in range(0, W, 3): px(g, (x + r['yf'] * 2) % W, r['yf'] + 1 + (x // 3) % max(1, r['gap'] - 2), rgb(P['water'][1]))
-            for X in CROSS: xb = sx(X, s); box(g, xb - 2, r['yf'] - 1, xb + 2, bot + 1, rgb(P['road']))
-        elif r['gap'] >= 5:
-            for x in range(0, W, 8): box(g, x, r['yf'] + r['gap'] // 2, x + 3, r['yf'] + r['gap'] // 2, shade(walk, 1.05))   # lane dashes
-    box(g, 0, 171, W, LEDGE, walk)                                                  # the plaza right under the ledge
-    if P.get('snow'):
-        for y in range(HOR + 3, H):
-            for x in range(W):
-                if g.getpixel((x, y)) == road and dith(x, y, .55): px(g, x, y, rgb('#8a86b8'))
-    if P['night']:                                                                  # street lamps: a warm pool on the road
-        for r in rows:
-            for X in range(-420, 430, 70): halo(g, sx(X + 18, r['s']), r['yf'] + 1, max(3, round(9 * r['s'])), rgb(P['lamp']), .6)
+def make_street(P, rng):
+    """The street at the foot of the towers: kerb, warm shop glow at night, lamp pools."""
+    g = canvas(); box(g, 0, BASE_Y + 1, W, H, rgb(P['road'])); box(g, 0, BASE_Y + 1, W, BASE_Y + 1, rgb(P['walk']))
+    for x in range(0, W, 8): box(g, x, 162, x + 3, 162, shade(rgb(P['walk']), 1.05))
+    if P['night']:
+        for x in range(1, W, 3):
+            if rng.random() < .5: px(g, x, BASE_Y + 2, rgb(rng.choice(P['win']['lit'])))
+        for x in range(8, W, 22): halo(g, x, BASE_Y + 3, 6, rgb(P['lamp']), .5)
     return g
 
-def tree(im, x, y, r, cols, snow=False):
-    r = max(1, r)
-    disc(im, x, y, r, rgb(cols[0]))
-    if r > 1: disc(im, x - r // 3, y - r // 3, max(1, r - 1), rgb(cols[1])); px(im, x + r // 2, y + r // 2, shade(rgb(cols[0]), .8))
-    if snow: box(im, x - r // 2, y - r // 2, x, y - r // 2, rgb('#ffffff'))
-
-def draw_buildings(P, rng, rows, parks, lights, smokes):
-    b = canvas()
-    for r in reversed(rows):                                                        # far to near
-        s, yf, dep = r['s'], r['yf'], r['dep']
-        for si, (a, bb) in enumerate(SEGMENTS):
-            if (r['k'], si) in parks:
-                for _ in range(max(2, int(10 * s))):
-                    tree(b, sx(rng.randint(a, bb), s), rng.randint(yf - dep + 1, yf - 1), round(3.2 * s), P['trees'], P.get('snow'))
-                continue
-            X, roof, wall = a, rng.choice(P['roofs']), rng.choice(P['walls'])          # one roof and wall colour per block keeps it calm
-            while X < bb - 10:
-                w = min(rng.randint(26, 50), bb - X)
-                x0, x1 = sx(X, s), max(sx(X, s) + 2, sx(X + w, s) - 1)
-                lift = max(1, round(rng.choice([1, 1, 2, 3]) * s * 1.4))
-                house(b, P, rng, x0, x1, yf, dep, lift, s, lights, smokes, roof, wall)
-                X += w + rng.choice([0, 1, 2])
-        for X in range(-430, 440, 55):                                              # trees along the sidewalk
-            if rng.random() < P['tree_p'] and not any(abs(X - c) < 8 for c in CROSS): tree(b, sx(X, s), yf + 1, round(2.6 * s), P['trees'], P.get('snow'))
-    return b
-
-def house(im, P, rng, x0, x1, yf, dep, lift, s, lights, smokes, roof, wall):
-    w = x1 - x0 + 1
-    wall, roof = rgb(wall), shade(rgb(roof), rng.uniform(.92, 1.08))
-    top, bot = yf - dep - lift, yf - lift                                            # the roof's rectangle; the wall's sliver is below it
-    box(im, x0, bot, x1, yf, shade(wall, .86)); box(im, x1, bot, x1, yf, shade(wall, .7)); box(im, x0, bot, x1, bot, shade(wall, .6))
-    if lift >= 3:
-        for wy in range(bot + 1, yf - 1, 3):
-            for wx in range(x0 + 1, x1 - 1, 3):
-                lit = rng.random() < P['win']['p']
-                px(im, wx, wy, rgb(rng.choice(P['win']['lit'])) if lit else rgb(P['win']['dim']))
-                if lit: lights.append((wx, wy, wx, wy, 'win'))
-    if P.get('snow'):                                                                # snow on every roof, the eave showing underneath
-        box(im, x0, top, x1, bot - 1, rgb('#f4f1ff')); box(im, x0, bot - 2, x1, bot - 1, rgb('#cfc8ee')); box(im, x1, top, x1, bot - 1, rgb('#cfc8ee'))
-        for _ in range(max(1, w // 5)): px(im, rng.randint(x0, x1), rng.randint(top, max(top, bot - 3)), rgb('#ffffff'))
-        if s > .5: box(im, x0, bot, x1, bot, roof)
-    elif w >= 7 and s > .45 and rng.random() < .55:                                  # gabled roof: two slopes and a ridge
-        mid = (top + bot - 1) // 2
-        box(im, x0, top, x1, mid, shade(roof, 1.12)); box(im, x0, mid + 1, x1, bot - 1, shade(roof, .86))
-        box(im, x0, mid, x1, mid, shade(roof, 1.3)); box(im, x1, top, x1, bot - 1, shade(roof, .7))
-        for y in range(top + 1, bot - 1, 2):
-            for x in range(x0 + (y % 4 == 1), x1, 2): px(im, x, y, shade(roof, .93))
-    else:                                                                            # flat roof, parapet, and something on it
-        box(im, x0, top, x1, bot - 1, roof); box(im, x0, top, x1, top, shade(roof, 1.25))
-        box(im, x1, top, x1, bot - 1, shade(roof, .75)); box(im, x0, bot - 1, x1, bot - 1, shade(roof, .8))
-        if s > .5 and w > 5 and rng.random() < .55:
-            kind = rng.random()
-            cx, cy = rng.randint(x0 + 1, max(x0 + 1, x1 - 4)), rng.randint(top + 2, max(top + 2, bot - 4))
-            if kind < .2: box(im, cx, cy, cx + 2, cy + 1, rgb('#aab4c0')); px(im, cx + 1, cy, rgb('#d4dce4'))              # air-con
-            elif kind < .35: disc(im, cx + 1, cy + 1, 1, rgb('#8a6a5a'))                                                  # water tank
-            elif kind < .55 and P.get('gardens'): box(im, cx - 1, cy, cx + 2, cy + 1, rgb('#6fa36a')); px(im, cx, cy, rgb('#e86a6a')); px(im, cx + 2, cy + 1, rgb('#f4c95d'))
-            elif kind < .65: box(im, cx, cy, cx + 2, cy + 1, rgb('#3a5a8a')); px(im, cx + 1, cy, rgb('#5a8ac0'))          # solar panel
-            elif kind < .8 and P['night']: box(im, cx, cy, cx + 1, cy + 1, rgb('#ffe9a8')); lights.append((cx, cy, cx + 1, cy + 1, 'win'))   # lit skylight
-    if P.get('smoke') and s > .55 and w > 6 and rng.random() < .22:                  # a chimney
-        cx = rng.randint(x0 + 1, x1 - 2); box(im, cx, top - 1, cx + 1, top + 1, shade(roof, .6)); px(im, cx, top - 1, shade(roof, .9))
-        smokes.append((cx, top - 2))
-
-def make_smoke(P, smokes):
-    frames = [canvas() for _ in range(3)]
-    for ax, ay in smokes:
-        for f in range(3):
-            for i in range(3):
-                x, y = ax + (1 if (f + i) % 2 else 0) - i // 2, ay - 2 - i * 2 - f
-                px(frames[f], x, y, rgb(P['smoke_c'][0] if i == 0 else P['smoke_c'][1]))
-                if i == 0: px(frames[f], x + 1, y, rgb(P['smoke_c'][1]))
-    return frames
-
+def beams(P, rng, y, head):
+    """Light streaks of night traffic; a 2W strip so moving it W pixels loops."""
+    im = canvas(W * 2, H); c = rgb('#fff3c0' if head else '#e8503a')
+    for x in sorted(rng.sample(range(0, W - 4), 9)):
+        for off in (0, W): box(im, x + off, y, x + off + 1, y, c); px(im, x + off + 2, y, shade(c, .6))
+    return im
 
 # ------------------------------------------------------------------ traffic: lanes that loop sideways
 def car(im, x, y, L, Hc, col, night):
@@ -317,52 +235,40 @@ def make_steam(anchor):
     return frames
 
 def make_haze(P):
-    """Flat bands of haze where the city meets the sky, thinning out as it comes toward you."""
+    """Atmosphere: dithered haze that thickens toward the foot of the far towers, so the distance looks distant."""
     im = canvas(); c = rgb(P['haze'])
-    box(im, 0, HOR - 1, W, HOR + 3, c)
-    for y in range(HOR + 4, HOR + 9):
+    for y in range(90, 152):
         for x in range(W):
-            if dith(x, y, .3 if y < HOR + 7 else .12): px(im, x, y, c)
+            if dith(x, y, .6 * (y - 90) / 62): px(im, x, y, c)
     return im
 
 
 # ------------------------------------------------------------------ the five scenes
-BASE = dict(wood='#8a5a3a', rail='#3a2c3e', lamp='#ffd479', tree_p=.5, smoke_c=['#f4eef0', '#d8d0dc'], night=False, mover=None, mover2=None)
+BASE = dict(wood='#8a5a3a', rail='#3a2c3e', lamp='#ffd479', night=False, mover=None, mover2=None)
+WARM = ['#ffd479', '#ffb557', '#ffe9a8']; COOL = ['#9fd4ff', '#dff1ff']
 SCENES = {
-    'dusk': dict(BASE, night=True, sky=['#3f3a72', '#5a4a8c', '#7d5a9e', '#a8629a', '#d0709a', '#e88580', '#f4a679', '#fbd08a'],
-        sun=(98, HOR - 2, 11), sun_c='#fff1c1', sun_halo='#fde0a0', haze='#f7b98a', cloud=['#f6b48c', '#d98aa0'], clouds=4,
-        far=['#8a6a9a', '#a07aa0'], roofs=['#b4523a', '#c8683f', '#8a4a3a', '#6d4a5e', '#d08a52', '#9a5a48'], walls=['#e8cfa8', '#d9b48a', '#c89a78'],
-        road='#3a2c4e', walk='#6a5578', park='#6b8a52', trees=['#e8803a', '#f2a244'], win=dict(lit=['#ffd479', '#ffb557'], dim='#4c3d6c', p=.5),
-        cars=['#e05a4b', '#f2b84b', '#f6e9d2', '#5b8fb9', '#7a9a6a'], parks=3, people=True, mover=('birds', 'sky', 30, 85)),
+    'dusk': dict(BASE, night=True, sky=['#0a1030', '#0f1a42', '#15255a', '#1d3070', '#2a3f82', '#43508e', '#7a5a8e', '#d98a78'], stars=30,
+        haze='#3a4a86', cloud=['#2a3a72', '#1d2a5c'], clouds=3, tw=dict(far='#27386a', mid='#17214a', near='#0d1330'),
+        win=dict(lit=WARM, cool=COOL, cool_p=.14, dim='#1c2850'), road='#0d1330', walk='#3a3a70', mover=('birds', 'sky', 30, 85)),
     'dawn': dict(BASE, sky=['#8fb8de', '#aec6e6', '#cfcae6', '#eec9d6', '#f8d2c4', '#fbe0b4', '#fdecc2', '#fff0cf'],
-        sun=(70, HOR - 3, 10), sun_c='#fff8dc', sun_halo='#fff0c4', haze='#fdecc8', cloud=['#ffffff', '#f3d5dc'], clouds=4,
-        far=['#cdb0c0', '#dcc0ca'], roofs=['#d9826a', '#e8a07e', '#c06f5e', '#9aa8c4', '#b9a0b8', '#e6b88a'], walls=['#fff1dc', '#f6dcc0', '#efe0d0'],
-        road='#8a7a96', walk='#c8b8c8', park='#7fb070', trees=['#8cc080', '#f2b8c8'], win=dict(lit=['#ffe39a', '#ffd479'], dim='#9c8fb4', p=.1),
-        cars=['#e8704f', '#f2b84b', '#ffffff', '#6aa0c8', '#9ac07a'], parks=3, people=True, smoke=True, gardens=True,
-        mover=('balloon', 'sky', 40, 90), mover2=('birds', 'sky', 20, 110)),
-    'rain': dict(BASE, night=True, sky=['#27304f', '#2f3a5c', '#3a4668', '#465475', '#566684', '#6a7a94'],
-        haze='#7f8fa6', cloud=['#4a5878', '#38466a'], clouds=8, far=['#4c5a78', '#566684'],
-        roofs=['#2f5a5e', '#3a4a68', '#5a4a6e', '#7a5a54', '#3f6a6a', '#54607a'], walls=['#8a8aa0', '#9a9098', '#7e8aa0'],
-        road='#242c44', walk='#4a5878', park='#3f6a5c', trees=['#4f8a78', '#5f9a88'], win=dict(lit=['#ffcf72', '#ffb054'], dim='#2d3858', p=.6),
-        cars=['#e8704f', '#f2b84b', '#e9e2d0', '#6aa0c8'], umbrellas=['#e05a4b', '#f2b84b', '#4aa3a0', '#d46aa0', '#5b8fe0'], parks=2, fall='rain'),
-    'snow': dict(BASE, night=True, snow=True, sky=['#1e1b46', '#2c2760', '#3d3478', '#52408a', '#6a4c92', '#8a5a9a'], stars=42,
-        haze='#a070a0', cloud=['#6a5a9c', '#4a3f80'], clouds=3, far=['#4a4580', '#5a4f8e'],
-        roofs=['#8a4a5a', '#6d4a7a', '#9a5a48'], walls=['#d8c0a8', '#c8a898', '#b898a0'], road='#4a4678', walk='#cfc8ee', park='#dfe0f4',
-        trees=['#2f5a4a', '#3f7260'], win=dict(lit=['#ffcf72', '#ffb054'], dim='#3a3470', p=.55), cars=['#e8704f', '#f2b84b', '#f4f1ff', '#7a9ac0'],
-        parks=3, smoke=True, people=True, fall='snow', mover=('blimp', 'sky', 30, 80)),
+        sun=(100, 86, 10), sun_c='#fff8dc', sun_halo='#fff0c4', haze='#fde6c8', cloud=['#ffffff', '#f3d5dc'], clouds=4,
+        tw=dict(far='#d0b8cb', mid='#b09ab8', near='#8a7a9e'), win=dict(lit=['#ffe39a', '#ffd479'], cool=['#ffffff'], cool_p=.2, dim='#c4d0e8'),
+        road='#8a7a96', walk='#c8b8c8', cars=['#e8704f', '#f2b84b', '#ffffff', '#6aa0c8', '#9ac07a'], mover=('balloon', 'sky', 40, 90), mover2=('birds', 'sky', 20, 110)),
+    'rain': dict(BASE, night=True, sky=['#1a2240', '#222c50', '#2c3860', '#38466e', '#485880', '#5f7090'],
+        haze='#566684', cloud=['#3a4868', '#2c3a5c'], clouds=8, tw=dict(far='#36456a', mid='#232e56', near='#141b38'),
+        win=dict(lit=WARM, cool=['#8fd0d8'], cool_p=.1, dim='#1c2646'), road='#141b38', walk='#3a4a6e', fall='rain'),
+    'snow': dict(BASE, night=True, snow=True, sky=['#1a1844', '#272260', '#392e78', '#4d3c8a', '#654a92', '#8a5a9a'], stars=42,
+        haze='#6a528e', cloud=['#5a4a8c', '#403676'], clouds=3, tw=dict(far='#443f80', mid='#2c2862', near='#1c1946'),
+        win=dict(lit=WARM, cool=COOL, cool_p=.1, dim='#2a2658'), road='#1c1946', walk='#6a64a0', fall='snow', mover=('blimp', 'sky', 30, 80)),
     'afternoon': dict(BASE, sky=['#5fb0e8', '#7cc2ee', '#9ad2f2', '#b6e0f6', '#d2eef8', '#eaf6ee'],
-        sun=(120, 26, 8), sun_c='#fff3b0', sun_halo='#fff8d0', haze='#e8f4ee', cloud=['#ffffff', '#d8e8f4'], clouds=5, far=['#a9c0d8', '#bcd0e0'],
-        roofs=['#d9826a', '#c8683f', '#e8a07e', '#8aa0c0', '#b4523a', '#e6b88a'], walls=['#fff1dc', '#f6dcc0', '#efe0d0', '#e8d0b0'],
-        road='#6a6a7a', walk='#d8d0c0', park='#5f9c62', trees=['#4f9c52', '#7fc070'], tree_p=.7, win=dict(lit=['#fff3b0', '#ffe28a'], dim='#7fb0d0', p=.04),
-        cars=['#e05a4b', '#f2b84b', '#ffffff', '#5b8fb9', '#7a9a6a'], water=['#4a9ec8', '#8cc8dc'], river=3, parks=4, people=True, gardens=True,
-        mover=('birds', 'sky', 36, 100)),
+        sun=(120, 26, 8), sun_c='#fff3b0', sun_halo='#fff8d0', haze='#e0f0f2', cloud=['#ffffff', '#d8e8f4'], clouds=5,
+        tw=dict(far='#b4cce0', mid='#8fb0cc', near='#6a8aab'), win=dict(lit=['#fff3b0', '#ffe28a'], cool=['#ffffff'], cool_p=.3, dim='#bcdcf0'),
+        road='#6a6a7a', walk='#d8d0c0', cars=['#e05a4b', '#f2b84b', '#ffffff', '#5b8fb9', '#7a9a6a'], mover=('birds', 'sky', 36, 100)),
 }
 MOV = dict(balloon=sprite_balloon, blimp=sprite_blimp, birds=sprite_birds)
 
 def build(name, P, seed):
-    rng = random.Random(seed); lights, smokes = [], []
-    rows = plan()
-    parks = {(rng.randint(1, len(rows) - 1), rng.randint(0, len(SEGMENTS) - 1)) for _ in range(P.get('parks', 2))}
+    rng = random.Random(seed); lights = []
     sky, stars = make_sky(P, rng)
     files = {'sky': sky, 'clouds': make_clouds(P, rng)}
     layers = [dict(k='img', n='sky'), dict(k='drift', n='clouds', dur=300)]
@@ -370,28 +276,17 @@ def build(name, P, seed):
         if P.get(key):
             kind, _, y, dur = P[key]; files[key] = MOV[kind]()
             layers.append(dict(k='cross', n=key, w=files[key].width, y=y, dur=dur, off=.35 + j * .3))
-    files['far'] = make_far(P, rng, lights); layers.append(dict(k='img', n='far'))
-    files['ground'] = draw_ground(P, rng, rows, parks); layers.append(dict(k='img', n='ground'))
-    for r in rows:                                                                                  # traffic, river boats, walkers
-        s = r['s']; speed = 12 * s + 2
-        if P.get('river') == r['k']:
-            files[f'lane{r["k"]}'] = lane(P, rng, r['yf'] + r['gap'] // 2, s, 'boat'); layers.append(dict(k='strip', n=f'lane{r["k"]}', dur=round(W / (speed * .5)), rev=False))
-            continue
-        for i, y in enumerate([r['yf'] + 1, r['yf'] + r['gap'] - 2] if r['gap'] >= 5 else [r['yf'] + r['gap'] // 2]):
-            n = f'lane{r["k"]}_{i}'; files[n] = lane(P, rng, y, s, 'car'); layers.append(dict(k='strip', n=n, dur=round(W / speed), rev=bool(i)))
-        walkers = 'umbrella' if P.get('umbrellas') else 'people' if P.get('people') and s > .5 else None
-        if walkers:
-            n = f'walk{r["k"]}'; files[n] = lane(P, rng, r['yf'], s, walkers); layers.append(dict(k='strip', n=n, dur=round(W / (speed * .3)), rev=bool(r['k'] % 2)))
-    files['bldg'] = draw_buildings(P, rng, rows, parks, lights, smokes); layers.append(dict(k='img', n='bldg'))
-    if smokes:
-        for i, f in enumerate(make_smoke(P, smokes)): files[f'smoke{i}'] = f
-        layers.append(dict(k='frames', n='smoke', count=3, dur=7))
-    files['haze'] = make_haze(P); layers.append(dict(k='img', n='haze'))
+    files['far'] = towers(P, rng, lights, 'far'); files['haze'] = make_haze(P)
+    files['mid'] = towers(P, rng, lights, 'mid'); files['near'] = towers(P, rng, lights, 'near'); files['ground'] = make_street(P, rng)
+    layers += [dict(k='img', n=n) for n in ('far', 'haze', 'mid', 'near', 'ground')]
+    for i, y in enumerate((159, 164)):                                                              # traffic on the street below
+        n = f'lane{i}'; files[n] = beams(P, rng, y, not i) if P['night'] else lane(P, rng, y, .85, 'car')
+        layers.append(dict(k='strip', n=n, dur=9 + i * 6, rev=bool(i)))
     ledge, anchor = make_ledge(P, lights)
     rng.shuffle(lights)                                                                             # lights that go off now and then
     A, B = canvas(), canvas(); cut = len(lights) // 6
     for im, group in ((A, lights[:cut]), (B, lights[cut:cut * 2])):
-        for x0, y0, x1, y1, kind in group: box(im, x0, y0, x1, y1, sky.getpixel((x0, y0)) if kind == 'beacon' else rgb(P['win']['dim']) if kind == 'win' else shade(rgb(P['rail']), 1.3))
+        for x0, y0, x1, y1, kind in group: box(im, x0, y0, x1, y1, sky.getpixel((x0, y0)) if kind == 'beacon' else rgb(P['win']['dim']) if kind in ('win', 'bulb') and y0 < BASE_Y else shade(rgb(P['rail']), 1.3))
     for i, (x, y) in enumerate(stars[::2]): px((A, B)[i % 2], x, y, sky.getpixel((x, y)))
     files['lightA'], files['lightB'] = A, B; layers += [dict(k='blink', n='lightA', cls='wp-a'), dict(k='blink', n='lightB', cls='wp-b')]
     if P.get('fall'):
@@ -401,8 +296,8 @@ def build(name, P, seed):
     for i, f in enumerate(make_steam(anchor)): files[f'steam{i}'] = f
     layers.append(dict(k='frames', n='steam', count=3, dur=4.5))
     for k, im in files.items(): im.save(OUT / f'{name}-{k}.png')
-    comp = Image.alpha_composite(Image.alpha_composite(sky, files['far']), files['ground'])
-    comp = Image.alpha_composite(Image.alpha_composite(comp, files['bldg']), files['haze'])
+    comp = sky
+    for k in ('far', 'haze', 'mid', 'near', 'ground'): comp = Image.alpha_composite(comp, files[k])
     return dict(bg=P['sky'][-1], layers=layers), comp
 
 def main():
@@ -411,8 +306,8 @@ def main():
     meta = {}
     for i, (name, P) in enumerate(SCENES.items()):
         meta[name], comp = build(name, P, 300 + i)
-        if name == 'dusk':                                            # email header: rooftops at dusk, 4x
-            comp.crop((0, 96, W, 96 + 34)).resize((W * 4, 34 * 4), Image.NEAREST).convert('RGB').save(ROOT / 'public/pixel/email-banner.png')
+        if name == 'dusk':                                            # email header: night towers, 4x
+            comp.crop((0, 70, W, 70 + 34)).resize((W * 4, 34 * 4), Image.NEAREST).convert('RGB').save(ROOT / 'public/pixel/email-banner.png')
     (ROOT / 'src/city-scenes.json').write_text(json.dumps(meta, separators=(',', ':')))
     print('built', ', '.join(meta))
 
