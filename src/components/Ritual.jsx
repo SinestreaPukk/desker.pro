@@ -3,7 +3,7 @@ import { track } from '../analytics.js'
 import { btn, BLUE, ghost, panel } from '../ui.js'
 import { logEnergy } from '../energy.js'
 import { fmtMin } from './TimeAsk.jsx'
-import { nameOf, finishRitual, skipRitual } from '../kodama.js'
+import { nameOf, finishRitual } from '../kodama.js'
 import { record, addOutcome, outcomeFor, rhythmOf } from '../rhythm.js'
 import { plannerArgs, applyPlanChecked, todayStr } from '../shared.jsx'
 import { lengthOf } from '../schedule.js'
@@ -16,10 +16,12 @@ const FEEL = ['Good', 'Okay', 'Tough']
 // The two daily check-ins with the kodama. Both are optional and a day without them costs nothing.
 // Morning: look at today's plan, say how your energy is. Evening: say what got done and how long it took, move the rest.
 // Everything said here is data for the rhythm engine (timings, energy), so the planner gets better at fitting your days.
-export default function Ritual({ kind, data, setData, onReplan }) {
+export default function Ritual({ kind, due, data, setData, onReplan }) {
   const today = todayStr(), name = nameOf(data)
   const tasks = data.tasks.filter((t) => !t.fun)
   const planned = tasks.filter((t) => t.when === today && !t.done).sort((a, b) => (a.start || '99').localeCompare(b.start || '99'))
+  const [hidden, setHidden] = useState(() => { try { return localStorage.ritualHidden === '1' } catch { return false } }) // retracted to one slim line; remembered on this device
+  const retract = (v) => { setHidden(v); try { localStorage.ritualHidden = v ? '1' : '0' } catch { /* storage blocked: it opens again next visit */ } }
   const [started, setStarted] = useState(false) // collapsed to one line and a Start button until the student chooses to begin
   const [asked, setAsked] = useState({}) // task id -> minutes chosen in the wrap-up
   const [feel, setFeel] = useState('')
@@ -29,7 +31,7 @@ export default function Ritual({ kind, data, setData, onReplan }) {
   const untimed = finishedToday.filter((t) => !(t.spent > 0) && !rh.outcomes.some((o) => o.task === t.id))
   const set = (fn) => setData(fn)
   const tapEnergy = (l) => { track('energy_logged', { prompted: true }); setEnergy(l); set((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
-  const done = () => { if (kind === 'evening') track('wrapup_completed'); finish() }
+  const done = () => { if (kind === 'evening') track('wrapup_completed'); setStarted(false); finish() }
   const finish = () => set((d) => finishRitual(feel ? { ...d, kodama: { ...d.kodama, feel: Object.fromEntries(Object.entries({ ...d.kodama?.feel, [today]: feel }).slice(-60)) } } : d, kind))
 
   const markDone = (t) => set((d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === t.id ? { ...x, done: true, doneAt: Date.now() } : x)) }))
@@ -39,10 +41,18 @@ export default function Ritual({ kind, data, setData, onReplan }) {
   const mins = planned.reduce((n, t) => n + lengthOf(t), 0)
   const morning = kind === 'morning'
   const title = morning ? 'Morning plan' : 'Evening wrap-up'
-  const skip = <button className={btn} onClick={() => set((d) => skipRitual(d, kind))}>Not now</button>
+  const skip = <button className={btn} onClick={() => retract(true)}>Hide</button>
+  const wrapped = (data.kodama?.rituals?.[kind] || []).includes(today)
   const line = morning
     ? (planned.length ? `Look over today with ${name}: ${planned.length} thing${planned.length === 1 ? '' : 's'}, about ${fmtMin(Math.round(mins / 15) * 15)}.` : 'Nothing is planned for today yet.')
-    : `Tell ${name} what got done today and what can wait.`
+    : wrapped && !due ? 'Wrapped up for today. Open it again to add more.' : `Tell ${name} what got done today and what can wait.`
+  if (hidden) {
+    return (
+      <section className={`${panel} mb-6 !py-2`} aria-label={title}>
+        <BoxHead tab={title}><button className={`${btn} ${ghost}`} aria-expanded="false" onClick={() => retract(false)}>Show</button></BoxHead>
+      </section>
+    )
+  }
   if (!started) {
     return (
       <section className={`${panel} mb-6`} aria-label={title}>

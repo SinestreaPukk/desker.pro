@@ -285,7 +285,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </section>
       </div>
 
-      {ritualDue(data) && <Ritual key={ritualDue(data)} kind={ritualDue(data)} data={data} setData={setData} onReplan={onReplan} />}
+      <Ritual key={ritualDue(data) || 'evening'} kind={ritualDue(data) || 'evening'} due={!!ritualDue(data)} data={data} setData={setData} onReplan={onReplan} /> {/* the wrap-up is always here; it can be retracted */}
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section className="lg:col-span-6" aria-label="Your tasks">
