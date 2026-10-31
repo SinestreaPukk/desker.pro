@@ -1,6 +1,6 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 3 done. Phases 4 to 8 are waiting on the decisions listed at the bottom.**
+Status: **Phases 1 to 3 and 6 done. Phases 4, 5, 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -35,7 +35,16 @@ Status: **Phases 1 to 3 done. Phases 4 to 8 are waiting on the decisions listed 
 - "Right now": "Do this next", the scene is 64px shorter on desktop so Start is on the first screen at 1470x769.
 - `desker.tour.seen.business/personal`: no such flag exists in this repo (source or `dist/`), so nothing was removed.
 
+## Phase 6: signed-out experience
+- `/` for signed-out visitors is a landing page (`src/Landing.jsx`): "The planner that learns how you study", the kodama in the winter scene, three features with drawn examples (marked "Example"), a supporting row, footer with Privacy, Terms and (if `VITE_CONTACT_EMAIL` is set) Contact. Signed-in users still go to `/today`.
+  The copy promises the rhythm page and the kodama's rituals (Phases 4 and 5); the example numbers ("38% off, now 12%") are illustrative.
+- `/privacy` and `/terms` (`src/Legal.jsx`) are placeholders with TODOs for you to write. `vercel.json` rewrites them.
+- Sign-up is email and password. Name and username are derived from the email (`deriveAccount`, a taken username gets a number); sign-in by email or username is unchanged; the confirm-password field is gone on sign-up (Show/Hide stays), but kept on password reset.
+- Google/GitHub buttons already existed behind `GOOGLE_CLIENT_ID/SECRET` (and GitHub's); they now sit above the form as "Continue with Google" and stay hidden when the variables are missing.
+- **Not done, on purpose: letting people in before they confirm their email.** Verification is only required when a mail provider is configured. Skipping it would let anyone register someone else's address and later block or hijack that person's sign-up. If you still want it, the safe version is: verify before the first password reset or before any email is sent, which needs a server change in `api/_auth.js` (`requireEmailVerification`).
+- SEO: `index.html` carries the landing copy (visually hidden, replaced when the app loads), canonical link, Open Graph and Twitter tags, and `public/og.png` (1200x630, made from the winter scene). Real pre-rendering would need an SSR build step; not added.
+
 ## Tests
-`npm test` (64 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (65 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.

@@ -9,8 +9,11 @@
     <meta property="og:site_name" content="Desker" />
     <meta property="og:title" content="Desker: the study planner that learns how you work" />
     <meta property="og:description" content="Plans your deadlines, exams and tasks around how long things really take you and when you focus best." />
-    <meta property="og:image" content="/icon-512.png" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content="https://desker.dev/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://desker.dev/" />
     <meta name="theme-color" content="#F4F7F6" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
@@ -20,7 +23,15 @@
     <meta name="apple-mobile-web-app-title" content="Desker" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Read by crawlers that do not run scripts, and replaced by the app the moment it loads. Keep in step with src/Landing.jsx. -->
+      <div style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">
+        <h1>The planner that learns how you study.</h1>
+        <p>Desker learns how long things really take you and when you focus best, and your kodama plans each day around it. Built for university students with deadlines.</p>
+        <ul><li>It learns you: every task you time teaches Desker how long your work really takes, and when you focus best.</li><li>It plans around your energy: one task for right now, in the hours you do your best work.</li><li>A companion, not a to-do list: a short plan in the morning, two quick questions in the evening.</li><li>Import your syllabus, plan around your calendar, turn deadlines into tasks.</li></ul>
+        <a href="/signup">Meet your kodama, it is free</a> <a href="/login">Sign in</a> <a href="/privacy">Privacy</a> <a href="/terms">Terms</a>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

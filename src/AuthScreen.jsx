@@ -1,6 +1,6 @@
 import { useState, useEffect, useId } from 'react'
 import { authClient } from './auth.js'
-import { checkSignUp } from './authForm.js'
+import { checkSignUp, deriveAccount } from './authForm.js'
 import { btn, BLUE, ghost, input, panel } from './ui.js'
 import { Avatar } from './px.jsx'
 import Wallpaper from './Wallpaper.jsx'
@@ -76,6 +76,16 @@ export default function AuthScreen() {
     addEventListener('popstate', back); return () => removeEventListener('popstate', back)
   }, [])
 
+  // Sign-up needs only email and password: the name and username are derived, and a taken username gets a number.
+  const signUp = async (f) => {
+    let out
+    for (let n = 0; n < 5; n++) {
+      const { name, username } = deriveAccount(f.email, n ? Math.floor(100 + Math.random() * 900) : 0)
+      out = await authClient.signUp.email({ name, username, email: f.email.trim(), password: f.password, callbackURL: '/today' })
+      if (!(out.error && /USERNAME/.test(out.error.code || '') && /TAKEN/.test(out.error.code))) break
+    }
+    return out
+  }
   const submit = async (e) => {
     e.preventDefault()
     const f = Object.fromEntries(new FormData(e.target))
@@ -88,13 +98,13 @@ export default function AuthScreen() {
     setBusy(true)
     const id = (f.identifier || '').trim()
     const { data, error } = await (mode === 'in' ? (id.includes('@') ? authClient.signIn.email({ email: id, password: f.password, callbackURL: '/today' }) : authClient.signIn.username({ username: id, password: f.password }))
-      : mode === 'up' ? authClient.signUp.email({ name: f.name.trim(), username: f.username, email: f.email.trim(), password: f.password, callbackURL: '/today' })
+      : mode === 'up' ? signUp(f)
       : mode === 'forgot' ? authClient.requestPasswordReset({ email: f.email.trim(), redirectTo: '/reset-password' })
       : authClient.resetPassword({ newPassword: f.password, token }))
     setBusy(false)
     if (error?.code === 'EMAIL_NOT_VERIFIED') return setSentTo(id.includes('@') ? id : '') // sign-in already sent a fresh link
     if (error) {
-      if (/USERNAME/.test(error.code || '')) return setErrors({ username: /TAKEN/.test(error.code) ? 'That username is taken. Try another.' : 'Use 3 to 30 letters, numbers, dots or underscores.' })
+      if (/USERNAME/.test(error.code || '')) return setMsg('Could not create your account just now. Please try again.')
       return setMsg(error.status === 429 ? 'Too many tries. Wait a little and try again.' : error.status === 401 ? 'That email, username or password is not right.' : error.message || 'Something went wrong.')
     }
     if (mode === 'forgot') return setMsg('If that email has an account, a reset link is on its way. Check your inbox and spam.')
@@ -110,29 +120,25 @@ export default function AuthScreen() {
           {[['in', 'Sign in'], ['up', 'Create account']].map(([m, name]) => <button key={m} type="button" aria-pressed={mode === m} className="flex-1" onClick={() => go(m)}>{name}</button>)}
         </div>
       )}
+      {(mode === 'in' || mode === 'up') && social.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex flex-col gap-2">
+            {social.map((p) => <button key={p} className={`${btn} ${ghost} w-full`} onClick={() => authClient.signIn.social({ provider: p, callbackURL: '/today', errorCallbackURL: '/today?error=1' })}>Continue with {p === 'github' ? 'GitHub' : 'Google'}</button>)}
+          </div>
+          <p className="text-center text-xs text-slate-700">or use your email</p>
+        </div>
+      )}
       <form onSubmit={submit} noValidate className={`${panel} space-y-3`} aria-label={TITLE[mode]}>
         <h1 className="text-2xl">{TITLE[mode]}</h1>
-        {mode === 'up' && <>
-          <Field label="Your name" name="name" autoComplete="name" required error={errors.name} />
-          <Field label="Username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} required error={errors.username} hint="3 to 30 letters, numbers, dots or underscores." />
-        </>}
         {mode === 'in' && <Field label="Email or username" name="identifier" autoComplete="username" autoCapitalize="none" spellCheck={false} required />}
         {(mode === 'up' || mode === 'forgot') && <Field label="Email" name="email" type="email" autoComplete="email" required error={errors.email} />}
         {mode !== 'forgot' && <Field label={mode === 'reset' ? 'New password' : 'Password'} name="password" secret required autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
           error={errors.password} hint={mode === 'in' ? undefined : 'At least 10 characters.'} />}
-        {(mode === 'up' || mode === 'reset') && <Field label="Confirm password" name="confirm" secret required autoComplete="new-password" error={errors.confirm} />}
+        {mode === 'reset' && <Field label="Confirm password" name="confirm" secret required autoComplete="new-password" error={errors.confirm} />}
         {mode === 'in' && <button type="button" className="text-xs underline" onClick={() => go('forgot')}>Forgot password?</button>}
         <button className={`${btn} ${BLUE} w-full`} disabled={busy}>{busy ? 'One moment…' : GO[mode]}</button>
         {msg && <p role="status" className="text-base">{msg}</p>}
       </form>
-      {(mode === 'in' || mode === 'up') && social.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-center text-xs text-slate-700">or continue with</p>
-          <div className="flex gap-2">
-            {social.map((p) => <button key={p} className={`${btn} ${ghost} flex-1`} onClick={() => authClient.signIn.social({ provider: p, callbackURL: '/today', errorCallbackURL: '/today?error=1' })}>{p === 'github' ? 'GitHub' : 'Google'}</button>)}
-          </div>
-        </div>
-      )}
       {mode !== 'in' && mode !== 'up' && <p className="text-base"><button className="underline" onClick={() => go('in')}>Back to sign in</button></p>}
     </Shell>
   )

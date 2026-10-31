@@ -13,7 +13,7 @@
       "destination": "/api/auth/x"
     },
     {
-      "source": "/(today|tasks|goals|projects|deadlines|dsb|calendar|do-now|reset-password|login|signup|forgot-password)",
+      "source": "/(today|tasks|goals|projects|deadlines|dsb|calendar|do-now|reset-password|login|signup|forgot-password|privacy|terms)",
       "destination": "/index.html"
     }
   ]

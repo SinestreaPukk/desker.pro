@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import App from './App.jsx'
 import AuthScreen from './AuthScreen.jsx'
+import Landing from './Landing.jsx'
+import Legal from './Legal.jsx'
 import { useSession } from './auth.js'
 import { Avatar } from './px.jsx'
 
@@ -14,6 +16,8 @@ export default function Gate() {
     const old = localStorage.uid // data saved in this browser before accounts existed: move it into the account, once
     if (user && old) fetch('/api/state', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ claim: old }) }).then((r) => r.ok && localStorage.removeItem('uid')).catch(() => {})
   }, [user])
+  const path = location.pathname.replace(/\/$/, '')
+  if (path === '/privacy' || path === '/terms') return <Legal kind={path.slice(1)} /> // public, signed in or not
   if (!loaded) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">Loading…</p></div>
-  return user ? <App /> : <AuthScreen />
+  return user ? <App /> : path === '' ? <Landing /> : <AuthScreen /> // signed out: the landing page at "/", sign-in everywhere else
 }
