@@ -10,7 +10,7 @@ import kodama_poses as kp
 ROOT = kp.ROOT
 POSES = {k: [r.translate(str.maketrans('Bbh', 'KKK')) for r in v] for k, v in kp.POSES.items()}   # the sheet's log colours only leak in as stray cells
 inv = {v: k for k, v in kp.LETTER.items()}
-N = 44; BOTTOM = 43; M = 33   # drawn at 44, shipped at 33 (3/4)   # all poses stand on the same baseline
+N = 44; BOTTOM = 43; M = N   # all poses stand on the same baseline
 
 def canvas(): return [['.'] * N for _ in range(N)]
 def place(c, rows, dy=0):
@@ -38,26 +38,14 @@ def lucky(spark):
     c[dot[1]][dot[0]] = 'P'
     return c
 
-def shrink(c):
-    """Resample N -> M: area-average the colours (alpha-weighted), then snap each cell to the nearest sheet colour, so eyes keep their highlights."""
-    import numpy as np
-    rgb = {ch: np.array(kp.PAL[inv[ch]], float) for ch in {x for r in c for x in r if x != '.'}}
-    out = [['.'] * M for _ in range(M)]
-    for y in range(M):
-        for x in range(M):
-            y0, y1, x0, x1 = y * N / M, (y + 1) * N / M, x * N / M, (x + 1) * N / M
-            acc, tot = np.zeros(3), 0.0
-            wts = {}
-            for j in range(int(y0), min(N, int(np.ceil(y1)))):
-                for i in range(int(x0), min(N, int(np.ceil(x1)))):
-                    w = (min(j + 1, y1) - max(j, y0)) * (min(i + 1, x1) - max(i, x0)); tot += w
-                    if c[j][i] != '.': acc += rgb[c[j][i]] * w; wts[c[j][i]] = wts.get(c[j][i], 0) + w
-            cover = sum(wts.values())
-            if cover < tot * .5: continue
-            m = acc / cover
-            out[y][x] = min(rgb, key=lambda k: ((rgb[k] - m) ** 2).sum())
+def thicken(c):
+    """Outline at 2 cells: every empty cell touching the outline becomes outline too (the face and eyes inside stay fine)."""
+    out = [r[:] for r in c]
+    for y in range(N):
+        for x in range(N):
+            if c[y][x] == '.' and any(0 <= y + dy < N and 0 <= x + dx < N and c[y + dy][x + dx] == 'K' for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1))): out[y][x] = 'K'
     return out
-FRAMES = [(n, shrink(c)) for n, c in [('idle-a', idle(False)), ('idle-b', idle(True)), ('happy-a', happy(0)), ('happy-b', happy(-2)), ('lucky-a', lucky(0)), ('lucky-b', lucky(1))]]
+FRAMES = [(n, thicken(c)) for n, c in [('idle-a', idle(False)), ('idle-b', idle(True)), ('happy-a', happy(0)), ('happy-b', happy(-2)), ('lucky-a', lucky(0)), ('lucky-b', lucky(1))]]
 used = sorted({ch for _, c in FRAMES for row in c for ch in row if ch != '.'})
 (ROOT / 'art/palette/kodama.json').write_text(json.dumps({'name': 'kodama', 'note': 'The one exception to yuki16: colours read off the kodama pose sheet. Used only by the kodama sprite.',
     'colors': {inv[ch]: '#%02X%02X%02X' % kp.PAL[inv[ch]] for ch in used}}, indent=2) + '\n')
