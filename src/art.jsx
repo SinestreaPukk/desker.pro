@@ -1,7 +1,8 @@
 import { Icon } from './icons.jsx'
+import { sceneUrl } from './px.jsx'
 // Page banners reuse the one lakeside scene: a strip of its sky and mountains, slid sideways per page. Today gets the full scene (px.jsx).
 export function Hero({ className = '' }) {
-  return <div className={`px-strip ${className}`} aria-hidden="true"><img src="/pixel/scene-morning.png" alt="" className="px-art" /></div>
+  return <div className={`px-strip ${className}`} aria-hidden="true"><img src={sceneUrl('morning')} alt="" className="px-art" /></div>
 }
 
 // One pattern per quadrant (art/authoring/gen_covers.py): torii, peaks, pines, night drifts.

@@ -38,6 +38,44 @@ R = {
     'stone_l': ('yuki-3', 'yuki-3', 'yuki-3'), 'stone_s': ('yoru-0', 'yoru-0', 'yoru-0'), 'stone_d': ('yoru-1', 'yoru-1', 'yoru-1'),
     'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'reed_h': ('kuri', 'kuri', 'kuri'),
 }
+for new, old in (('rf_hi', 'sn_hi'), ('rf_l', 'sn_l'), ('rf_m', 'sn_m'), ('rf_s', 'sn_s'), ('cap_hi', 'sn_hi'), ('cap_l', 'sn_l'), ('cap_s', 'sn_s'),
+                 ('pn_hi', 'sn_hi'), ('pn_l', 'sn_l'), ('pn_s', 'sn_s'), ('br', 'pine'), ('br_s', 'pine_s'), ('br_d', 'pine_d')):
+    R[new] = R[old]
+BASE = dict(R)   # winter
+
+# Seasons recolour the same pixels. Each override is (night, morning, dusk). Winter is BASE.
+STRAW = {'rf_hi': ('hada-0', 'hada-0', 'hada-0'), 'rf_l': ('hada-1', 'hada-1', 'hada-1'), 'rf_m': ('hada-1', 'hada-1', 'hada-1'), 'rf_s': ('kuri', 'kuri', 'kuri'),
+         'pool0': ('hada-1', 'matsu-0', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0')}
+GREEN_GROUND = {'sn_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'sn_l': ('matsu-1', 'matsu-0', 'matsu-1'), 'sn_m': ('matsu-2', 'matsu-1', 'matsu-2'), 'sn_s': ('yoru-2', 'matsu-2', 'yoru-1'), 'sn_d': ('yoru-2', 'matsu-2', 'yoru-2'),
+                'cap_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'cap_l': ('matsu-0', 'matsu-0', 'hada-1'), 'cap_s': ('matsu-1', 'matsu-1', 'matsu-1'),
+                'pn_hi': ('matsu-0', 'matsu-0', 'hada-0'), 'pn_l': ('matsu-0', 'matsu-0', 'matsu-0'), 'pn_s': ('matsu-1', 'matsu-1', 'matsu-1'),
+                'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2')}
+SEASONS = {
+    'winter': {},
+    'spring': {**STRAW, **GREEN_GROUND,
+        'sky0': ('yoru-2', 'kori-1', 'yoru-0'), 'sky1': ('yoru-1', 'yuki-1', 'hada-1'), 'sky2': ('yoru-0', 'hada-0', 'hada-0'), 'halo': ('yoru-0', 'hada-0', 'hada-0'),
+        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'hada-0', 'hada-1'),
+        'pn_hi': ('hada-0', 'hada-0', 'hada-0'),
+        'br': ('hada-1', 'hada-0', 'hada-1'), 'br_s': ('kuri', 'hada-1', 'kuri'), 'br_d': ('yoru-1', 'kuri', 'yoru-1')},
+    'summer': {**STRAW, **GREEN_GROUND,
+        'sky0': ('yoru-2', 'kori-2', 'yoru-1'), 'sky1': ('yoru-1', 'kori-1', 'yoru-0'), 'sky2': ('yoru-0', 'yuki-1', 'hada-0'), 'halo': ('yoru-0', 'yuki-0', 'hada-0'),
+        'sn_hi': ('matsu-0', 'yuki-0', 'hada-0'),
+        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
+        'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2')},
+    'autumn': {**STRAW,
+        'sky0': ('yoru-2', 'kori-1', 'yoru-1'), 'sky1': ('yoru-1', 'hada-0', 'yoru-0'), 'sky2': ('yoru-0', 'hada-1', 'hada-1'), 'halo': ('yoru-0', 'hada-0', 'hada-0'),
+        'hill': ('matsu-2', 'kuri', 'kuri'), 'hill_l': ('matsu-1', 'hada-1', 'hada-1'),
+        'sn_hi': ('hada-1', 'hada-0', 'hada-0'), 'sn_l': ('kuri', 'hada-1', 'hada-1'), 'sn_m': ('yoru-0', 'kuri', 'kuri'), 'sn_s': ('yoru-1', 'yoru-0', 'yoru-0'), 'sn_d': ('yoru-2', 'yoru-1', 'yoru-1'),
+        'cap_hi': ('hada-1', 'hada-0', 'hada-0'), 'cap_l': ('hada-1', 'hada-1', 'hada-1'), 'cap_s': ('kuri', 'kuri', 'kuri'),
+        'pn_hi': ('hada-1', 'hada-1', 'hada-1'), 'pn_l': ('matsu-1', 'matsu-0', 'matsu-1'), 'pn_s': ('matsu-2', 'matsu-1', 'matsu-2'),
+        'br': ('kuri', 'hada-1', 'hada-1'), 'br_s': ('yoru-1', 'beni', 'beni'), 'br_d': ('yoru-2', 'kuri', 'kuri'),
+        'reed': ('kuri', 'hada-1', 'kuri'), 'reed_s': ('yoru-1', 'kuri', 'yoru-1'), 'reed_h': ('hada-1', 'beni', 'hada-1')},
+}
+SNOWLINE_AT = {'winter': 31, 'spring': 29, 'autumn': 27, 'summer': 21}   # how far down the peaks the snow reaches
+FALL = {'winter': 'snow', 'spring': 'petal', 'summer': 'none', 'autumn': 'leaf'}
+CUR = 'winter'
+def table(season): return {**BASE, **SEASONS[season]}
+
 NAMES = list(R); IDX = {n: i + 1 for i, n in enumerate(NAMES)}
 VARIANTS = ('night', 'morning', 'dusk')
 rng = random.Random(7)
@@ -105,7 +143,7 @@ def sky(A):
                 put(A, x, y, 'cloud_l' if (not up or not lf) and dn else 'cloud_s' if not dn else 'cloud')
 
 # ---------------------------------------------------------------- far peaks (one dominant, smaller ones overlapping it)
-SNOWLINE = lambda x: 31 + 2.5 * math.sin(x / 6.3) + 1.5 * math.sin(x / 2.9 + 1)
+SNOWLINE = lambda x: SNOWLINE_AT[CUR] + 2.5 * math.sin(x / 6.3) + 1.5 * math.sin(x / 2.9 + 1)
 def mountain(A, pts, seed, base=46):
     top = ridge(pts, seed)
     for x in range(W):
@@ -165,7 +203,7 @@ def lake(A):
         if is_(A, x, y, 'w_far', 'w_mid', 'w_near'):
             for i in range(g.randint(3, 7)): put(A, x + i, y, 'w_far' if y > 53 else 'w_mid' if y > 49 else 'w_mid')
 
-REFL = {'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near',
+REFL = {'rf_hi': 'rf_l', 'rf_l': 'rf_m', 'rf_m': 'rf_s', 'rf_s': 'w_near', 'cap_hi': 'cap_l', 'cap_l': 'cap_s', 'cap_s': 'w_near', 'pn_hi': 'pn_l', 'pn_l': 'pn_s', 'pn_s': 'pine_s', 'br': 'br_s', 'br_s': 'br_d', 'br_d': 'w_near', 'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near',
         'win': 'win_g', 'win_g': 'win_g', 'tor': 'tor_s', 'tor_s': 'thatch_s', 'tor_h': 'tor', 'pine': 'pine_s', 'pine_s': 'pine_d', 'pine_d': 'w_near', 'stone_l': 'stone_s', 'stone_s': 'stone_d'}
 def reflect(A, L, base, shear=1):
     """Mirror an object layer about its waterline: one ramp step darker, 1px ripple gaps, a gentle sideways wobble."""
@@ -219,10 +257,10 @@ def pine(L, cx, base, h, seed, w_scale=1.0):
         for i, (y, a, b) in enumerate(rows[:depth]):
             for x in range(a, b + 1):
                 if g.random() < (1 - i / (depth + 1)) + .25 - (.15 if x > cx else 0):
-                    s(x, y, 'sn_hi' if (i == 0 and x < cx) else 'sn_l' if x < cx + 1 else 'sn_s')
+                    s(x, y, 'pn_hi' if (i == 0 and x < cx) else 'pn_l' if x < cx + 1 else 'pn_s')
         for y, a, b in rows[depth - 1:depth + 1]:                        # clumps hanging past the edge
             for x in (a - 1, b + 1):
-                if g.random() < .5 and at(x, y) == 0: s(x, y, 'sn_l' if x < cx else 'sn_s')
+                if g.random() < .5 and at(x, y) == 0: s(x, y, 'pn_l' if x < cx else 'pn_s')
     return L
 
 HOUSE_X, HOUSE_Y = 133, 46     # front-left corner of the front wall, waterline of the far shore
@@ -234,10 +272,10 @@ def house(L):
     def P(pts, r): poly(L, pts, r)
     P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wood_s')        # right wall, in shade
     P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'thatch_s')                                    # side roof: straw...
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 4), (ex - 2, ey - 4)], 'sn_s')                              # ...under a heavy shaded snow load
+    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 4), (ex - 2, ey - 4)], 'rf_s')                              # ...under a heavy shaded snow load
     for i in range(DX + 1):                                                                                          # lit crest along the ridge, ragged lower lip
-        put(L, ax + i, ay + round(i * DY / DX), 'sn_m')
-        y = ey - 4 - round(i * 5 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'sn_m'); put(L, ex - 2 + i, y + 1, 'sn_s')
+        put(L, ax + i, ay + round(i * DY / DX), 'rf_m')
+        y = ey - 4 - round(i * 5 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'rf_m'); put(L, ex - 2 + i, y + 1, 'rf_s')
     for i in range(0, DX + 1):
         for k in range(3): put(L, ex + i, ey - round(i * 5 / DX) - k, 'thatch' if (i + k) % 3 else 'thatch_s')
     for i in range(0, DX + 1, 2): put(L, ex + i, ey - round(i * 5 / DX) - 1, 'thatch'); put(L, ex + i + 1, ey - round(i * 5 / DX) - 2, 'thatch_s')
@@ -247,7 +285,7 @@ def house(L):
     for wx in (x0 + 1, x0 + 7, x0 + 13):
         rect(L, wx + 1, yb - 4, wx + 3, yb - 3, 'win'); put(L, wx + 2, yb - 1, 'win_g') if wx == x0 + 7 else None
     rect(L, x0 + 12, yb - 1, x0 + 14, yb, 'wood_s')
-    P([(x0 - 3, yb - HW), (x0 + W1 + 3, yb - HW), (ax, ay)], 'sn_l')                                                 # front gable: snow...
+    P([(x0 - 3, yb - HW), (x0 + W1 + 3, yb - HW), (ax, ay)], 'rf_l')                                                 # front gable: snow...
     P([(x0 + 2, yb - HW), (x0 + W1 - 2, yb - HW), (ax, ay + 7)], 'thatch')                                            # ...with the straw face showing inside
     for yy in range(ay + 8, yb - HW):
         for x in range(x0 + 3, x0 + W1 - 2):
@@ -255,10 +293,10 @@ def house(L):
     rect(L, ax - 2, ay + 9, ax + 2, ay + 10, 'wood_s'); rect(L, ax - 1, ay + 9, ax + 1, ay + 10, 'win')               # attic window
     for i in range(HG):                                                                                              # snow thickness on the rafters: lit left, cool right, crisp rim
         y = ay + i; hw = (i * (W1 // 2 + 3)) // HG
-        put(L, ax - hw, y, 'sn_hi'); put(L, ax - hw + 1, y, 'sn_hi' if i > 3 else 'sn_l'); put(L, ax + hw, y, 'sn_m'); put(L, ax + hw - 1, y, 'sn_s')
+        put(L, ax - hw, y, 'rf_hi'); put(L, ax - hw + 1, y, 'rf_hi' if i > 3 else 'rf_l'); put(L, ax + hw, y, 'rf_m'); put(L, ax + hw - 1, y, 'rf_s')
     for x in range(x0 - 3, x0 + W1 + 4):                                                                             # eave: snow overhang and icicles
-        if x % 2 == 0: put(L, x, yb - HW + 1, 'sn_l' if x < ax else 'sn_m')
-    for x in (x0 - 1, x0 + 3, x0 + 8, x0 + W1 + 1): put(L, x, yb - HW + 2, 'sn_hi' if x < ax else 'sn_m')
+        if x % 2 == 0: put(L, x, yb - HW + 1, 'rf_l' if x < ax else 'rf_m')
+    for x in (x0 - 1, x0 + 3, x0 + 8, x0 + W1 + 1): put(L, x, yb - HW + 2, 'rf_hi' if x < ax else 'rf_m')
     return ax, ay
 
 def pool(A):
@@ -284,8 +322,8 @@ def torii(L, cx, wl):
         put(L, x, top + 2 - up, 'tor_h' if x <= cx else 'tor'); put(L, x, top + 3 - up, 'tor'); put(L, x, top + 4 - up, 'tor_s')
     for x in range(cx - 10, cx + 11):                                                                           # snow on the kasagi
         up = 1 if abs(x - cx) > 8 else 0
-        put(L, x, top + 1 - up, 'sn_hi' if x <= cx + 1 else 'sn_l')
-        if abs(x - cx) < 8: put(L, x, top - up, 'sn_hi' if x < cx - 2 else 'sn_l') if abs(x - cx) < 5 else None
+        put(L, x, top + 1 - up, 'cap_hi' if x <= cx + 1 else 'cap_l')
+        if abs(x - cx) < 8: put(L, x, top - up, 'cap_hi' if x < cx - 2 else 'cap_l') if abs(x - cx) < 5 else None
     for y in (wl - 1, wl):                                                                                      # stone plinths
         for px_ in (-7, 6): put(L, cx + px_ - 1, y, 'stone_l'); put(L, cx + px_ + 2, y, 'stone_s')
 
@@ -323,9 +361,9 @@ def post(A):
     for y in range(top, top + 10):
         rect(A, px_, y, px_ + 6, y, 'wood'); put(A, px_ + 5, y, 'wood_s'); put(A, px_ + 6, y, 'wood_s')
         if y % 4 == 2: rect(A, px_ + 1, y, px_ + 3, y, 'wood_s')
-    for x in range(px_ - 1, px_ + 8): put(A, x, top - 1 + (0 if px_ <= x <= px_ + 6 else 1), 'sn_hi' if x < px_ + 4 else 'sn_l')   # snow cap
-    for x in range(px_ - 1, px_ + 8): put(A, x, top, 'sn_l' if x < px_ + 5 else 'sn_s')
-    put(A, px_ + 3, top + 1, 'sn_m'); put(A, px_ + 4, top + 1, 'sn_m')
+    for x in range(px_ - 1, px_ + 8): put(A, x, top - 1 + (0 if px_ <= x <= px_ + 6 else 1), 'cap_hi' if x < px_ + 4 else 'cap_l')   # snow cap
+    for x in range(px_ - 1, px_ + 8): put(A, x, top, 'cap_l' if x < px_ + 5 else 'cap_s')
+    put(A, px_ + 3, top + 1, 'cap_s'); put(A, px_ + 4, top + 1, 'cap_s')
     for x in range(px_ - 3, px_ + 11): put(A, x, top + 10, 'sn_s')                                       # contact shadow in the snow
     for x in range(px_ + 1, px_ + 12): put(A, x, top + 11, 'sn_s' if x % 2 else 'sn_m')                  # long cool shadow, away from the light
 
@@ -335,8 +373,8 @@ def rock_and_reeds(A):
     poly(A, [(23, 67), (29, 70), (34, 75), (36, 80), (21, 80), (24, 74)], 'stone_s'); poly(A, [(28, 76), (36, 80), (22, 80)], 'stone_d')
     for x in range(1, 30):                                                                               # snow cap
         t = (x - 15) / 15; y0 = 64 + round(5 * t * t) + (0 if x > 3 else 3)
-        put(A, x, y0, 'sn_hi'); put(A, x, y0 + 1, 'sn_l');
-        if x % 3: put(A, x, y0 + 2, 'sn_l' if x < 22 else 'sn_s')
+        put(A, x, y0, 'cap_hi'); put(A, x, y0 + 1, 'cap_l');
+        if x % 3: put(A, x, y0 + 2, 'cap_l' if x < 22 else 'cap_s')
     for y in range(70, 78): put(A, 8 + (y % 3), y, 'stone_s') if y % 2 else None                           # cracks
     g = random.Random(3)
     for i, (x, h, lean) in enumerate(((3, 17, 1), (7, 12, -1), (11, 19, 1), (15, 10, 0), (30, 13, -1), (34, 18, 1), (38, 11, 0), (42, 15, -1), (46, 9, 1), (1, 9, 0))):
@@ -346,7 +384,7 @@ def rock_and_reeds(A):
             if j > 3 and g.random() < .25: put(A, xx + (1 if lean >= 0 else -1), yy, 'reed_s')
         tx = x + (lean * h) // 5
         for k in range(3): put(A, tx, 79 - h - k, 'reed_h'); put(A, tx + (1 if k == 1 else 0), 79 - h - k, 'reed_h')
-        put(A, tx, 79 - h - 3, 'sn_l')
+        put(A, tx, 79 - h - 3, 'cap_l')
 
 def branch(A):
     """Pine bough hanging into the top-right corner: bark line, fans of drooping needles (lit above, dark below), snow clumped on top."""
@@ -358,15 +396,17 @@ def branch(A):
         y = ys(x)
         for k, (dx, dy) in enumerate(((0, 1), (-1, 2), (-1, 3), (-2, 4), (-2, 6), (-3, 7), (-3, 8))):
             if k > 3 and g.random() < .45: continue
-            put(A, x + dx, y + dy, 'pine' if k < 3 else 'pine_s'); put(A, x + dx + 1, y + dy, 'pine_s'); put(A, x + dx + 2, y + dy + 1, 'pine_d')
-            if k < 2: put(A, x + dx + 2, y + dy, 'pine_s')
-        for dx, dy in ((2, 1), (3, 2), (4, 3)): put(A, x + dx, y + dy, 'pine_s')
+            put(A, x + dx, y + dy, 'br' if k < 3 else 'br_s'); put(A, x + dx + 1, y + dy, 'br_s'); put(A, x + dx + 2, y + dy + 1, 'br_d')
+            if k < 2: put(A, x + dx + 2, y + dy, 'br_s')
+        for dx, dy in ((2, 1), (3, 2), (4, 3)): put(A, x + dx, y + dy, 'br_s')
     for x in range(150, 191): 
-        if x % 5 != 3: put(A, x, ys(x) - 1, 'sn_hi' if x % 2 else 'sn_l')
-        if x % 4 == 0: put(A, x, ys(x) - 2, 'sn_l')
+        if x % 5 != 3: put(A, x, ys(x) - 1, 'pn_hi' if x % 2 else 'pn_l')
+        if x % 4 == 0: put(A, x, ys(x) - 2, 'pn_l')
 
 # ---------------------------------------------------------------- compose
-def build():
+def build(season='winter'):
+    global CUR
+    CUR = season
     A = new()
     sky(A); peaks(A); forest(A); lake(A); shore(A); spit(A)
     ho = new(); house(ho)
@@ -383,36 +423,43 @@ def build():
 
 SHIMMER = [[25, 51, 6], [23, 54, 8], [24, 57, 5]]       # [x, y, width] dashes on the moon's path that slide 1px at 2 fps
 
-def colour(A, v):
-    lut = np.zeros((len(NAMES) + 1, 3), dtype=np.uint8)
+def colour(A, v, season='winter'):
+    T = table(season); lut = np.zeros((len(NAMES) + 1, 3), dtype=np.uint8)
     for n in NAMES:
-        h = PAL[R[n][VARIANTS.index(v)]].lstrip('#'); lut[IDX[n]] = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+        h = PAL[T[n][VARIANTS.index(v)]].lstrip('#'); lut[IDX[n]] = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
     return Image.fromarray(lut[A], 'RGB')
 
-def check(A):
+def check(A, season):
     """Role pairs that touch and share a colour in some variant: where a variant may stop reading."""
-    for v in VARIANTS[1:]:
-        merged = {}
+    T = table(season)
+    for v in VARIANTS:
+        merged = {}; i = VARIANTS.index(v)
         for y in range(H):
             for x in range(W - 1):
                 a, b = A[y, x], A[y, x + 1]
-                if a and b and a != b and R[NAMES[a - 1]][VARIANTS.index(v)] == R[NAMES[b - 1]][VARIANTS.index(v)]:
+                if a and b and a != b and T[NAMES[a - 1]][i] == T[NAMES[b - 1]][i]:
                     k = tuple(sorted((NAMES[a - 1], NAMES[b - 1]))); merged[k] = merged.get(k, 0) + 1
-        print(v, sorted(merged.items(), key=lambda t: -t[1])[:8])
+        print(season, v, sorted(merged.items(), key=lambda t: -t[1])[:6])
 
 def main():
     out = ROOT / 'public/pixel'; out.mkdir(parents=True, exist_ok=True)
-    A = build()
-    assert (A > 0).all(), 'unpainted pixels'
-    names = {'night': 'night', 'morning': 'morning', 'dusk': 'dusk'}
-    for v in VARIANTS: colour(A, v).save(out / f'scene-{names[v]}.png')
-    hexof = lambda n, v: '#%s' % PAL[R[n][VARIANTS.index(v)]].lstrip('#')
-    motion = {v: {'back': hexof('sn_m', v), 'front': hexof('sn_hi', v), 'glint': hexof('glint', v)} for v in VARIANTS}
+    for old in out.glob('scene-*.png'): old.unlink()
+    motion = {}
+    for season in SEASONS:
+        A = build(season)
+        assert (A > 0).all(), 'unpainted pixels'
+        T = table(season); motion[season] = {'fall': FALL[season]}
+        for v in VARIANTS:
+            colour(A, v, season).save(out / f'scene-{season}-{v}.png')
+            hexof = lambda n: '#%s' % PAL[T[n][VARIANTS.index(v)]].lstrip('#')
+            fall = {'snow': ('sn_m', 'sn_hi'), 'petal': ('hada-1', 'hada-0'), 'leaf': ('kuri', 'hada-1'), 'none': ('sn_m', 'sn_hi')}[FALL[season]]
+            col = lambda n: ('#%s' % PAL[n].lstrip('#')) if n in PAL else hexof(n)
+            motion[season][v] = {'back': col(fall[0]), 'front': col(fall[1]), 'glint': hexof('glint')}
+        if '--check' in sys.argv: check(A, season)
     motion['shimmer'] = SHIMMER
     (ROOT / 'src/scene-motion.json').write_text(json.dumps(motion, indent=2) + '\n')
-    (out / 'scene.json').write_text(json.dumps({'width': W, 'height': H, 'avatar': {'x': AV_X, 'y': AV_Y}, 'variants': list(VARIANTS)}))
-    if '--check' in sys.argv: check(A)
-    print('built scene x3', W, H)
+    (out / 'scene.json').write_text(json.dumps({'width': W, 'height': H, 'avatar': {'x': AV_X, 'y': AV_Y}, 'seasons': list(SEASONS), 'variants': list(VARIANTS)}))
+    print('built scene', len(SEASONS), 'seasons x', len(VARIANTS), W, H)
 
 if __name__ == '__main__':
     main()

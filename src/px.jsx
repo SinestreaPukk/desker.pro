@@ -14,18 +14,27 @@ export const Kodama = ({ mood = 'idle' }) => <span className="px-kodama" data-mo
 // Completion seal: three frames, one pass.
 export const Hanko = () => <span className="px-hanko" aria-hidden="true" />
 
-// Local time picks the palette of the same scene: morning, dusk or night.
+// The month picks the season (northern meteorological seasons; `?season=summer` overrides it), local time picks morning, dusk or night.
+export const SEASONS = ['winter', 'spring', 'summer', 'autumn']
+export const sceneSeason = (d = new Date()) => {
+  const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('season') : null
+  if (SEASONS.includes(q)) return q
+  const m = d.getMonth()
+  return m === 11 || m < 2 ? 'winter' : m < 5 ? 'spring' : m < 8 ? 'summer' : 'autumn'
+}
+export const sceneUrl = (variant, season = sceneSeason()) => `/pixel/scene-${season}-${variant}.png`
+
 export const sceneVariant = (d = new Date()) => { const h = d.getHours(); return h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 19 ? 'dusk' : 'night' }
 
 // Calm motion on a 192x80 canvas, whole art-pixel steps at 8 fps. Two layers so snow falls behind and in front of the avatar:
 // slow dim flakes behind, a few quicker bright ones in front. The back layer also slides three dashes on the moon's path at 2 fps.
 // Paused while hidden, absent under reduced motion.
-function Motion({ variant, front }) {
+function Motion({ variant, season, front }) {
   const ref = useRef(null)
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const col = motion[variant], g = ref.current.getContext('2d')
-    const flakes = Array.from({ length: front ? 4 : 7 }, (_, i) => ({ x: (front ? 31 : 17) + i * (front ? 47 : 27), y: (i * (front ? 23 : 13)) % 66 }))
+    const col = motion[season][variant], fall = motion[season].fall, g = ref.current.getContext('2d')
+    const flakes = fall === 'none' ? [] : Array.from({ length: front ? 4 : 7 }, (_, i) => ({ x: (front ? 31 : 17) + i * (front ? 47 : 27), y: (i * (front ? 23 : 13)) % 66 }))
     let t = 0
     const draw = () => {
       g.clearRect(0, 0, 192, 80)
@@ -35,7 +44,7 @@ function Motion({ variant, front }) {
     }
     const step = () => {
       t++
-      flakes.forEach((f) => { if (t % (front ? 2 : 4) === 0) { f.y = (f.y + 1) % 66; if (t % (front ? 16 : 24) === 0) f.x = (f.x + 1) % 192 } })
+      flakes.forEach((f) => { if (t % (front ? 2 : 4) === 0) { f.y = (f.y + 1) % 66; if (t % (fall === 'snow' ? (front ? 16 : 24) : (front ? 6 : 8)) === 0) f.x = (f.x + 1) % 192 } })
       draw()
     }
     draw()
@@ -43,20 +52,20 @@ function Motion({ variant, front }) {
     const vis = () => { clearInterval(id); if (!document.hidden) id = setInterval(step, 125) }
     document.addEventListener('visibilitychange', vis)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', vis) }
-  }, [variant, front])
+  }, [variant, season, front])
   return <canvas ref={ref} width="192" height="80" className="px-flake" aria-hidden="true" />
 }
 
 // The banner: one lakeside scene at --px-scene, the shimaenaga perched on a dock post. Variant by local time.
 export function Scene() {
-  const v = sceneVariant()
+  const v = sceneVariant(), season = sceneSeason()
   return (
-    <div className="px-scene" role="img" aria-label={`A snowy lake at ${v === 'morning' ? 'morning' : v === 'dusk' ? 'dusk' : 'night'}`}>
-      <img src={`/pixel/scene-${v}.png`} alt="" width="192" height="80" className="px-art" />
+    <div className="px-scene" role="img" aria-label={`A lake in ${season}, ${v === 'morning' ? 'morning' : v === 'dusk' ? 'dusk' : 'night'}`}>
+      <img src={sceneUrl(v, season)} alt="" width="192" height="80" className="px-art" />
       <div style={{ position: 'absolute', left: 'calc(50% - 96 * var(--px-scene))', top: 'calc(-1 * var(--crop) * var(--px-scene))', width: 'calc(192 * var(--px-scene))', height: 'calc(80 * var(--px-scene))' }}>
-        <Motion variant={v} />
+        <Motion variant={v} season={season} />
         <Avatar scene style={{ position: 'absolute', left: 'calc(114 * var(--px-scene))', top: 'calc(43 * var(--px-scene))' }} />
-        <Motion variant={v} front />
+        <Motion variant={v} season={season} front />
       </div>
     </div>
   )
