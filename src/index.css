@@ -117,14 +117,14 @@ details > summary { cursor: pointer; }
 .px-avatar-scene { animation-name: blink-scene; }
 @keyframes blink-scene { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
 
-/* Kodama: 24x24, 6 frames (idle, blink, happy a/b, lucky a/b) at the scene scale. Happy hops, lucky sparkles, idle just blinks. */
-.px-kodama { width: calc(24 * var(--px-scene)); height: calc(24 * var(--px-scene)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(144 * var(--px-scene)) calc(24 * var(--px-scene)) no-repeat; image-rendering: pixelated; }
+/* Kodama: 32x32 sprite, 6 frames (idle, blink, happy a/b, lucky a/b) at --px. Happy hops, lucky sparkles, idle just blinks. */
+.px-kodama { width: calc(32 * var(--px)); height: calc(32 * var(--px)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(192 * var(--px)) calc(32 * var(--px)) no-repeat; image-rendering: pixelated; }
 .px-kodama[data-mood='idle'] { animation: k-idle 5s steps(1) infinite; }
-.px-kodama[data-mood='happy'] { background-position: calc(-48 * var(--px-scene)) 0; animation: k-happy .8s steps(1) infinite; }
-.px-kodama[data-mood='lucky'] { background-position: calc(-96 * var(--px-scene)) 0; animation: k-lucky 1.6s steps(1) infinite; }
-@keyframes k-idle { 0%, 93% { background-position: 0 0; } 94%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
-@keyframes k-happy { 0%, 49% { background-position: calc(-48 * var(--px-scene)) 0; } 50%, 100% { background-position: calc(-72 * var(--px-scene)) 0; } }
-@keyframes k-lucky { 0%, 49% { background-position: calc(-96 * var(--px-scene)) 0; } 50%, 100% { background-position: calc(-120 * var(--px-scene)) 0; } }
+.px-kodama[data-mood='happy'] { background-position: calc(-64 * var(--px)) 0; animation: k-happy .8s steps(1) infinite; }
+.px-kodama[data-mood='lucky'] { background-position: calc(-128 * var(--px)) 0; animation: k-lucky 1.6s steps(1) infinite; }
+@keyframes k-idle { 0%, 93% { background-position: 0 0; } 94%, 100% { background-position: calc(-32 * var(--px)) 0; } }
+@keyframes k-happy { 0%, 49% { background-position: calc(-64 * var(--px)) 0; } 50%, 100% { background-position: calc(-96 * var(--px)) 0; } }
+@keyframes k-lucky { 0%, 49% { background-position: calc(-128 * var(--px)) 0; } 50%, 100% { background-position: calc(-160 * var(--px)) 0; } }
 .px-pip { display: inline-block; width: calc(4 * var(--px)); height: calc(4 * var(--px)); background: var(--color-yuki-2); }
 .px-pip-on { background: var(--color-matsu-1); }
 

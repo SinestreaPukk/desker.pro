@@ -1,6 +1,6 @@
 {
-  "frameWidth": 24,
-  "frameHeight": 24,
+  "frameWidth": 32,
+  "frameHeight": 32,
   "frames": [
     "idle",
     "blink",
