@@ -208,7 +208,7 @@ export default function App() {
         <div className="flex items-center justify-between">
           <button className="flex items-center gap-3 py-1 pr-3 text-left" onClick={() => setTab('Today')} aria-label="Desker, go to Today">
             {logo()}
-            <span><span className="block text-base font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
+            <span className="block text-base font-semibold leading-tight">Desker</span>
           </button>
           <div className="flex items-center gap-2">
             <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Talk to {nameOf(data)}</button>
