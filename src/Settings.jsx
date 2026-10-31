@@ -5,7 +5,7 @@ import { dueReminders } from './reminders.js'
 import { authClient, useSession } from './auth.js'
 import { Icon } from './icons.jsx'
 
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'xp', 'scene']
 const store = {
   get: (k) => { try { return localStorage[k] } catch { return undefined } },
   set: (k, v) => { try { localStorage[k] = v } catch { /* storage blocked: the toggle just will not persist */ } },

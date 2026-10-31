@@ -1,8 +1,10 @@
-import { totalXp, levelOf, questOf, badgesOf } from '../game.js'
+import { totalXp, levelOf, questOf, badgesOf, SCENE_UNLOCK } from '../game.js'
+import { SEASONS } from '../px.jsx'
+import { input } from '../ui.js'
 import { doneStats } from '../tasks.js'
 
 // Today's game card: level and XP bar, the day's quest, the streak and the badges (earned ones lit).
-export default function PlayerCard({ data, className = '' }) {
+export default function PlayerCard({ data, setData, className = '' }) {
   const { tasks = [] } = data
   const L = levelOf(totalXp(data)), q = questOf(tasks), { streak } = doneStats(tasks), badges = badgesOf(data)
   return (
@@ -19,6 +21,20 @@ export default function PlayerCard({ data, className = '' }) {
       <ul className="mt-2 flex flex-wrap gap-1" aria-label="Badges">
         {badges.map((b) => <li key={b.id} title={b.how} className={`px-tab ${b.got ? 'px-tab-matsu' : 'px-tab-yuki opacity-60'}`}>{b.got ? b.name : `? ${b.how}`}</li>)}
       </ul>
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-base">
+        {[['variant', 'Time of day', ['morning', 'dusk', 'night']], ['season', 'Season', SEASONS]].map(([key, label, opts]) => {
+          const open = L.level >= SCENE_UNLOCK[key]
+          return (
+            <label key={key} className="flex items-center gap-2">{label}
+              <select className={`${input} !min-h-0 w-auto capitalize`} disabled={!open} value={open ? data.scene?.[key] || '' : ''}
+                onChange={(e) => setData((d) => ({ ...d, scene: { ...d.scene, [key]: e.target.value || undefined } }))}>
+                <option value="">{open ? 'Automatic' : `Level ${SCENE_UNLOCK[key]}`}</option>
+                {open && opts.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </label>
+          )
+        })}
+      </div>
     </section>
   )
 }

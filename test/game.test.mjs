@@ -30,3 +30,29 @@ test('total xp never drops below the saved high-water mark', () => {
   assert.equal(totalXp({ xp: 5, tasks: [{ done: true }] }), 10)
   assert.equal(totalXp({ xp: 'x', tasks: [] }), 0)
 })
+
+import { doneStats } from '../src/tasks.js'
+import { learned, recap } from '../src/insights.js'
+import { sceneChoice } from '../src/game.js'
+
+const at = (d, h = 10) => new Date(`${d}T${String(h).padStart(2, '0')}:00:00`).getTime()
+const doneOn = (...ds) => ds.map((d, i) => ({ id: i, done: true, doneAt: at(d) }))
+test('streak: one rest day a week is forgiven, two in a row break it', () => {
+  const now = at('2026-10-30', 15) // a Friday
+  assert.equal(doneStats(doneOn('2026-10-30', '2026-10-29', '2026-10-28'), now).streak, 3)
+  assert.equal(doneStats(doneOn('2026-10-30', '2026-10-28', '2026-10-27'), now).streak, 3, 'Thursday rested, streak lives (the rest day itself is not counted)')
+  assert.equal(doneStats(doneOn('2026-10-30', '2026-10-27'), now).streak, 1, 'two missed days in a row break it')
+  assert.equal(doneStats(doneOn('2026-10-30', '2026-10-28', '2026-10-26'), now).streak, 2, 'a second rest day in the same week breaks it')
+})
+test('insights: only says what the data supports', () => {
+  assert.deepEqual(learned({ tasks: [] }), [])
+  const mornings = Array.from({ length: 6 }, (_, i) => ({ done: true, doneAt: at('2026-10-2' + i, 9) }))
+  assert.match(learned({ tasks: mornings })[0], /morning/)
+  const r = recap({ tasks: doneOn('2026-10-26', '2026-10-27', '2026-10-20'), goals: [{ milestones: [{ at: '2026-10-27' }, { at: '2026-10-01' }] }] }, at('2026-10-30'))
+  assert.deepEqual([r.done, r.last, r.milestones], [2, 1, 1])
+})
+test('scene choices need the level', () => {
+  const low = { scene: { variant: 'night', season: 'winter' }, tasks: [] }
+  assert.deepEqual(sceneChoice(low), { variant: undefined, season: undefined })
+  assert.deepEqual(sceneChoice({ ...low, xp: 100 }), { variant: 'night', season: 'winter' })
+})

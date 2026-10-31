@@ -62,11 +62,11 @@ function Motion({ variant, season, front, rainy }) {
 }
 
 // The banner: one mountain-and-lake scene at --px-scene. Variant by local time.
-export function Scene() {
+export function Scene({ variant, season: pickedSeason }) {
   const [, tick] = useState(0)
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 6e4); return () => clearInterval(id) }, [])   // the clock moves the light
   useWeather()
-  const v = sceneVariant(), season = sceneSeason(), rainy = sceneRain()
+  const v = variant || sceneVariant(), season = pickedSeason || sceneSeason(), rainy = !pickedSeason && sceneRain()
   return (
     <div className="px-scene" role="img" aria-label={`A calm mountain lake in ${season}${rainy ? ' rain' : ''}, ${v === 'morning' ? 'morning' : v === 'dusk' ? 'dusk' : 'night'}`}>
       <img src={sceneUrl(v, season)} alt="" width="192" height="80" className="px-art" />

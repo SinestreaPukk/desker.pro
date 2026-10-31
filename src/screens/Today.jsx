@@ -6,6 +6,8 @@ import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
 import KodamaCard from '../components/KodamaCard.jsx'
 import PlayerCard from '../components/PlayerCard.jsx'
+import Insights from '../components/Insights.jsx'
+import { sceneChoice } from '../game.js'
 import Review from '../Review.jsx'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
@@ -119,7 +121,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />
           {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
-        <div className="order-1 lg:order-2"><Scene /></div>
+        <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
       </header>
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (
@@ -256,10 +258,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
             {!todays.length && <li className="text-slate-700">Nothing due today. Add a task or ask the AI agent to plan tomorrow.</li>}
           </ul>
+          <div className="mt-6"><Insights data={data} onReplan={onReplan} /></div>
         </section>
         <div className="flex flex-col gap-6 lg:col-span-6">
           <Review tasks={tasks} goals={goals} onAgent={onReview} />
-          <PlayerCard data={data} className={`${panel} !p-3 lg:!p-4`} />
+          <PlayerCard data={data} setData={setData} className={`${panel} !p-3 lg:!p-4`} />
         </div>
       </div>
     </>

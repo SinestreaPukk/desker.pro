@@ -3,7 +3,7 @@
 import { doneStats } from './tasks.js'
 import { dayStr } from './milestones.js'
 
-const taskXp = (t) => 10 + (t.important ? 5 : 0) + (t.urgent ? 5 : 0) + Math.min(10, Math.round((t.hours || 0) * 2)) // bigger, harder tasks pay more
+export const taskXp = (t) => 10 + (t.important ? 5 : 0) + (t.urgent ? 5 : 0) + Math.min(10, Math.round((t.hours || 0) * 2)) // bigger, harder tasks pay more
 export const MILESTONE_XP = 25, GUIDE_XP = 50, QUEST_GOAL = 3
 
 export const xpOf = ({ tasks = [], goals = [], guide }) =>
@@ -38,4 +38,11 @@ export function badgesOf({ tasks = [], goals = [], guide }) {
   const s = { tasksDone: tasks.filter((t) => t.done).length, streak: doneStats(tasks).streak, guide: !!guide?.done,
     milestones: goals.reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length, 0), hours: tasks.reduce((n, t) => n + (t.spent || 0), 0) }
   return BADGES.map(([id, name, how, test]) => ({ id, name, how, got: test(s) }))
+}
+
+// Levels unlock the scene on Today: level 2 lets you pick the time of day, level 3 the season. Below that it follows the clock and the calendar.
+export const SCENE_UNLOCK = { variant: 2, season: 3 }
+export const sceneChoice = (data) => {
+  const level = levelOf(totalXp(data)).level, c = data.scene || {}
+  return { variant: level >= SCENE_UNLOCK.variant ? c.variant : undefined, season: level >= SCENE_UNLOCK.season ? c.season : undefined }
 }

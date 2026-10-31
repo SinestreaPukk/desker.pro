@@ -45,14 +45,25 @@ export function settle(prev, next, now = Date.now()) {
 }
 
 // Done this week (Monday start) and the current day streak, from doneAt stamps.
+// One rest day a week is forgiven: a single missed day between two active days does not end the streak (and is not counted in it).
 export function doneStats(tasks, now = Date.now()) {
   const stamps = tasks.filter((t) => t.done && t.doneAt && !t.fun).map((t) => t.doneAt)
   const days = new Set(stamps.map((s) => day(new Date(s))))
   const n = new Date(now), monday = new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7)).getTime()
+  const week = (d) => day(new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7), 12))
+  const rested = new Set()
   let streak = 0
   const d = new Date(n.getFullYear(), n.getMonth(), n.getDate(), 12)
   if (!days.has(day(d))) d.setDate(d.getDate() - 1) // today may not have a finished task yet
-  while (days.has(day(d))) { streak++; d.setDate(d.getDate() - 1) }
+  for (;;) {
+    if (days.has(day(d))) streak++
+    else {
+      const before = new Date(d); before.setDate(before.getDate() - 1)
+      if (rested.has(week(d)) || !days.has(day(before))) break
+      rested.add(week(d))
+    }
+    d.setDate(d.getDate() - 1)
+  }
   return { week: stamps.filter((s) => s >= monday).length, streak }
 }
 

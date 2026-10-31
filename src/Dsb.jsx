@@ -47,7 +47,7 @@ export default function Dsb() {
     </main>
   )
 
-  const { counts: c, ai, kinds, daily, habit: h, active } = data
+  const { counts: c, ai, kinds, daily, habit: h, active, funnel: f } = data
   const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'n/a')
   const tokens = ai.input + ai.output
   const max = Math.max(1, ...daily.map((d) => d.tokens))
@@ -65,6 +65,19 @@ export default function Dsb() {
         <Tile label="Back the next day" value={pct(h.back1, h.eligible1)} sub={`${h.back1} of ${h.eligible1} accounts signed up at least a day ago`} />
         <Tile label="Back a week later" value={pct(h.back7, h.eligible7)} sub={`${h.back7} of ${h.eligible7} accounts signed up at least a week ago`} />
         <Tile label="Finished the goals guide" value={pct(h.guide_done, c.users)} sub={`${h.guide_done} of ${c.users} accounts, ${h.guide_started} started it`} />
+      </div>
+
+      <h2 className="mb-2 font-semibold">Where new people get to</h2>
+      <div className={`${panel} mb-8`}>
+        <ul className="space-y-1 text-base">
+          {[['Signed up', f.signed], ['Added a task', f.added], ['Finished a task', f.finished], ['Finished 3 tasks', f.finished3], ['Finished the goals guide', f.guide]].map(([label, v]) => (
+            <li key={label} className="flex items-center gap-3">
+              <span className="w-52 shrink-0 text-slate-600">{label}</span>
+              <span className="h-4 bg-primary" style={{ width: `${f.signed ? Math.max(2, (v / f.signed) * 45) : 2}%` }} aria-hidden="true" />
+              <span className="tabular-nums">{v} ({pct(v, f.signed)})</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <h2 className="mb-2 font-semibold">People who opened Desker, last 14 days</h2>
