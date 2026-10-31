@@ -66,7 +66,7 @@ SEASONS = {
         'star': ('yoru-1', 'yuki-2', 'yoru-0'), 'starb': ('yoru-1', 'yuki-2', 'yoru-0'),
         'moon': ('yoru-0', 'yuki-1', 'yuki-3'), 'moon_s': ('yoru-1', 'yuki-2', 'yoru-0'),
         'cloud_l': ('yoru-0', 'yuki-1', 'yuki-3'), 'cloud': ('yoru-1', 'yuki-2', 'yoru-0'), 'cloud_s': ('yoru-2', 'yuki-3', 'yoru-1'),
-        'w_far': ('yoru-1', 'yuki-2', 'yoru-0'), 'w_mid': ('yoru-1', 'yuki-3', 'yoru-0'), 'w_near': ('yoru-2', 'yoru-0', 'yoru-1'), 'glint': ('yoru-0', 'yuki-1', 'yuki-3'),
+        'w_far': ('yoru-0', 'yuki-2', 'yoru-0'), 'w_mid': ('yoru-1', 'yuki-3', 'yoru-0'), 'rock_s': ('yoru-2', 'yoru-0', 'yoru-1'), 'w_near': ('yoru-2', 'yoru-0', 'yoru-1'), 'glint': ('yoru-0', 'yuki-1', 'yuki-3'),
         'sn_hi': ('matsu-0', 'matsu-0', 'matsu-0'),
         'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
         'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2')},
@@ -218,12 +218,18 @@ def reflect(A, L, base, shear=1):
             if 0 <= sx < W and ry < BANK(sx) and is_(A, sx, ry, 'w_far', 'w_mid', 'w_near', 'glint'): put(A, sx, ry, REFL.get(inv[v], 'w_near'))
 
 # ---------------------------------------------------------------- far shore: snow spit, house, pines
+def runs(seed, lo, hi):
+    """Uneven run lengths (lo..hi) as a per-column index, so edges step where a hand would step instead of every n pixels."""
+    g = random.Random(seed); out = []; k = 0
+    while len(out) < W + hi: out += [k] * g.randint(lo, hi); k += 1
+    return out
 def shore(A):
+    step, speck = runs(31, 4, 13), runs(32, 2, 9)
     for x in range(W):
-        lip = 45 + (1 if (x // 9) % 2 else 0) - (1 if 120 <= x <= 180 else 0)
+        lip = 45 + (1 if step[x] % 2 else 0) - (1 if 120 <= x <= 180 else 0)
         for y in range(lip, 47):
-            put(A, x, y, 'sn_hi' if y == lip else 'sn_l' if y == 46 or x % 7 else 'sn_m')
-        if x % 5 == 2: put(A, x, 46, 'sn_m')
+            put(A, x, y, 'sn_hi' if y == lip else 'sn_l' if y == 46 or speck[x] % 3 else 'sn_m')
+        if speck[x] % 4 == 1 and speck[x] != speck[x - 1]: put(A, x, 46, 'sn_m')
 
 def spit(A):
     for y in range(46, 50):
@@ -332,14 +338,14 @@ def boat_rings(A, cx, wl):
 
 # ---------------------------------------------------------------- near bank
 def bank(A):
-    g = random.Random(13)
+    g = random.Random(13); crest = runs(33, 2, 6)
     for x in range(W):
         b = BANK(x)
         for y in range(b, H):
             d = y - b
             r = 'sn_l' if d < 5 else 'sn_m' if d < 12 or (d < 14 and (x + y) % 2 == 0) else 'sn_l'
             put(A, x, y, r)
-        put(A, x, b, 'sn_hi'); put(A, x, b + 1, 'sn_hi' if x % 3 else 'sn_l')
+        put(A, x, b, 'sn_hi'); put(A, x, b + 1, 'sn_hi' if crest[x] % 3 else 'sn_l')
     # drifts: 1px highlight on the lit crest, a shaded lee below it
     for cx, cy, w in ((50, 73, 34), (150, 74, 34)):
         for x in range(cx - w // 2, cx + w // 2 + 1):
@@ -390,9 +396,10 @@ def branch(A):
             put(A, x + dx, y + dy, 'br' if k < 3 else 'br_s'); put(A, x + dx + 1, y + dy, 'br_s'); put(A, x + dx + 2, y + dy + 1, 'br_d')
             if k < 2: put(A, x + dx + 2, y + dy, 'br_s')
         for dx, dy in ((2, 1), (3, 2), (4, 3)): put(A, x + dx, y + dy, 'br_s')
-    for x in range(150, 191): 
-        if x % 5 != 3: put(A, x, ys(x) - 1, 'pn_hi' if x % 2 else 'pn_l')
-        if x % 4 == 0: put(A, x, ys(x) - 2, 'pn_l')
+    gap, clump = runs(34, 1, 4), runs(35, 3, 8)
+    for x in range(150, 191):
+        if gap[x] % 4: put(A, x, ys(x) - 1, 'pn_hi' if gap[x] % 2 else 'pn_l')
+        if clump[x] % 3 == 0: put(A, x, ys(x) - 2, 'pn_l')
 
 # ---------------------------------------------------------------- compose
 def build(season='winter'):
