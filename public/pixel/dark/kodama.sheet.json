@@ -1,0 +1,12 @@
+{
+  "frameWidth": 44,
+  "frameHeight": 44,
+  "frames": [
+    "idle-a",
+    "idle-b",
+    "happy-a",
+    "happy-b",
+    "lucky-a",
+    "lucky-b"
+  ]
+}

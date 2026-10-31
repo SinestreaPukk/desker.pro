@@ -57,7 +57,7 @@ export default function Landing() {
               <p className="mt-3 text-base">Your plans were 38% off in week 1. 12% off now.</p>
             </Feature>
             <Feature title="It plans around your energy" text="Tell it how much time and energy you have right now and it picks one task, in the hours you do your best work.">
-              <p className="px-tab px-tab-beni inline-block">Right now</p>
+              <p className="px-tab px-tab-ando inline-block">Right now</p>
               <p className="mt-2 text-slate-700">Do this next</p>
               <p className="text-2xl">Read chapter 4 for Cell Biology</p>
               <p className="text-base text-slate-700">45 min. Mornings are your sharpest time.</p>

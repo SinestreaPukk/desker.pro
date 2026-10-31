@@ -1,0 +1,27 @@
+{
+  "name": "yuki16",
+  "note": "Dark counterpart of yuki16 (same names, so the same sprites rebuild in dark): the snow ramp runs from deep night blue (yuki-0, the page) to pale frost (yoru-2, the ink).",
+  "colors": {
+    "yuki-0": "#161B2D",
+    "yuki-1": "#1F2640",
+    "yuki-2": "#303A5C",
+    "yuki-3": "#5F729C",
+    "yoru-0": "#93A2C2",
+    "yoru-1": "#C2CEE2",
+    "yoru-2": "#E8EFF6",
+    "kori-1": "#4F88A0",
+    "kori-2": "#86BCD2",
+    "kori-3": "#A9D3E4",
+    "ando-0": "#5A4A2C",
+    "ando-1": "#E8BE6A",
+    "ando-2": "#F3D79A",
+    "matsu-0": "#4E7367",
+    "matsu-1": "#8DB9A8",
+    "matsu-2": "#BBD8CB",
+    "beni": "#D9857B",
+    "hada-0": "#F0D2C2",
+    "hada-1": "#D49E95",
+    "kuri": "#8C6A5C"
+  },
+  "ramps": {}
+}

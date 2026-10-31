@@ -21,9 +21,7 @@ export const SEASONS = ['winter', 'spring', 'summer', 'autumn']
 export const sceneSeason = (d = new Date()) => {
   const q = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('season') : null
   if (SEASONS.includes(q)) return q
-  if (cachedWeather()?.kind === 'snow') return 'winter'
-  const m = d.getMonth()
-  return m === 11 || m < 2 ? 'winter' : m < 5 ? 'spring' : m < 8 ? 'summer' : 'autumn'
+  return 'winter' // Desker is a snowy place by default; the other seasons are something you grow into and choose (kodama.js sceneChoice)
 }
 export const sceneRain = () => ['rain', 'storm'].includes(cachedWeather()?.kind)
 export const sceneUrl = (variant, season = sceneSeason()) => `/pixel/scene-${season}-${variant}.png`

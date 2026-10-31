@@ -1,0 +1,17 @@
+# Lantern tab: the one thing to look at. Outline yoru-2, amber fill.
+size 8 8
+palette yuki16
+. transparent
+K yoru-2
+h ando-0
+f ando-1
+s ando-2
+frame rest
+.KKKKKK.
+KhhhhhhK
+KffffffK
+KffffffK
+KffffffK
+KssssssK
+.KKKKKK.
+........

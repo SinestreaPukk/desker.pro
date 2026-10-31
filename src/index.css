@@ -19,25 +19,27 @@
   --font-weight-medium: 400; --font-weight-semibold: 400; --font-weight-bold: 400;
   --radius-lg: 0; --radius-xl: 0; --radius-2xl: 0; --radius-3xl: 0;
 
-  --color-yuki-0: #F4F7F6; --color-yuki-1: #DDE6EA; --color-yuki-2: #B4C5D1; --color-yuki-3: #8394AE;
-  --color-yoru-0: #5A6283; --color-yoru-1: #3B4262; --color-yoru-2: #252A40;
-  --color-kori-1: #8DBCCB; --color-kori-2: #5A8AA3;
+  --color-yuki-0: #F3F8FA; --color-yuki-1: #DBE8EF; --color-yuki-2: #B2C8D6; --color-yuki-3: #6D86A4;
+  --color-yoru-0: #575F7F; --color-yoru-1: #3A4264; --color-yoru-2: #232842;
+  --color-kori-1: #8EC3D6; --color-kori-2: #4A87A8; --color-kori-3: #2D6B8C;
+  --color-ando-0: #F6DDA0; --color-ando-1: #E0B25A; --color-ando-2: #A9772F;
   --color-matsu-0: #7E9C8F; --color-matsu-1: #4F6E68; --color-matsu-2: #31474A;
-  --color-beni: #B4534A; --color-hada-0: #F0D2C2; --color-hada-1: #D49E95; --color-kuri: #8C6A5C;
+  --color-beni: #A8574F; --color-hada-0: #F0D2C2; --color-hada-1: #D49E95; --color-kuri: #8C6A5C;
 
   --color-paper: var(--color-yuki-0);
   --color-ink: var(--color-yoru-2);
   --color-panel: var(--color-yuki-1);
-  --color-primary: var(--color-yoru-1);
+  --color-primary: var(--color-kori-3);
   --color-primary-hover: var(--color-yoru-2);
   --color-pale: var(--color-yuki-1);
-  --color-accent: var(--color-yoru-1);
+  --color-accent: var(--color-kori-3);
   --color-accent-dark: var(--color-yoru-2);
   --color-line: var(--color-yuki-2);
   --color-control: var(--color-yuki-3);
   --color-danger: var(--color-beni);
   --color-leaf: var(--color-matsu-1);
-  --color-amber: var(--color-kuri);
+  --color-amber: var(--color-ando-2);
+  --color-lantern: var(--color-ando-1);
   --color-stone: var(--color-yoru-0);
   --color-white: var(--color-yuki-0);
   --color-slate-50: var(--color-yuki-0); --color-slate-100: var(--color-yuki-1); --color-slate-200: var(--color-yuki-2); --color-slate-300: var(--color-yuki-2);
@@ -46,7 +48,22 @@
 }
 
 /* Two art-pixel units: --px for UI, --px-scene for the banner. Every border, offset and sprite is an integer multiple. */
-:root { --px: 2px; --px-scene: 2px; --bg: var(--color-yuki-0); --ink: var(--color-yoru-2); }
+:root {
+  --k-panel: url(/pixel/panel.png); --k-panel-sunk: url(/pixel/panel-sunk.png); --k-field: url(/pixel/field.png); --k-btn-primary: url(/pixel/btn-primary.png); --k-btn-secondary: url(/pixel/btn-secondary.png); --k-btn-danger: url(/pixel/btn-danger.png); --k-tab-beni: url(/pixel/tab-beni.png); --k-tab-kori: url(/pixel/tab-kori.png); --k-tab-matsu: url(/pixel/tab-matsu.png); --k-tab-yuki: url(/pixel/tab-yuki.png); --k-tab-ando: url(/pixel/tab-ando.png); --k-divider: url(/pixel/divider.png); --k-backdrop: url(/pixel/backdrop.png); --k-check: url(/pixel/check.sheet.png);
+  color-scheme: light;
+  --px: 2px; --px-scene: 2px; --bg: var(--color-yuki-0); --ink: var(--color-yoru-2); }
+/* Dark: the same names with night values. The kit sprites are rebuilt from art/palette/yuki16-dark.json into /pixel/dark (npm run pixel:build). Set on <html> by src/theme.js. */
+html[data-theme='dark'] .px-tab-ando { color: var(--color-yuki-0); } /* amber stays light in the dark theme, so its text goes dark */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --color-yuki-0: #161B2D; --color-yuki-1: #1F2640; --color-yuki-2: #303A5C; --color-yuki-3: #5F729C;
+  --color-yoru-0: #93A2C2; --color-yoru-1: #C2CEE2; --color-yoru-2: #E8EFF6;
+  --color-kori-1: #4F88A0; --color-kori-2: #86BCD2; --color-kori-3: #A9D3E4;
+  --color-ando-0: #5A4A2C; --color-ando-1: #E8BE6A; --color-ando-2: #F3D79A;
+  --color-matsu-0: #4E7367; --color-matsu-1: #8DB9A8; --color-matsu-2: #BBD8CB;
+  --color-beni: #D9857B;
+  --k-panel: url(/pixel/dark/panel.png); --k-panel-sunk: url(/pixel/dark/panel-sunk.png); --k-field: url(/pixel/dark/field.png); --k-btn-primary: url(/pixel/dark/btn-primary.png); --k-btn-secondary: url(/pixel/dark/btn-secondary.png); --k-btn-danger: url(/pixel/dark/btn-danger.png); --k-tab-beni: url(/pixel/dark/tab-beni.png); --k-tab-kori: url(/pixel/dark/tab-kori.png); --k-tab-matsu: url(/pixel/dark/tab-matsu.png); --k-tab-yuki: url(/pixel/dark/tab-yuki.png); --k-tab-ando: url(/pixel/dark/tab-ando.png); --k-divider: url(/pixel/dark/divider.png); --k-backdrop: url(/pixel/dark/backdrop.png); --k-check: url(/pixel/dark/check.sheet.png);
+}
 /* 4px from 640px up: at 2px a tablet-width banner would leave flat bars either side of the scene. The wide window crops the scene's sides instead. */
 @media (min-width: 640px) { :root { --px-scene: 4px; } }
 
@@ -65,24 +82,25 @@ button { -webkit-tap-highlight-color: transparent; }
 .border { border-style: solid; } .border-b { border-bottom-style: solid; } .border-t { border-top-style: solid; } .border-l { border-left-style: solid; } .border-r { border-right-style: solid; }
 .border-b { border-width: 0 0 var(--px) 0; } .border-t { border-width: var(--px) 0 0 0; } .border-l { border-width: 0 0 0 var(--px); } .border-r { border-width: 0 var(--px) 0 0; }
 .border-b-2 { border-bottom-width: var(--px); }
-hr { border: 0; height: var(--px); background: url(/pixel/divider.png) 0 0 / calc(4 * var(--px)) var(--px); image-rendering: pixelated; }
+hr { border: 0; height: var(--px); background: var(--k-divider) 0 0 / calc(4 * var(--px)) var(--px); image-rendering: pixelated; }
 
 /* ---- Frames: 9-slice PNGs, slice 3, drawn at --px ---- */
 .px-panel, .px-btn-primary, .px-btn-secondary, .px-btn-danger, .px-field, .px-sunk, .px-tab {
   border-style: solid; border-width: calc(3 * var(--px)); background: none; image-rendering: pixelated; border-radius: 0;
 }
-.px-panel { border-image: url(/pixel/panel.png) 3 fill / calc(3 * var(--px)) stretch; }
-.px-sunk { border-image: url(/pixel/panel-sunk.png) 3 fill / calc(3 * var(--px)) stretch; }
-.px-field { border-image: url(/pixel/field.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); min-height: 44px; padding: 0 calc(2 * var(--px)); }
+.px-panel { border-image: var(--k-panel) 3 fill / calc(3 * var(--px)) stretch; }
+.px-sunk { border-image: var(--k-panel-sunk) 3 fill / calc(3 * var(--px)) stretch; }
+.px-field { border-image: var(--k-field) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); min-height: 44px; padding: 0 calc(2 * var(--px)); }
 .px-field::placeholder { color: var(--color-yoru-0); }
-.px-btn-primary { border-image: url(/pixel/btn-primary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
-.px-btn-secondary { border-image: url(/pixel/btn-secondary.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
-.px-btn-danger { border-image: url(/pixel/btn-danger.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
+.px-btn-primary { border-image: var(--k-btn-primary) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
+.px-btn-secondary { border-image: var(--k-btn-secondary) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
+.px-btn-danger { border-image: var(--k-btn-danger) 3 fill / calc(3 * var(--px)) stretch; color: var(--color-yuki-0); }
 .px-tab { padding: 0 var(--px); font-size: 20px; line-height: 24px; color: var(--color-yuki-0); }
-.px-tab-beni { border-image: url(/pixel/tab-beni.png) 3 fill / calc(3 * var(--px)) stretch; }
-.px-tab-kori { border-image: url(/pixel/tab-kori.png) 3 fill / calc(3 * var(--px)) stretch; }
-.px-tab-matsu { border-image: url(/pixel/tab-matsu.png) 3 fill / calc(3 * var(--px)) stretch; }
-.px-tab-yuki { border-image: url(/pixel/tab-yuki.png) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
+.px-tab-beni { border-image: var(--k-tab-beni) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-kori { border-image: var(--k-tab-kori) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-matsu { border-image: var(--k-tab-matsu) 3 fill / calc(3 * var(--px)) stretch; }
+.px-tab-ando { border-image: var(--k-tab-ando) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
+.px-tab-yuki { border-image: var(--k-tab-yuki) 3 fill / calc(3 * var(--px)) stretch; color: var(--ink); }
 
 /* Buttons: flat text buttons by default; the frame comes from a variant. Press = one art pixel down. */
 .px-btn { display: inline-flex; align-items: center; justify-content: center; gap: calc(2 * var(--px)); min-height: 44px; padding: 0 calc(4 * var(--px)); cursor: pointer; }
@@ -103,7 +121,7 @@ hr { border: 0; height: var(--px); background: url(/pixel/divider.png) 0 0 / cal
 /* Checkbox: 8x8 sprite at 2x, 44px hit area */
 input[type='checkbox'] {
   appearance: none; flex: none; box-sizing: content-box; width: 16px; height: 16px; padding: 14px; margin: -14px;
-  background: url(/pixel/check.sheet.png) 0 0 / 32px 16px no-repeat; background-origin: content-box; background-clip: content-box; image-rendering: pixelated; cursor: pointer;
+  background: var(--k-check) 0 0 / 32px 16px no-repeat; background-origin: content-box; background-clip: content-box; image-rendering: pixelated; cursor: pointer;
 }
 input[type='checkbox']:checked { background-position: -16px 0; }
 input[type='checkbox']:focus-visible { outline-offset: -12px; }
@@ -160,8 +178,8 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @media (min-width: 1024px) { .px-strip { width: calc(192 * var(--px-scene)); flex: none; } .px-strip > img { left: 0; margin-left: 0; } }
 
 /* Dialog backdrop and dotted row rule */
-.px-backdrop { background: url(/pixel/backdrop.png) 0 0 / calc(2 * var(--px)) calc(2 * var(--px)); image-rendering: pixelated; }
-.px-rule { background: url(/pixel/divider.png) 0 100% / calc(4 * var(--px)) var(--px) repeat-x; image-rendering: pixelated; }
+.px-backdrop { background: var(--k-backdrop) 0 0 / calc(2 * var(--px)) calc(2 * var(--px)); image-rendering: pixelated; }
+.px-rule { background: var(--k-divider) 0 100% / calc(4 * var(--px)) var(--px) repeat-x; image-rendering: pixelated; }
 
 /* Typing indicator: three pixels that step */
 .dot { width: var(--px); height: var(--px); background: var(--color-yoru-0); animation: step 900ms steps(1) infinite; }

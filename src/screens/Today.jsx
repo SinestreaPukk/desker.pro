@@ -159,7 +159,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
 
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
-          <h2 className="px-tab px-tab-beni inline-block">Right now</h2>
+          <h2 className="px-tab px-tab-ando inline-block">Right now</h2>
           {askEnergy && (
             <div role="group" aria-label="How is your energy" className="px-rule mt-3 flex flex-wrap items-center gap-2 pb-3">
               <span>How is your energy right now?</span>

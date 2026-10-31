@@ -36,7 +36,7 @@ export default function Ritual({ kind, data, setData, onReplan }) {
     const mins = planned.reduce((n, t) => n + lengthOf(t), 0)
     return (
       <section className={`${panel} mb-6`} aria-label="Morning plan">
-        <h2 className="px-tab px-tab-beni mb-3 inline-block">Morning plan</h2>
+        <h2 className="px-tab px-tab-ando mb-3 inline-block">Morning plan</h2>
         <p>{planned.length ? `Here is today with ${name}: ${planned.length} thing${planned.length === 1 ? '' : 's'}, about ${fmtMin(Math.round(mins / 15) * 15)}.` : 'Nothing is planned for today yet. Plan the week and I will find the times.'}</p>
         {planned.length > 0 && <ul className="mt-2 text-base text-slate-700">{planned.slice(0, 6).map((t) => <li key={t.id} className="break-words">{hhmm(t)}{t.title}</li>)}</ul>}
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -53,7 +53,7 @@ export default function Ritual({ kind, data, setData, onReplan }) {
   }
   return (
     <section className={`${panel} mb-6`} aria-label="Evening wrap-up">
-      <h2 className="px-tab px-tab-beni mb-3 inline-block">Evening wrap-up</h2>
+      <h2 className="px-tab px-tab-ando mb-3 inline-block">Evening wrap-up</h2>
       {planned.length > 0 && (
         <>
           <p>Still open from today. Did you get to any of it?</p>

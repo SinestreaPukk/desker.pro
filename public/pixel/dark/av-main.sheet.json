@@ -1,0 +1,8 @@
+{
+  "frameWidth": 24,
+  "frameHeight": 24,
+  "frames": [
+    "idle-0",
+    "blink"
+  ]
+}

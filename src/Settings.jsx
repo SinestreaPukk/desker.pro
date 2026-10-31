@@ -4,6 +4,7 @@ import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { authClient, useSession } from './auth.js'
 import { Icon } from './icons.jsx'
+import { preference, setPreference } from './theme.js'
 import { pushSupported, subscribe, unsubscribe } from './push.js'
 import { nameOf } from './kodama.js'
 import { QUIET } from './pushPlan.js'
@@ -76,6 +77,12 @@ export default function Settings({ data, setData, row: inSidebar }) {
       </button>
       {open && (
         <div className={`px-panel absolute z-40 w-72 ${inSidebar ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'} space-y-3 p-3`} role="dialog" aria-label="Settings">
+          <label className={row}>Appearance
+            <select className={`${input} w-40`} defaultValue={preference()} onChange={(e) => setPreference(e.target.value)}>
+              <option value="auto">Match my device</option><option value="light">Light</option><option value="dark">Dark</option>
+            </select>
+          </label>
+          <hr />
           <label className={row}>Reminders
             <input type="checkbox" checked={rem} onChange={(e) => toggle(e.target.checked)} />
           </label>

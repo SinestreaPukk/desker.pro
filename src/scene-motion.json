@@ -2,25 +2,25 @@
   "winter": {
     "fall": "snow",
     "night": {
-      "back": "#8394AE",
-      "front": "#DDE6EA",
-      "glint": "#8394AE",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "back": "#6D86A4",
+      "front": "#DBE8EF",
+      "glint": "#6D86A4",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "morning": {
-      "back": "#B4C5D1",
-      "front": "#F4F7F6",
-      "glint": "#DDE6EA",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "back": "#B2C8D6",
+      "front": "#F3F8FA",
+      "glint": "#DBE8EF",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "dusk": {
-      "back": "#8394AE",
+      "back": "#6D86A4",
       "front": "#F0D2C2",
       "glint": "#F0D2C2",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     }
   },
   "spring": {
@@ -28,23 +28,23 @@
     "night": {
       "back": "#31474A",
       "front": "#7E9C8F",
-      "glint": "#8394AE",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "glint": "#6D86A4",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "morning": {
       "back": "#4F6E68",
-      "front": "#F4F7F6",
-      "glint": "#DDE6EA",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "front": "#F3F8FA",
+      "glint": "#DBE8EF",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "dusk": {
       "back": "#31474A",
       "front": "#F0D2C2",
       "glint": "#F0D2C2",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     }
   },
   "summer": {
@@ -52,47 +52,47 @@
     "night": {
       "back": "#31474A",
       "front": "#7E9C8F",
-      "glint": "#8394AE",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "glint": "#6D86A4",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "morning": {
       "back": "#4F6E68",
-      "front": "#F4F7F6",
-      "glint": "#DDE6EA",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "front": "#F3F8FA",
+      "glint": "#DBE8EF",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "dusk": {
       "back": "#31474A",
       "front": "#F0D2C2",
       "glint": "#F0D2C2",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     }
   },
   "autumn": {
     "fall": "none",
     "night": {
-      "back": "#DE8A4E",
+      "back": "#DDB070",
       "front": "#F0D2C2",
-      "glint": "#8394AE",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "glint": "#6D86A4",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "morning": {
-      "back": "#DE8A4E",
+      "back": "#DDB070",
       "front": "#F0D2C2",
-      "glint": "#DDE6EA",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "glint": "#DBE8EF",
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     },
     "dusk": {
-      "back": "#DE8A4E",
+      "back": "#DDB070",
       "front": "#F0D2C2",
       "glint": "#F0D2C2",
-      "rainBack": "#8DBCCB",
-      "rainFront": "#B4C5D1"
+      "rainBack": "#8EC3D6",
+      "rainFront": "#B2C8D6"
     }
   },
   "shimmer": [

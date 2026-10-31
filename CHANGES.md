@@ -1,6 +1,6 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 6 done. Phases 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
+Status: **Phases 1 to 7 done. Phase 8 follows (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -81,7 +81,21 @@ Status: **Phases 1 to 6 done. Phases 7, 8 follow (decisions recorded: kodama is 
 - **Poses to draw** (the kodama sheet is 44x44 frames: idle a/b, happy a/b, lucky a/b): focusing (eyes down, a tiny book or lamp), sleepy (nodding, eyes closed, optional "z"), cozy (a blanket or a mug), calm-concerned (soft eyes, leaf drooping slightly), plus two accessories for Young tree (leaf crown) and Elder (lantern).
 - **Clash with the brief, resolved the safe way**: "reuse the user's kodama pixels" and "state sprites for six states" cannot both be met with the six frames that exist, so four states borrow frames; nothing was redrawn.
 
+## Phase 7: calm, snowy, one kit
+- **Palette retuned** (still Yuki, same names): slightly bluer snow; **icy blue** is the accent (`kori-3`, links, active tab, primary buttons, progress bars, focus colour); **lantern amber** (`ando-0/1/2`, new) is used sparingly for the one thing to look at
+  (the "Right now", Morning plan and Evening wrap-up tabs); the red (`beni`) is muted and kept for danger and the done stamp. The scene's `daidai` oranges are pulled toward amber. `yuki-3` was darkened so field and panel outlines reach 3:1.
+- **Dark theme** (Settings, Appearance: match device / light / dark; stored on this device; no flash on load): the same colour names with night values (`art/palette/yuki16-dark.json`). The kit sprites are rebuilt in dark into `public/pixel/dark/`
+  by `npm run pixel:build`, and CSS picks them through `--k-*` variables, so there is no filter trick. Characters (Deskie, kodama) and the scene art are the same in both themes.
+- **One source of colour**: components use tokens only (the last hard-coded hex, in `src/review.js`, now uses `var(--color-*)`). `test/palette.test.mjs` fails if the sprite palette, the dark palette, the scene palette and the CSS tokens disagree, if a component hard-codes a hex,
+  and checks WCAG AA for the pairs the UI uses in both themes (body, secondary, captions, links, primary button, lantern tab, danger, positive text; 3:1 for outlines).
+- **Winter by default**: the window view is winter unless you choose a season (Sapling unlocks the choice). The calendar-month seasons are gone; weather no longer switches it.
+- Sprites recoloured from their text sources (`btn-primary` now uses `kori-3`; new `tab-ando`); page stripes regenerated with the new palette. `npm run pixel:lint` passes.
+- Focus rings were already a 2px ink outline with offset on every control (works on both themes); motion was already off under `prefers-reduced-motion` (kodama states included).
+- Fixed: the Calendar toolbar clipped its "Today" button on phones.
+- **Decided not to change: the body font.** VT323 at 24px (20px small) is already well above 14px and is the pixel identity; swapping paragraphs to a system font would reflow every screen and mix two voices. Say if you want it anyway: it is one variable (`--font-sans`) plus `p`/`li` rules.
+- **Art still needed**: a Rhythm page stripe (it borrows the calendar one), a dusk sky that is not peach (the landing hero uses winter dusk; `hada` in `art/scene_build.py` roles), and the kodama poses listed under Phase 5.
+
 ## Tests
-`npm test` (97 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (101 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.

@@ -190,13 +190,13 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
         <h2 className="text-center font-semibold">{title}</h2>
         <button aria-label={`Next ${view}`} className={`${btn} ${ghost}`} onClick={() => shift(1)}>→</button>
       </div>
-      <div className="mb-3 flex items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex gap-1 border border-line bg-white p-1" role="group" aria-label="Calendar view">
           {VIEWS.map((v) => (
             <button key={v} className={`${btn} !px-3 !py-1 capitalize ! ${view === v ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`} aria-pressed={view === v} onClick={() => setView(v)}>{v}</button>
           ))}
         </div>
-        <span className="flex gap-2">
+        <span className="flex flex-wrap gap-2">
           <button className={`${btn} ${ghost}`} onClick={onReplan}>Replan my week</button>
           <button className={`${btn} ${ghost}`} onClick={() => setAnchor(new Date())}>Today</button>
         </span>
