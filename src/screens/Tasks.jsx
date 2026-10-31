@@ -70,7 +70,8 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
         </div>
         <div className="mt-4"><Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} /></div>
       </details>
-      <button className={`${btn} mt-6 text-danger hover:bg-slate-100`} onClick={onDelete}>Delete task</button>
+      <button className={`${btn} mt-6 text-danger hover:bg-white`} onClick={onDelete}>Delete task</button>
+      <button className={`${btn} ${ghost} sticky bottom-0 mt-4 w-full md:hidden`} onClick={onClose}>Close</button>
     </div>
   )
 }

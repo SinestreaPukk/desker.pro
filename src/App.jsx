@@ -10,7 +10,6 @@ import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
 import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
-import { isMissed } from './tasks.js'
 import Today from './screens/Today.jsx'
 import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
@@ -20,7 +19,7 @@ import Calendar from './screens/Calendar.jsx'
 import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
-import { BLUE, btn, ghost } from './ui.js'
+import { btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
@@ -50,11 +49,12 @@ export default function App() {
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [cheer, setCheer] = useState(0) // bumps when Do First is cleared, to animate the logo
   const [toast, setToast] = useState(null) // { text, undo }
+  const [toastHeld, holdToast] = useState(false) // hover or focus pauses the countdown
   useEffect(() => {
-    if (!toast) return
-    const id = setTimeout(() => setToast(null), 7000)
+    if (!toast || toastHeld) return
+    const id = setTimeout(() => setToast(null), 15000)
     return () => clearTimeout(id)
-  }, [toast])
+  }, [toast, toastHeld])
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState(false)
@@ -91,7 +91,6 @@ export default function App() {
   const addSpent = (id, hours) => hours > 0 && setData((d) => ({ ...d, tasks: d.tasks.map((t) => (t.id === id ? { ...t, spent: Math.round(((t.spent || 0) + hours) * 1000) / 1000 } : t)) }))
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it yourself.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const focusTask = focus && tasks.find((t) => t.id === focus.taskId)
-  const missed = tasks.filter((t) => isMissed(t))
   const openReplan = () => { setAgentOpen(false); setTab('Calendar'); setReplanOpen(true) }
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
@@ -168,12 +167,6 @@ export default function App() {
 
         <main className="mx-auto w-full max-w-[1400px] px-4 pb-32 pt-4 md:px-8 md:pt-8">
           {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
-          {missed.length > 0 && tab !== 'Today' && !replanOpen && (
-            <div role="status" className="px-panel mb-4 flex flex-wrap items-center gap-3 p-3">
-              <span><b className="font-medium">{missed.length} planned task{missed.length === 1 ? '' : 's'}</b> slipped past {missed.length === 1 ? 'its' : 'their'} time: {missed.slice(0, 3).map((t) => t.title).join(', ')}{missed.length > 3 ? '…' : ''}</span>
-              <button className={`${btn} ${BLUE}`} onClick={openReplan}>Replan my week</button>
-            </div>
-          )}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
@@ -198,10 +191,11 @@ export default function App() {
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
       )}
       {toast && (
-        <div role="status" className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
+        <div role="alert" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
           {toast.stamp && <Hanko key={toast.text} />}
           <span className="min-w-0 flex-1 break-words">{toast.text}</span>
           <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>
+          <button className="min-h-11 shrink-0 px-3" aria-label="Dismiss" onClick={() => setToast(null)}>x</button>
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Sections">

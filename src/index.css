@@ -52,6 +52,8 @@
 
 html { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; background: var(--bg); }
 body { background: var(--bg); font-family: var(--font-sans); font-size: 24px; line-height: 28px; font-variant-ligatures: none; font-feature-settings: 'liga' 0, 'clig' 0; color: var(--ink); font-synthesis: none; -webkit-font-smoothing: none; }
+/* Hierarchy without weight: section heads step up to 32px, small captions step down to yoru-1 ink at 20px. */
+@layer base { h2 { font-size: 32px; line-height: 40px; } }
 b, strong { font-weight: 400; color: var(--color-yoru-2); }
 .px-art { image-rendering: pixelated; }
 ::selection { background: var(--color-kori-1); color: var(--ink); }

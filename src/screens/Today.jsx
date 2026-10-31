@@ -134,7 +134,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </section>
         </div>
       )}
-      <div className="mb-4 grid grid-cols-2 gap-x-4 gap-y-2 lg:mb-6 lg:grid-cols-12 lg:gap-x-6">
+      <details className="mb-4 lg:mb-6">
+        <summary className="underline">This week at a glance</summary>
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-12 lg:gap-x-6">
         <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
         <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
         <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
@@ -142,7 +144,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
         </Tile>
-      </div>
+        </div>
+      </details>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
@@ -160,7 +163,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             </div>
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
 
-          <div className="mt-4 flex flex-wrap items-end gap-4">
+          <details className="mt-4">
+            <summary className="underline">Tune this pick</summary>
+          <div className="mt-3 flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1">Minutes free right now
               <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
             </label>
@@ -173,8 +178,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 ))}
               </div>
             </div>
-            <button className={`${btn} ${ghost}`} onClick={openAgent}>Ask the AI agent to plan my day</button>
           </div>
+          </details>
 
           <details className="mt-4">
             <summary className="underline">More ways to choose</summary>
