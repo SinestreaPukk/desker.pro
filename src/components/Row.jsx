@@ -5,7 +5,9 @@ import { isMissed } from '../tasks.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
 
 // One task: checkbox, title, one line of facts, a Start action and a menu for the rest.
-export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project }) {
+// `reorder` is optional: { drop(fromId), up(), down() } lets the row be dragged over another row, or moved from its menu (touch and keyboard).
+export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project, reorder }) {
+  const [over, setOver] = useState(false)
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
   const [sub, setSub] = useState('')
@@ -29,9 +31,11 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   ].filter(Boolean)
   const item = 'flex min-h-11 w-full items-center px-3 text-left hover:bg-yuki-1'
   return (
-    <li className={`${cover ? 'px-sunk p-2 text-ink' : `${rowCard} py-2`}`}>
+    <li className={`${cover ? 'px-sunk p-2 text-ink' : `${rowCard} py-2`} ${over ? 'bg-yuki-1' : ''}`}
+      {...(reorder && { onDragOver: (e) => { e.preventDefault(); setOver(true) }, onDragLeave: (e) => !e.currentTarget.contains(e.relatedTarget) && setOver(false),
+        onDrop: (e) => { e.preventDefault(); setOver(false); const id = +e.dataTransfer.getData('text/plain'); if (id && id !== t.id) reorder.drop(id) } })}>
       <div className="flex items-center gap-2">
-        <span className="hidden shrink-0 cursor-grab text-slate-600 md:block" draggable title="Drag to another box" aria-hidden="true"
+        <span className="hidden shrink-0 cursor-grab text-slate-600 md:block" draggable title={reorder ? 'Drag to move' : 'Drag to another box'} aria-hidden="true"
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>
           <Icon name="Grip" />
         </span>
@@ -48,6 +52,8 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
           </button>
           {menu && (
             <div role="menu" className="px-panel absolute right-0 top-full z-20 mt-1 w-44 p-1" onKeyDown={(e) => e.key === 'Escape' && setMenu(false)}>
+              {reorder?.up && <button role="menuitem" className={item} onClick={() => { reorder.up(); setMenu(false) }}>Move up</button>}
+              {reorder?.down && <button role="menuitem" className={item} onClick={() => { reorder.down(); setMenu(false) }}>Move down</button>}
               <button role="menuitem" className={item} onClick={() => { setOpen(!open); setMenu(false) }}>{open ? 'Hide details' : 'Details'}</button>
               <button role="menuitem" className={item} onClick={() => { onEdit(); setMenu(false) }}>Open</button>
               <button role="menuitem" className={`${item} text-danger`} onClick={() => { onDelete(); setMenu(false) }}>Delete</button>

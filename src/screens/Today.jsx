@@ -68,7 +68,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       const mine = open.filter((t) => t.deadlineId === d.id) // work left = its open tasks, or the whole estimate if it has none yet
       return { id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline', work: mine.length ? left(mine.reduce((n, t) => n + Math.max(0, (t.hours || 0) - (t.spent || 0)), 0)) : left(d.hours) }
     }),
-    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task', work: left((t.hours || 0) - (t.spent || 0)) })),
+    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task', work: left((t.hours || 0) - (t.spent || 0)), plan: t.when ? `${t.when === today ? 'today' : fmtDate(t.when)}${t.start ? ` at ${t.start}` : ''}` : '' })),
   ].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))
   const daysTo = (date) => Math.round((new Date(`${date}T12:00`) - new Date(`${today}T12:00`)) / 864e5)
   const timeLeft = (date) => { const n = daysTo(date); return n === 0 ? 'Due today' : `${n} day${n === 1 ? '' : 's'} left` }
@@ -84,7 +84,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const cal = fromCalendar(tasks)
   const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy }) }))
   const lead = picks.find((p) => p.r)
-  const cur = focus || pick || cal || (lead && { taskId: lead.r.t.id, title: lead.r.t.title, method: lead.m.name, why: lead.r.why, minutes: lead.r.t.hours ? Math.round(lead.r.t.hours * 60) : undefined })
+  const cur0 = focus || pick || cal || (lead && { taskId: lead.r.t.id, title: lead.r.t.title, method: lead.m.name, why: lead.r.why, minutes: lead.r.t.hours ? Math.round(lead.r.t.hours * 60) : undefined })
+  // A pick or a running focus is a copy made earlier. Title, length and planned time are always read from the task itself, so an edit on the Tasks page shows here at once.
+  const liveTask = cur0?.taskId ? tasks.find((x) => x.id === cur0.taskId) : null
+  const cur = liveTask ? { ...cur0, title: liveTask.title, minutes: liveTask.hours ? Math.round(liveTask.hours * 60) : cur0.minutes } : cur0
+  const slotText = liveTask?.when ? `Planned ${liveTask.when === today ? 'today' : fmtDate(liveTask.when)}${liveTask.start ? ` at ${liveTask.start}` : ''}.` : ''
   const check = realityCheck(tasks, plannerOf(data), today, freeTodayOf(data) ?? data.freeHours ?? 4)
   const finish = () => {
     if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
@@ -113,7 +117,16 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     ? { important: undefined, urgent: undefined, goalId: undefined, reason: undefined, manual: false }
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
   const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
-  const todays = [...open].sort((a, b) => (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9')).slice(0, 5)
+  // Your order wins once you have moved something (rank); everything you have not placed yet sorts by priority and date above it.
+  const ordered = [...open].sort((a, b) => (a.rank ?? -1) - (b.rank ?? -1) || (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9'))
+  const todays = ordered.slice(0, 5)
+  const moveTo = (fromId, toId) => {
+    const ids = ordered.map((t) => t.id), f = ids.indexOf(fromId), to = ids.indexOf(toId)
+    if (f < 0 || to < 0 || f === to) return
+    ids.splice(to, 0, ids.splice(f, 1)[0])
+    setTasks(tasks.map((t) => (ids.includes(t.id) ? { ...t, rank: ids.indexOf(t.id) } : t)))
+  }
+  const reorderOf = (t, i) => ({ drop: (from) => moveTo(from, t.id), up: i > 0 ? () => moveTo(t.id, todays[i - 1].id) : undefined, down: i < todays.length - 1 ? () => moveTo(t.id, todays[i + 1].id) : undefined })
   const idle = !cur && !open.length // nothing to choose from: the pick controls would do nothing
   const hint = [
     ['goals', open.length >= 3 && !goals.length, 'Goals tell Desker what matters most, so it can rank your tasks.', 'Add a goal', () => goTab('Goals')],
@@ -183,6 +196,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
                 <p className="mt-1 break-words text-2xl">{cur.title}</p>
                 <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
+                {slotText && <p className="mt-1 text-slate-700">{slotText}</p>}
               </div>
               <div className={ACT}>
                 <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
@@ -279,6 +293,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <li key={x.id} className="px-rule py-2">
                 <p className="break-words">{x.title}</p>
                 <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
+                {x.plan && <p className="text-xs text-slate-700">Planned {x.plan}</p>}
                 <p className="text-xs text-slate-700">{timeLeft(x.date)}{x.work ? `. ${x.work}h of work left` : ''}</p>
               </li>
             ))}
@@ -300,7 +315,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <button className={`${btn} ${BLUE}`}>Add task</button>
           </form>
           <ul className="mt-3">
-            {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
+            {todays.map((t, i) => <Row key={t.id} t={t} reorder={reorderOf(t, i)} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
             {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
           {hint && (
