@@ -131,8 +131,10 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
-          <p className="px-sunk mt-3 max-w-md break-words px-3 py-2" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
-          <KodamaSettings data={data} setData={setData} />
+          <div className="px-sunk mt-3 flex max-w-md flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
+            <p className="min-w-0 flex-1 basis-40 break-words" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
+            <KodamaSettings data={data} setData={setData} />
+          </div>
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)} /></div>

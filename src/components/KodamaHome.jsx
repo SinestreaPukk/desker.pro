@@ -23,7 +23,7 @@ export function KodamaSettings({ data, setData, view }) {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <button className={`${btn} ${ghost} mt-3`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{name}, {g.stage.name.toLowerCase()}</button>
+      <button className={`${btn} ${ghost} ml-auto shrink-0`} aria-haspopup="dialog" onClick={() => setOpen(true)}>{name}, {g.stage.name.toLowerCase()}</button>
       {open && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={() => setOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
           <section role="dialog" aria-modal="true" aria-label={`${name}, your kodama`} className="px-panel w-full max-w-md space-y-3 bg-yuki-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-base" onClick={(e) => e.stopPropagation()}>
