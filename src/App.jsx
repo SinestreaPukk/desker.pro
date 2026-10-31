@@ -21,6 +21,7 @@ import { addTasks } from './tasks.js'
 import { BLUE, btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
+import { toggleMilestone } from './milestones.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -91,6 +92,8 @@ export default function App() {
   const setPick = (pick) => setData((d) => ({ ...d, pick }))
   const setHobbies = (hobbies) => setData((d) => ({ ...d, hobbies }))
   const setGoals = (goals) => setData((d) => ({ ...d, goals }))
+  const milestoneReached = (goalId, m) => setToast({ stamp: true, text: `Milestone reached: ${m.title}. The kodama is happy, tomorrow is a lucky day.`,
+    undo: () => { setData((d) => ({ ...d, goals: toggleMilestone(d.goals, goalId, m.id) })); setToast(null) } })
   // mode: 'resume' keeps the draft, 'fresh' wipes it; otherwise start (or retake with earlier answers kept)
   const openGuide = (mode) => {
     if (mode === 'skip') return setData((d) => ({ ...d, guide: { ...d.guide, skipped: true } }))
@@ -173,7 +176,7 @@ export default function App() {
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
-            {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
+            {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} onMilestone={milestoneReached} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
             {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>

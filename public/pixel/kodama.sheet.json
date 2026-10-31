@@ -1,0 +1,12 @@
+{
+  "frameWidth": 24,
+  "frameHeight": 24,
+  "frames": [
+    "idle",
+    "blink",
+    "happy-a",
+    "happy-b",
+    "lucky-a",
+    "lucky-b"
+  ]
+}

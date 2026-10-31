@@ -8,6 +8,9 @@ export const Avatar = ({ scene, label = '', style }) => (
     className={`px-avatar ${scene ? 'px-avatar-scene' : ''}`} style={{ backgroundImage: `url(/pixel/${scene ? 'av-scene' : 'av-main'}.sheet.png)`, ...style }} />
 )
 
+// The kodama: a tree spirit that follows the goals' milestones (see milestones.js).
+export const Kodama = ({ mood = 'idle' }) => <span className="px-kodama" data-mood={mood} aria-hidden="true" />
+
 // Completion seal: three frames, one pass.
 export const Hanko = () => <span className="px-hanko" aria-hidden="true" />
 

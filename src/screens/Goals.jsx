@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import Review from '../Review.jsx'
 import { areaTag } from '../guide/questions.js'
+import KodamaCard from '../components/KodamaCard.jsx'
+import { msOf, progress, addMilestone, removeMilestone, toggleMilestone } from '../milestones.js'
 
 function Hobbies({ hobbies, setHobbies }) {
   const [v, setV] = useState('')
@@ -59,20 +61,24 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
   )
 }
 
-export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onReview, guide, onGuide, fresh, onMakeTasks, onDismissOffer }) {
+export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbies, tasks, onReview, guide, onGuide, fresh, onMakeTasks, onDismissOffer }) {
   const [area, setArea] = useState('')
   const areas = [...new Set(goals.map((g) => g.area).filter(Boolean))]
   const shown = area && areas.includes(area) ? goals.filter((g) => g.area === area) : goals
   const blank = { title: '', level: 3, happiness: false }
   const [d, setD] = useState(blank)
+  const [drafts, setDrafts] = useState({}) // new milestone text per goal id
+  const tick = (g, m) => { setGoals(toggleMilestone(goals, g.id, m.id)); if (!m.at) onMilestone?.(g.id, m) }
+  const addMs = (e, g) => { e.preventDefault(); setGoals(addMilestone(goals, g.id, drafts[g.id] || '')); setDrafts({ ...drafts, [g.id]: '' }) }
   const submit = (e) => {
     e.preventDefault()
     if (!d.title.trim()) return
-    setGoals(d.id ? goals.map((g) => (g.id === d.id ? d : g)) : [...goals, { ...d, id: Date.now() }])
+    setGoals(d.id ? goals.map((g) => (g.id === d.id ? { ...d, milestones: g.milestones } : g)) : [...goals, { ...d, id: Date.now() }])
     setD(blank)
   }
   return (
     <>
+      <KodamaCard goals={goals} className="mb-4" />
       <GuideEntry goals={goals} guide={guide} onGuide={onGuide} setSkipped={() => onGuide('skip')} />
       {fresh?.offer && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 bg-pale p-4 text-base">
@@ -108,12 +114,30 @@ export default function Goals({ goals, setGoals, hobbies, setHobbies, tasks, onR
             <ul className="mt-3 space-y-2">
               {!shown.some((g) => g.level === i) && <li className="text-center text-base text-slate-800">No goals yet</li>}
               {shown.filter((g) => g.level === i).map((g) => (
-                <li key={g.id} className={`flex items-center justify-between gap-2 bg-yuki-0 px-4 py-2 ${fresh?.ids.includes(g.id) ? 'ring-2 ring-accent' : ''}`}>
+                <li key={g.id} className={`bg-yuki-0 px-4 py-2 ${fresh?.ids.includes(g.id) ? 'ring-2 ring-accent' : ''}`}>
+                  <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 break-words">{g.top && <span aria-label="Top 3 goal" className="mr-2 bg-beni px-1 text-xs text-yuki-0">Top 3</span>}{g.title}{g.area && <span className={`ml-2 px-2 text-xs ${areaTag(g.area)}`}>{g.area}</span>}{g.happiness && <span className="ml-2 bg-pale px-2 text-xs">happiness</span>}</span>
                   <span className="flex shrink-0 gap-1">
                     <button className={`${btn} hover:bg-slate-100`} onClick={() => setD(g)}>Edit</button>
                     <button className={`${btn} text-danger hover:bg-slate-100`} onClick={() => setGoals(goals.filter((x) => x.id !== g.id))}>Delete</button>
                   </span>
+                  </div>
+                  <div className="mt-2">
+                    <p className="flex flex-wrap items-center gap-2 text-base text-slate-700">Milestones <span className="flex gap-1" aria-hidden="true">{msOf(g).map((m) => <span key={m.id} className={`px-pip ${m.at ? 'px-pip-on' : ''}`} />)}</span>{msOf(g).length > 0 && `${progress(g).done} of ${progress(g).total}`}</p>
+                    <ul className="mt-1 space-y-1">
+                      {msOf(g).map((m) => (
+                        <li key={m.id} className="flex items-center gap-2">
+                          <input type="checkbox" checked={!!m.at} onChange={() => tick(g, m)} aria-label={`Reached: ${m.title}`} />
+                          <span className={`min-w-0 flex-1 break-words ${m.at ? 'text-slate-700 line-through' : ''}`}>{m.title}</span>
+                          <button className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-700 hover:bg-yuki-1" aria-label={`Remove milestone ${m.title}`} onClick={() => setGoals(removeMilestone(goals, g.id, m.id))}>×</button>
+                        </li>
+                      ))}
+                    </ul>
+                    <form className="mt-1 flex gap-2" onSubmit={(e) => addMs(e, g)}>
+                      <input className={`${input} min-w-0 flex-1`} placeholder="Add a milestone" aria-label={`New milestone for ${g.title}`} value={drafts[g.id] || ''} onChange={(e) => setDrafts({ ...drafts, [g.id]: e.target.value })} />
+                      <button className={`${btn} ${ghost}`}>Add</button>
+                    </form>
+                  </div>
                 </li>
               ))}
             </ul>

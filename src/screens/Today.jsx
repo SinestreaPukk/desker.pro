@@ -4,6 +4,7 @@ import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy, energyProfile, ranges } from '../energy.js'
 import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
+import KodamaCard from '../components/KodamaCard.jsx'
 import Review from '../Review.jsx'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
@@ -114,6 +115,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
+          <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />
           {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Scene /></div>
@@ -219,6 +221,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </details>
         </section>
 
+        <KodamaCard goals={goals} className="sm:hidden lg:col-span-12" />
         <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
             <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
