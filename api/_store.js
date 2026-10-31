@@ -74,19 +74,34 @@ const upsert = (t, uid, list) => {
   const c = ['id', 'pos', ...cols(t), 'extra']
   const defs = ['id bigint', 'pos int', ...SPEC[t].map(([, col, type]) => `${col} ${SQLTYPE[type]}`), 'extra jsonb']
   const set = c.filter((x) => x !== 'id').map((x) => `${x} = excluded.${x}`).join(', ')
-  return [`insert into ${t} (user_id, ${c.join(', ')}) select $1::text, x.* from jsonb_to_recordset($2::jsonb) as x(${defs.join(', ')})
-           on conflict (user_id, id) do update set ${set}, updated_at = now()`, [uid, JSON.stringify(list)]]
+  const mine = c.filter((x) => x !== 'id').map((x) => `t.${x}`).join(', '), theirs = c.filter((x) => x !== 'id').map((x) => `excluded.${x}`).join(', ')
+  // rows that did not change are not rewritten, so a save costs by what changed, not by the size of the workspace
+  return [`insert into ${t} as t (user_id, ${c.join(', ')}) select $1::text, x.* from jsonb_to_recordset($2::jsonb) as x(${defs.join(', ')})
+           on conflict (user_id, id) do update set ${set}, updated_at = now() where (${mine}) is distinct from (${theirs})`, [uid, JSON.stringify(list)]]
 }
 
-export async function saveDoc(uid, doc) {
+// `rev` is the version the client last saw (users.settings._rev). Pass it and a save from a stale copy throws Error('conflict')
+// instead of overwriting newer data; omit it (API keys, first-sign-in claim) to save unconditionally. Every save bumps the version.
+// The check row-locks the user, so two saves racing for the same user serialise. Returns the new version.
+export async function saveDoc(uid, doc, rev = null) {
   const rows = toRows(doc)
-  const settings = Object.fromEntries(SETTINGS.filter((k) => doc[k] !== undefined).map((k) => [k, doc[k]]))
-  const q = [hasContent(doc)
-    ? ['insert into users (id, settings) values ($1, $2::jsonb) on conflict (id) do update set settings = excluded.settings, last_seen_at = now()', [uid, JSON.stringify(settings)]]
-    : ['update users set settings = $2::jsonb, last_seen_at = now() where id = $1', [uid, JSON.stringify(settings)]]] // an empty visitor never gets a row
+  const settings = JSON.stringify(Object.fromEntries(SETTINGS.filter((k) => doc[k] !== undefined).map((k) => [k, doc[k]])))
+  const next = `$2::jsonb || jsonb_build_object('_rev', coalesce((select (settings->>'_rev')::bigint from users where id = $1), 0) + 1)`
+  const q = [
+    [`select 1 / (case when $2::bigint is null or coalesce((select (settings->>'_rev')::bigint from users where id = $1 for update), 0) = $2::bigint then 1 else 0 end)`, [uid, rev]], // 22012 when stale
+    hasContent(doc)
+      ? [`insert into users (id, settings) values ($1, ${next}) on conflict (id) do update set settings = excluded.settings, last_seen_at = now() returning (settings->>'_rev')::bigint as rev`, [uid, settings]]
+      : [`update users set settings = ${next}, last_seen_at = now() where id = $1 returning (settings->>'_rev')::bigint as rev`, [uid, settings]], // an empty visitor never gets a row
+  ]
   for (const t of ORDER) if (rows[t].length) q.push(upsert(t, uid, rows[t]))
   for (const t of [...ORDER].reverse()) q.push([`delete from ${t} where user_id = $1 and not (id = any($2::bigint[]))`, [uid, rows[t].map((r) => r.id)]])
-  await sql.transaction((txn) => q.map(([text, params]) => txn.query(text, params)))
+  try {
+    const out = await sql.transaction((txn) => q.map(([text, params]) => txn.query(text, params)))
+    return Number(out[1][0]?.rev ?? 0)
+  } catch (e) {
+    if (e?.code === '22012') throw Object.assign(new Error('conflict'), { conflict: true })
+    throw e
+  }
 }
 
 const DATES = new Set(['date'])

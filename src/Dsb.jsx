@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BLUE, btn, input, panel } from './ui.js'
 
 const NAMES = { chat: 'AI agent chat', deadline: 'Split a task / deadline', project: 'Project breakdown', prioritise: 'Prioritise tasks', now: 'Right now pick', syllabus: 'Syllabus import', replan: 'Replan week', read: 'Read file, photo or link' }
@@ -21,17 +21,20 @@ export default function Dsb() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = async (e) => {
-    e.preventDefault()
+  const load = async (e, quiet) => {
+    e?.preventDefault?.()
     setBusy(true); setError('')
     try {
       const r = await fetch('/api/dsb', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: pw }) })
       const out = await r.json().catch(() => ({}))
+      if (!r.ok && quiet) return setBusy(false) // not the owner: show the password form
       if (!r.ok) throw new Error(r.status === 429 ? 'Too many tries. Wait an hour.' : out.error || 'Something went wrong')
       setData(out)
     } catch (err) { setError(err.message) }
     setBusy(false)
   }
+
+  useEffect(() => { load(null, true) }, []) // the signed-in owner skips the password
 
   if (!data) return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-6">
@@ -44,7 +47,8 @@ export default function Dsb() {
     </main>
   )
 
-  const { counts: c, ai, kinds, daily } = data
+  const { counts: c, ai, kinds, daily, habit: h } = data
+  const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'n/a')
   const tokens = ai.input + ai.output
   const max = Math.max(1, ...daily.map((d) => d.tokens))
   const th = 'px-3 py-2 text-left font-medium'
@@ -56,9 +60,16 @@ export default function Dsb() {
         <button className={`${btn} border border-control bg-white`} onClick={load} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
       </div>
 
+      <h2 className="mb-2 font-semibold">Habit</h2>
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Back the next day" value={pct(h.back1, h.eligible1)} sub={`${h.back1} of ${h.eligible1} accounts signed up at least a day ago`} />
+        <Tile label="Back a week later" value={pct(h.back7, h.eligible7)} sub={`${h.back7} of ${h.eligible7} accounts signed up at least a week ago`} />
+        <Tile label="Finished the goals guide" value={pct(h.guide_done, c.users)} sub={`${h.guide_done} of ${c.users} accounts, ${h.guide_started} started it`} />
+      </div>
+
       <h2 className="mb-2 font-semibold">People and content</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data, ${c.active7} active in 7 days, anonymous browsers`} />
+        <Tile label="Users" value={n(c.users)} sub={`${c.verified} verified, ${c.with_data} with data, ${c.active7} active in 7 days`} />
         <Tile label="Tasks" value={n(c.tasks)} sub={`${n(c.doneTasks)} done`} />
         <Tile label="Projects" value={n(c.projects)} />
         <Tile label="Deadlines" value={n(c.deadlines)} />

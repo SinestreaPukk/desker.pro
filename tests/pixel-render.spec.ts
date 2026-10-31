@@ -6,14 +6,18 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const PALETTE = 'pixel-kit/art/palette/yuki16.json'
+const PALETTE = 'art/palette/scene.json'
 const LINT = 'pixel-kit/tools/pixel_lint.py'
 const day = (n: number) => new Date(Date.now() + n * 864e5).toLocaleDateString('sv')
 const state = {
+  onboarding: { done: true },
   goals: [{ id: 1, title: 'Graduate with honours', level: 2 }], hobbies: [], projects: [], freeHours: 4,
   deadlines: [{ id: 1, title: 'Midterm', date: day(3), hours: 6 }],
   tasks: [{ id: 1, title: 'Finish lab report', due: day(1), important: true, urgent: true, hours: 2 }, { id: 2, title: 'Read chapter 4', due: day(5), important: true, urgent: false }],
 }
+
+// The app sits behind sign-in: answer the session check as a signed-in user.
+const signIn = (page: Page) => page.route('**/api/auth/get-session*', (r) => r.fulfill({ json: { session: { id: 's', userId: 'u', expiresAt: '2030-01-01T00:00:00Z', token: 't' }, user: { id: 'u', name: 'Sak', email: 'a@b.c', emailVerified: true } } }))
 
 function lint(png: string, scale: number) {
   try {
@@ -26,6 +30,7 @@ function lint(png: string, scale: number) {
 async function open(page: Page, hour: number) {
   await page.addInitScript(() => { localStorage.guideSeen = '1' })
   await page.clock.setFixedTime(new Date(2026, 9, 30, hour, 0, 0))
+  await signIn(page)
   await page.route('**/api/state*', (r) => (r.request().method() === 'PUT' ? r.fulfill({ body: '{}' }) : r.fulfill({ json: state })))
   await page.goto('/today')
   await page.waitForSelector('.px-scene')
@@ -77,14 +82,30 @@ for (const width of [390, 768, 1440]) {
   }
 }
 
+for (const season of ['winter', 'spring', 'summer', 'autumn']) {
+  test(`the ${season} scene is crisp`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 }, deviceScaleFactor: 1 })
+    const page = await ctx.newPage()
+    await signIn(page)
+    await page.route('**/api/state*', (r) => (r.request().method() === 'PUT' ? r.fulfill({ body: '{}' }) : r.fulfill({ json: state })))
+    await page.goto(`/today?season=${season}`)
+    await page.waitForSelector('.px-scene')
+    const png = join(mkdtempSync(join(tmpdir(), 'px-')), 'scene.png')
+    await page.locator('.px-scene').screenshot({ path: png })
+    lint(png, 4)
+    await ctx.close()
+  })
+}
+
 test('reduced motion removes the snow and the blink', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
   const page = await ctx.newPage()
   await page.addInitScript(() => { localStorage.guideSeen = '1' })
+  await signIn(page)
   await page.route('**/api/state*', (r) => (r.request().method() === 'PUT' ? r.fulfill({ body: '{}' }) : r.fulfill({ json: state })))
   await page.goto('/today')
   await page.waitForSelector('.px-scene')
-  const anim = await page.locator('.px-avatar-scene').evaluate((el) => getComputedStyle(el).animationName)
+  const anim = await page.locator('.px-avatar').first().evaluate((el) => getComputedStyle(el).animationName)
   expect(anim).toBe('none')
   const flakes = await page.locator('.px-flake').evaluateAll((cs: HTMLCanvasElement[]) => cs.some((c) => c.getContext('2d')!.getImageData(0, 0, 192, 80).data.some((v) => v !== 0)))
   expect(flakes, 'nothing is drawn').toBe(false)

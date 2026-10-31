@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { stateUrl } from './api.js'
 import { settle } from './tasks.js'
 import { applyPlan as applyReplan } from './replan.js'
@@ -68,8 +68,10 @@ export default function App() {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [saveError, setSaveError] = useState(false)
+  const saving = useRef(Promise.resolve())
+  const rev = useRef(0) // version of the server copy we last saw; a save from a stale copy is refused (409), never overwrites
   useEffect(() => {
-    fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then((d) => setData(migrate(d))).catch((e) => setLoadError(e.message))
+    fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then((d) => { rev.current = d._rev || 0; setData(migrate(d)) }).catch((e) => setLoadError(e.message))
   }, [])
   // keep an imported calendar fresh (at most hourly)
   const stale = data?.sync?.url && Date.now() - data.sync.at > 36e5 ? data.sync.url : null
@@ -79,8 +81,9 @@ export default function App() {
   useEffect(() => {
     if (!data) return
     const id = setTimeout(() => {
-      fetch(stateUrl, { method: 'PUT', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify(data) })
-        .then((r) => setSaveError(!r.ok)).catch(() => setSaveError(true))
+      // one save at a time, so each carries the version the previous one returned
+      saving.current = saving.current.then(() => fetch(stateUrl, { method: 'PUT', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...data, _rev: rev.current }) })
+        .then(async (r) => { if (r.ok) rev.current = (await r.json()).rev ?? rev.current; setSaveError(r.status === 409 ? 'conflict' : !r.ok) }).catch(() => setSaveError(true)))
     }, 500)
     return () => clearTimeout(id)
   }, [data])
@@ -176,7 +179,7 @@ export default function App() {
         </header>
 
         <main className="mx-auto w-full max-w-[1400px] px-4 pb-32 pt-4 md:px-8 md:pt-8">
-          {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">Your latest changes could not be saved. Check your connection; they will retry on the next change.</p>}
+          {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">{saveError === 'conflict' ? <>Desker was changed on another device, so your latest edits were not saved. <button className="underline" onClick={() => location.reload()}>Reload to get the latest</button>.</> : 'Your latest changes could not be saved. Check your connection; they will retry on the next change.'}</p>}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>

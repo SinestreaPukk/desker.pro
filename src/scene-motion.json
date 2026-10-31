@@ -4,17 +4,47 @@
     "night": {
       "back": "#8394AE",
       "front": "#DDE6EA",
-      "glint": "#8394AE"
+      "glint": "#8394AE",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "morning": {
       "back": "#B4C5D1",
       "front": "#F4F7F6",
-      "glint": "#DDE6EA"
+      "glint": "#DDE6EA",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "dusk": {
       "back": "#8394AE",
       "front": "#F0D2C2",
-      "glint": "#F0D2C2"
+      "glint": "#F0D2C2",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
+    }
+  },
+  "spring": {
+    "fall": "none",
+    "night": {
+      "back": "#31474A",
+      "front": "#7E9C8F",
+      "glint": "#8394AE",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
+    },
+    "morning": {
+      "back": "#4F6E68",
+      "front": "#F4F7F6",
+      "glint": "#DDE6EA",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
+    },
+    "dusk": {
+      "back": "#31474A",
+      "front": "#F0D2C2",
+      "glint": "#F0D2C2",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     }
   },
   "summer": {
@@ -22,35 +52,47 @@
     "night": {
       "back": "#31474A",
       "front": "#7E9C8F",
-      "glint": "#8394AE"
+      "glint": "#8394AE",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "morning": {
       "back": "#4F6E68",
       "front": "#F4F7F6",
-      "glint": "#DDE6EA"
+      "glint": "#DDE6EA",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "dusk": {
       "back": "#31474A",
       "front": "#F0D2C2",
-      "glint": "#F0D2C2"
+      "glint": "#F0D2C2",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     }
   },
-  "rainy": {
-    "fall": "rain",
+  "autumn": {
+    "fall": "none",
     "night": {
-      "back": "#8DBCCB",
-      "front": "#B4C5D1",
-      "glint": "#5A6283"
+      "back": "#DE8A4E",
+      "front": "#F0D2C2",
+      "glint": "#8394AE",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "morning": {
-      "back": "#8DBCCB",
-      "front": "#B4C5D1",
-      "glint": "#DDE6EA"
+      "back": "#DE8A4E",
+      "front": "#F0D2C2",
+      "glint": "#DDE6EA",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     },
     "dusk": {
-      "back": "#8DBCCB",
-      "front": "#B4C5D1",
-      "glint": "#8394AE"
+      "back": "#DE8A4E",
+      "front": "#F0D2C2",
+      "glint": "#F0D2C2",
+      "rainBack": "#8DBCCB",
+      "rainFront": "#B4C5D1"
     }
   },
   "shimmer": [

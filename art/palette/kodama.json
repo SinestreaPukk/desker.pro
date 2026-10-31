@@ -1,14 +1,13 @@
 {
   "name": "kodama",
-  "note": "The one exception to yuki16: colours read off the kodama pose sheet. Used only by the kodama sprite.",
+  "note": "The one exception to yuki16: the colours of the user's kodama picture (kodama-reference.jpg). Used only by the kodama sprite.",
   "colors": {
-    "lime": "#BDD759",
-    "lime-hi": "#D1E281",
-    "line": "#3F2919",
-    "leg": "#3D925F",
-    "moss": "#708C3A",
-    "blush": "#E07F4C",
-    "eye": "#F5F2CE",
-    "lime-lo": "#9FBF42"
+    "line": "#412B1D",
+    "lime": "#B7D34B",
+    "lime-hi": "#CDDF7B",
+    "lime-lo": "#9CBC3D",
+    "leg": "#418D5F",
+    "blush": "#DE7C4A",
+    "eye": "#F2EEC8"
   }
 }

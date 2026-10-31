@@ -12,13 +12,22 @@ export default async function handler(req, res) {
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
   if (!(await limit(req, res, { scope: 'state', max: 600, id: uid }))) return // autosave PUTs are frequent
-  if (req.method === 'GET') return res.json(await loadDoc(uid))
+  if (req.method === 'GET') {
+    const doc = await loadDoc(uid)
+    await sql.query('insert into user_day (user_id) select id from users where id = $1 on conflict do nothing', [uid]) // no users row yet = nothing to count
+    return res.json(doc)
+  }
   if (req.method === 'PUT') {
     const body = req.body || {}
     if (!['goals', 'tasks'].every((k) => Array.isArray(body[k])) || ARRAYS.some((k) => body[k] !== undefined && !Array.isArray(body[k])) || JSON.stringify(body).length > 200_000)
       return res.status(400).json({ error: 'Invalid or too large' })
-    await saveDoc(uid, Object.fromEntries(KEYS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]])))
-    return res.json({ ok: true })
+    try {
+      const rev = await saveDoc(uid, Object.fromEntries(KEYS.filter((k) => body[k] !== undefined).map((k) => [k, body[k]])), Number.isSafeInteger(body._rev) ? body._rev : null)
+      return res.json({ ok: true, rev })
+    } catch (e) {
+      if (e.conflict) return res.status(409).json({ error: 'Changed on another device' })
+      throw e
+    }
   }
   if (req.method === 'POST') { // first sign-in on a browser that already has anonymous data: move it into the account, once
     const from = req.body?.claim

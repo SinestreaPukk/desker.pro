@@ -1,0 +1,54 @@
+{
+ "name": "yuki16+daidai",
+ "note": "Cold, muted 16-colour palette. Ramps are hue-shifted: shadows lean blue/violet, highlights lean cyan/warm. beni is the only saturated warm and is reserved for urgency (Do now) and the completion stamp.",
+ "colors": {
+  "yuki-0": "#F4F7F6",
+  "yuki-1": "#DDE6EA",
+  "yuki-2": "#B4C5D1",
+  "yuki-3": "#8394AE",
+  "yoru-0": "#5A6283",
+  "yoru-1": "#3B4262",
+  "yoru-2": "#252A40",
+  "kori-1": "#8DBCCB",
+  "kori-2": "#5A8AA3",
+  "matsu-0": "#7E9C8F",
+  "matsu-1": "#4F6E68",
+  "matsu-2": "#31474A",
+  "beni": "#B4534A",
+  "hada-0": "#F0D2C2",
+  "hada-1": "#D49E95",
+  "kuri": "#8C6A5C",
+  "daidai-0": "#F0B27A",
+  "daidai-1": "#DE8A4E",
+  "daidai-2": "#B8604A"
+ },
+ "ramps": {
+  "snow": [
+   "yuki-0",
+   "yuki-1",
+   "yuki-2",
+   "yuki-3",
+   "yoru-0",
+   "yoru-1",
+   "yoru-2"
+  ],
+  "ice": [
+   "yuki-0",
+   "kori-1",
+   "kori-2",
+   "yoru-1"
+  ],
+  "pine": [
+   "matsu-0",
+   "matsu-1",
+   "matsu-2",
+   "yoru-2"
+  ],
+  "skin": [
+   "hada-0",
+   "hada-1",
+   "kuri",
+   "yoru-1"
+  ]
+ }
+}

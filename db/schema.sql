@@ -181,3 +181,10 @@ create index if not exists auth_hit_key on auth_hit (key, at);
 alter table "user" add column if not exists username text;
 alter table "user" add column if not exists "displayUsername" text;
 create unique index if not exists user_username on "user" (username);
+
+-- One row per account per UTC day the app was opened (api/state.js GET). Feeds the return-rate numbers on /dsb.
+create table if not exists user_day (
+  user_id text not null references users(id) on delete cascade,
+  day     date not null default current_date,
+  primary key (user_id, day)
+);

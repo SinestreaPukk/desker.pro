@@ -24,6 +24,8 @@ HOR = 62          # the horizon: sky above, city below
 LEDGE = 181       # top of the wooden shelf you stand at
 SKYH = 112        # the sky gradient runs this far down, behind the skyline
 BASE_Y = 156      # where the towers stand; the street runs below
+KEEP_LIT = .5     # share of lit windows that stay lit
+thin = random.Random(7)   # its own dice, so thinning never moves a tower
 BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 dith = lambda x, y, t: BAYER[y % 4][x % 4] < t * 16
 rgb = lambda h: tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) + (255,)
@@ -97,6 +99,7 @@ def tower(im, rng, P, x0, w, top, c, dens, lights, reg, tier):
         for wx in range(x0 + 2, x1 - 1, 2):
             lit = rng.random() < rowp
             col = rng.choice(win['cool']) if lit and rng.random() < win['cool_p'] else rng.choice(win['lit']) if lit else win['dim']
+            if lit and thin.random() >= KEEP_LIT: lit, col = False, win['dim']      # the same towers as ever, but a quieter night: only some lit windows stay lit
             px(im, wx, wy, rgb(col))
             if lit and reg: lights.append((wx, wy, wx, wy, 'win'))
     if P['night'] and tier != 'far' and w >= 10 and rng.random() < .3:             # a lit crown band

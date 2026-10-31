@@ -249,8 +249,13 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
               <section key={q.name} className={`px-panel p-3 ${over === i ? 'outline outline-2 outline-accent' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setOver(i) }} onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget) && setOver(null)}
                 onDrop={(e) => { e.preventDefault(); setOver(null); const id = +e.dataTransfer.getData('text/plain'); if (tasks.some((t) => t.id === id)) move(id, i) }}>
-                <h2 className="flex items-center gap-2 text-base font-semibold"><span className={`${q.tab} px-tab`}>{q.name}</span><span className="ml-auto bg-yuki-1 px-2 text-xs font-normal text-ink">{rows.length}</span></h2>
-                <p className="mt-2 px-1 text-xs text-slate-700">{q.hint}</p>
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="flex items-center gap-2 text-base font-semibold"><span className={`${q.tab} px-tab`}>{q.name}</span><span className="bg-yuki-1 px-2 text-xs font-normal text-ink">{rows.length}</span></h2>
+                    <p className="mt-2 px-1 text-xs text-slate-700">{q.hint}</p>
+                  </div>
+                  <img src={['/pixel/i-flag.png', '/pixel/i-calendar.png', '/pixel/i-clock.png', '/pixel/spot-later.png'][i]} alt="" width="32" height="32" className="px-art shrink-0" style={{ width: 'calc(16 * var(--px))', height: 'calc(16 * var(--px))' }} />
+                </div>
                 <ul className="mt-3 space-y-2">{rows.map((t) => row(t, true))}{!rows.length && <li className="text-base text-slate-700">Nothing here</li>}</ul>
               </section>
             )

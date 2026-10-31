@@ -116,12 +116,9 @@ details > summary::-webkit-details-marker { display: none; }
 details > summary::before { content: ''; display: inline-block; width: calc(4 * var(--px)); height: calc(4 * var(--px)); margin-right: calc(2 * var(--px)); background: currentColor; clip-path: polygon(0 0, 50% 0, 50% 25%, 75% 25%, 75% 50%, 100% 50%, 100% 50%, 75% 50%, 75% 75%, 50% 75%, 50% 100%, 0 100%); }
 details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 50%, 75% 75%, 25% 75%, 25% 50%, 0 50%); }
 
-/* Avatars: 24x24 sprite, 2 frames (idle, blink), drawn at 2x = 48px */
+/* Avatars (Deskie): 24x24 sprite, 2 frames (idle, blink), drawn at 2x = 48px */
 .px-avatar { width: calc(24 * var(--px)); height: calc(24 * var(--px)); flex: none; background-size: calc(48 * var(--px)) calc(24 * var(--px)); background-repeat: no-repeat; image-rendering: pixelated; animation: blink 4s steps(1) infinite; }
-.px-avatar-scene { width: calc(24 * var(--px-scene)); height: calc(24 * var(--px-scene)); background-size: calc(48 * var(--px-scene)) calc(24 * var(--px-scene)); }
 @keyframes blink { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px)) 0; } }
-.px-avatar-scene { animation-name: blink-scene; }
-@keyframes blink-scene { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
 
 /* Kodama: 44x44 sprite, 6 frames (idle, blink, happy a/b, lucky a/b), at --px. Idle plays with a leaf and blinks, happy jumps, lucky waves and sparkles. */
 .px-kodama { width: calc(44 * var(--px)); height: calc(44 * var(--px)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(264 * var(--px)) calc(44 * var(--px)) no-repeat; image-rendering: pixelated; }
@@ -149,10 +146,9 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @media (min-width: 640px) { .px-scene { --crop: 0; }
   .px-scene { height: calc(80 * var(--px-scene)); } }
 @media (min-width: 1024px) { .px-scene { width: calc(192 * var(--px-scene)); flex: none; } .px-scene > img { left: 0; margin-left: 0; } }
-.px-scene > .px-avatar { position: absolute; }
 .px-flake { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .px-strip { height: calc(24 * var(--px-scene)); overflow: hidden; position: relative; background: var(--color-kori-1); width: 100%; }
-.px-strip > img { position: absolute; left: 50%; top: calc(-32 * var(--px-scene)); margin-left: calc(-96 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
+.px-strip > img { position: absolute; left: 50%; top: 0; margin-left: calc(-96 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }
 @media (min-width: 1024px) { .px-strip { width: calc(192 * var(--px-scene)); flex: none; } .px-strip > img { left: 0; margin-left: 0; } }
 
 /* Dialog backdrop and dotted row rule */
@@ -167,7 +163,7 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 .hour-lines { background-image: url(/pixel/divider.png); background-size: calc(4 * var(--px)) var(--px); background-repeat: repeat-x; image-rendering: pixelated; }
 
 @media (prefers-reduced-motion: reduce) {
-  .px-avatar, .px-avatar-scene, .px-kodama, .dot, .cheer { animation: none; }
+  .px-avatar, .px-kodama, .dot, .cheer { animation: none; }
   .px-kodama[data-mood='idle'] { background-position: 0 0; }
   .px-hanko { animation: none; background-position: calc(-32 * var(--px)) 0; }
   .px-btn:active:not(:disabled) { transform: none; }
