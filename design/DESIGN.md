@@ -165,3 +165,7 @@ The banner now follows the calendar as well as the clock: `scene-{winter,spring,
 ### Kodama redesign (as built)
 
 The kodama now comes from the four-pose pixel sheet (`kodama_read.py` reads the 8px grid, `kodama_poses.py` quantises and cuts the poses, `gen_kodama.py` builds `kodama.sheet.png`: 44x44, six frames, drawn at `--px`, palette `art/palette/kodama.json`). Default (idle) is the leaf-play pose with a blink; happy is the jumping pose with a 2px hop; lucky is the waving pose with sparkles. The log pose is cut from the sheet but not used yet. The sparkles and the blink are the only parts not on the sheet.
+
+### Kodama at low resolution (as built)
+
+The kodama is now 24x24 per frame (was 44x44), drawn at `--px-scene` (4px on desktop, 2px on phones), so each art pixel is twice as big. Head shape, light and colours still come from the pose sheet; the faces, limbs and sparkles are hand-drawn at this size in `art/authoring/gen_kodama.py` (a straight downsample of the sheet ate the faces). The tracing scripts for the high-resolution version are gone; it is in git history.
