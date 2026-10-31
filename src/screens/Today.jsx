@@ -9,6 +9,7 @@ import PlayerCard from '../components/PlayerCard.jsx'
 import Insights from '../components/Insights.jsx'
 import { sceneChoice } from '../game.js'
 import Review from '../Review.jsx'
+import { overlaps } from '../schedule.js'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
@@ -69,13 +70,16 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const doFirst = open.filter((t) => quadrant(t) === 0)
   const missed = tasks.filter((t) => isMissed(t))
   const stats = doneStats(tasks)
+  const clashes = overlaps(tasks, data.busy || []).length // planned times that overlap (older plans, or edits by hand)
   const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
   const soon = [
     ...deadlines.map((d) => ({ id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline' })),
     ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task' })),
   ].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))
   const thisWeek = soon.filter((x) => x.date <= weekEnd)
-  const finding = missed.length
+  const finding = clashes
+    ? `${clashes === 1 ? 'Two things are' : 'Some things are'} planned at the same time. Replan to fix it.`
+    : missed.length
     ? `${missed.length} planned task${missed.length === 1 ? '' : 's'} slipped past ${missed.length === 1 ? 'its' : 'their'} time.`
     : thisWeek.length ? `${thisWeek[0].title} is due ${thisWeek[0].date === today ? 'today' : fmtDate(thisWeek[0].date)}.`
     : doFirst.length ? `${doFirst.length} thing${doFirst.length === 1 ? '' : 's'} to do first.`
@@ -129,7 +133,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
           {goals.length > 0 && <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />} {/* the milestone prompt waits until there is a goal: a new user needs a first task, not this */}
-          {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
+          {(missed.length > 0 || clashes > 0) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
       </header>

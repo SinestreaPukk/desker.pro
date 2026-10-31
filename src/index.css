@@ -160,7 +160,8 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @keyframes step { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(calc(-1 * var(--px))); } }
 
 /* calendar hour lines */
-.hour-lines { background-image: url(/pixel/divider.png); background-size: calc(4 * var(--px)) var(--px); background-repeat: repeat-x; image-rendering: pixelated; }
+/* one 2px line per hour; --hour is the hour height (not --px, which would also resize every border drawn inside the grid) */
+.hour-lines { background-image: linear-gradient(var(--color-yuki-2) var(--px), transparent var(--px)); background-size: 100% var(--hour); }
 
 @keyframes hop { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(calc(-4 * var(--px))) } }
 .px-hop > .px-avatar { display: block; }

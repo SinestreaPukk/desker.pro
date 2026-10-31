@@ -3,6 +3,7 @@ import { post } from './api.js'
 import { btn, BLUE, ghost } from './ui.js'
 import { isMissed } from './tasks.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
+import { planWeek } from './schedule.js'
 
 const when = (w, s) => `${new Date(`${w}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${s ? ` ${s}` : ''}`
 
@@ -13,6 +14,10 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
     setState({ loading: true })
     const open = data.tasks.filter((t) => !t.done && !t.fun)
     if (!open.length) return setState({ error: 'You have no open tasks to plan. Add some in Tasks first.' })
+    const today = new Date().toLocaleDateString('sv')
+    const ctx = { tasks: data.tasks, busy: data.busy || [], deadlines: data.deadlines || [], freeHours: data.freeHours ?? 4, freeToday: data.freeToday?.date === today ? data.freeToday.hours : undefined,
+      scale: ratio > 0 ? Math.min(3, Math.max(0.5, ratio)) : 1 }
+    let aiPlan, aiNote = ''
     try {
       const out = await post('/api/replan', {
         tasks: open.map(({ id, title, due, when, start, hours, readiness, important, urgent, deadlineId }) => ({ id, title, due, when, start, hours, readiness, important, urgent, deadlineId, missed: isMissed({ when, start, hours }) })),
@@ -20,11 +25,15 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
         freeHours: data.freeHours, freeToday: data.freeToday?.date === new Date().toLocaleDateString('sv') ? data.freeToday.hours : undefined,
         busy, energy, ratio, now: new Date().toLocaleString(),
       })
-      const plan = validPlan(out.plan, data.tasks)
-      if (!plan.length) throw new Error('The AI gave an unreadable answer. Please try again.')
-      const d = diff(data.tasks, plan)
-      setState({ plan, d, note: typeof out.note === 'string' ? out.note : '', risk: risks(applyPlan(data.tasks, plan), data.deadlines || [], data.freeHours) })
-    } catch (err) { setState({ error: err.message }) }
+      aiPlan = validPlan(out.plan, data.tasks)
+      if (!aiPlan.length) throw new Error('unreadable')
+      aiNote = typeof out.note === 'string' ? out.note : ''
+    } catch { aiPlan = undefined; aiNote = 'The AI agent could not be reached, so Desker planned this itself from your deadlines, free time and calendar.' }
+    // Whatever the AI proposed is checked here: no overlaps, free-time caps and deadlines are enforced by code, not trusted.
+    const { plan, problems } = planWeek({ ...ctx, aiPlan })
+    if (!plan.length && !problems.length) return setState({ error: 'Nothing could be planned. Check your free time per day in the AI agent panel.' })
+    const d = diff(data.tasks, plan)
+    setState({ plan, d, note: aiNote, risk: [...problems.map((p) => p.why), ...risks(applyPlan(data.tasks, plan), data.deadlines || [], ctx.freeHours).map((r) => `${r.title}: ${r.why}`)] })
   }
   useEffect(() => { run() }, [])
   const { loading, error, plan, d, note, risk } = state
@@ -63,7 +72,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
           {risk.length > 0 ? (
             <div className="mb-3 bg-yuki-1 p-3 text-base">
               <h3 className="font-semibold text-danger">At risk of missing a deadline</h3>
-              <ul className="mt-1 list-disc pl-5">{risk.map((r, i) => <li key={i}><b>{r.title}</b>: {r.why}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5">{risk.map((r, i) => <li key={i}>{r}</li>)}</ul>
             </div>
           ) : <p className="mb-3 text-base text-leaf">No deadline looks at risk with this plan.</p>}
           <div className="flex flex-wrap gap-2">

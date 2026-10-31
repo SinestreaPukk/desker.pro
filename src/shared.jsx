@@ -1,8 +1,9 @@
 import { post } from './api.js'
 import { isMissed, timeRatio } from './tasks.js'
 import { energyProfile } from './energy.js'
+import { repair } from './schedule.js'
 import { encodeFile } from './files.js'
-import { LEVELS, Q } from './ui.js'
+import { LEVELS, Q, CAL } from './ui.js'
 
 // Plain-language answer to "where does this belong?", shown where work is created.
 export const WorkHelp = ({ className = '' }) => (
@@ -65,12 +66,16 @@ export function fromCalendar(tasks) {
 }
 
 export const dateKey = (t) => t.when || t.due
-export const color = (t) => (t.fun ? 'bg-pale' : quadrant(t) === undefined ? 'bg-white border' : Q[quadrant(t)].cls)
+export const color = (t) => (t.fun ? CAL.fun : CAL.task)
 export const minutes = (ms) => { const d = new Date(ms); return d.getHours() * 60 + d.getMinutes() }
 export const DATE = /^\d{4}-\d\d-\d\d$/
 // Merge the AI agent's plan into the workspace.
-export function applyPlan(d, o) {
+export const applyPlan = (d, o) => applyPlanChecked(d, o).data
+// The AI's times are proposals: every slot it set is checked by the scheduler (overlaps, free time, deadlines) and moved if invalid.
+// Returns { data, problems } where problems are plain sentences for things that could not be made to fit.
+export function applyPlanChecked(d, o) {
   const ups = new Map((o.updates || []).map((u) => [u.id, u]))
+  const changed = []
   const tasks = d.tasks.map((t) => {
     const u = ups.get(t.id)
     if (!u) return t
@@ -79,12 +84,17 @@ export function applyPlan(d, o) {
     if (Number.isFinite(u.hours)) p.hours = u.hours
     if (DATE.test(u.when)) p.when = u.when
     if (/^\d\d:\d\d$/.test(u.start)) p.start = u.start
+    if (p.when || p.start) changed.push(t.id)
     return { ...t, ...p }
   })
   const fun = Array.isArray(o.fun)
     ? o.fun.filter((f) => f.title && DATE.test(f.when)).map((f, i) => ({ id: Date.now() + i, title: f.title, when: f.when, start: /^\d\d:\d\d$/.test(f.start) ? f.start : undefined, hours: Number(f.hours) || undefined, fun: true, done: false, happy: 100 }))
     : null
-  return { ...d, tasks: fun ? [...tasks.filter((t) => !t.fun || t.done), ...fun] : tasks, freeHours: Number.isFinite(o.freeHours) ? o.freeHours : d.freeHours, freeToday: Number.isFinite(o.freeToday) ? { date: todayStr(), hours: o.freeToday } : d.freeToday, mood: typeof o.mood === 'string' && o.mood ? o.mood.slice(0, 80) : d.mood }
+  const merged = { ...d, tasks: fun ? [...tasks.filter((t) => !t.fun || t.done), ...fun] : tasks, freeHours: Number.isFinite(o.freeHours) ? o.freeHours : d.freeHours, freeToday: Number.isFinite(o.freeToday) ? { date: todayStr(), hours: o.freeToday } : d.freeToday, mood: typeof o.mood === 'string' && o.mood ? o.mood.slice(0, 80) : d.mood }
+  const ids = [...changed, ...(fun || []).map((f) => f.id)]
+  if (!ids.length) return { data: merged, problems: [] }
+  const fixed = repair({ tasks: merged.tasks, changed: ids, busy: merged.busy || [], deadlines: merged.deadlines || [], freeHours: merged.freeHours ?? 4, freeToday: freeTodayOf(merged) })
+  return { data: { ...merged, tasks: fixed.tasks }, problems: fixed.problems.map((p) => p.why) }
 }
 
 export const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToday.hours : undefined)

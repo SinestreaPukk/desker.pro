@@ -6,6 +6,13 @@ export const input = 'px-field'
 export const panel = 'px-panel p-4'
 export const rowCard = 'px-rule'
 
+// Calendar colours, one per kind and the same in Month, Week, Day and the key: a task is icy blue, a fun session green,
+// a deadline the one red, a calendar event a quiet frost grey. (Matrix boxes keep Q.cls below; the calendar does not reuse them.)
+export const CAL = {
+  task: 'border border-line bg-kori-1 text-ink', fun: 'border border-line bg-matsu-0 text-ink',
+  deadline: 'border border-line bg-beni text-yuki-0', event: 'border border-line bg-yuki-1 text-yoru-1',
+}
+
 // every task matters, just not equally: the four boxes rank by impact and timing, none means 'drop it'
 // cls = chip colours (calendar), dot = swatch, tab = panel tab frame. Do First is beni, the only accent.
 export const Q = [

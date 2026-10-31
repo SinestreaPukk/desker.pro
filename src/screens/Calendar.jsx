@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
 import { useSession } from '../auth.js'
-import { BLUE, btn, input, ghost, panel, Q } from '../ui.js'
+import { BLUE, btn, input, ghost, panel, Q, CAL } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
@@ -11,7 +11,7 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
   const dl = deadlines.find((x) => x.id === t.deadlineId)
   const lbl = 'flex flex-col gap-1 text-base'
   return (
-    <section className={`mt-4 p-3 border border-line ${color(t)} ${t.fun || quadrant(t) !== undefined ? '' : 'border-slate-200'}`} aria-label="Task details">
+    <section className={`mt-4 p-3 ${color(t)}`} aria-label="Task details">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold">{t.fun ? 'Fun session' : 'Task details'}</h2>
         <button className={`${btn} hover:bg-white`} onClick={close}>Close</button>
@@ -91,8 +91,8 @@ function CalendarSync({ data, setData }) {
             <button className={link} onClick={() => navigator.clipboard?.writeText(feed).then(() => setMsg('Link copied.'), () => setMsg(feed))}>Copy link</button>
             <a className={link} href={`${feed}&download=1`}>Download .ics</a>
           </div>
-          {local && <p className="mt-2 text-xs text-slate-600">Subscribing only works on the deployed site, because Google cannot reach localhost. Download works anywhere.</p>}
-          <p className="mt-2 text-xs text-slate-600">Keep this link private: anyone with it can see your tasks. Google refreshes subscribed calendars about once a day.</p>
+          {local && import.meta.env.DEV && <p className="mt-2 text-xs text-slate-600">Development build: Google cannot reach localhost, so subscribing will not work here. Download does.</p>}
+          <p className="mt-2 text-xs text-slate-600">Changes reach your calendar app about once a day, because Google decides when to refresh. Keep this link private: anyone with it can see your tasks.</p>
         </section>
         <section>
           <h3 className="mb-1 text-base font-semibold">Bring your calendar into Desker</h3>
@@ -109,7 +109,7 @@ function CalendarSync({ data, setData }) {
             {data.sync?.url && <button className={link} disabled={loading} onClick={() => run({ url: data.sync.url })}>Refresh</button>}
             {data.sync && <button className={`${link} text-danger`} onClick={() => { setData((d) => ({ ...d, busy: [], sync: undefined })); setUrl(''); setMsg('Disconnected. Imported events removed.') }}>Disconnect</button>}
           </div>
-          <p className="mt-2 text-xs text-slate-600">Your link is saved so we can refresh it. Imported events are only used to plan around.</p>
+          <p className="mt-2 text-xs text-slate-600">{data.sync?.at ? `Last synced: ${new Date(data.sync.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}. ` : ''}Desker re-reads your link about once an hour while it is open. Imported events are only used to plan around.</p>
         </section>
       </div>
       {msg && <p role="status" className="mt-3 text-base">{msg}</p>}
@@ -119,12 +119,14 @@ function CalendarSync({ data, setData }) {
 
 const Key = () => (
   <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-base text-slate-700" aria-label="Colour key">
-    {[['bg-yuki-1', 'Task (tint shows its box)'], ['bg-pale', 'For fun'], ['bg-beni', 'Deadline'], ['bg-yuki-1', 'Calendar event']].map(([c, l]) => (
-      <li key={l} className="flex items-center gap-2"><span className={`h-3 w-3 border border-control ${c}`} aria-hidden="true" />{l}</li>
+    {[[CAL.task, 'Task'], [CAL.fun, 'For fun'], [CAL.deadline, 'Deadline'], [CAL.event, 'Calendar event']].map(([c, l]) => (
+      <li key={l} className="flex items-center gap-2"><span className={`h-3 w-3 ${c}`} aria-hidden="true" />{l}</li>
     ))}
   </ul>
 )
 
+// finished tasks go quiet (frost grey, struck through) so they are not mistaken for open ones
+const shade = (t) => (t.done ? 'border border-line bg-yuki-1 text-yoru-0 line-through' : color(t))
 const HM = /^(\d\d):(\d\d)$/
 const VIEWS = ['month', 'week', 'day']
 
@@ -142,7 +144,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
   const update = (id, patch) => setTasks(tasks.map((x) => (x.id === id ? { ...x, ...patch } : x)))
   const chip = (t) => (
     <button key={t.id} title={t.title} onClick={() => setSel(t.id)}
-      className={`chip block w-full truncate px-1 text-left text-xs ${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? 'ring-2 ring-slate-800' : ''}`}>
+      className={`chip block w-full truncate px-1 text-left text-xs ${shade(t)} ${sel === t.id ? 'ring-2 ring-ink' : ''}`}>
       {t.title}
     </button>
   )
@@ -154,19 +156,19 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     const k = date.toLocaleDateString('sv'), blocks = [], allDay = []
     for (const t of tasks) {
       if (dateKey(t) !== k) continue
-      const hm = HM.exec(t.start || ''), cls = `${color(t)} ${t.done ? 'text-slate-500 line-through' : ''} ${sel === t.id ? '!ring-2 !ring-slate-800' : ''}`
+      const hm = HM.exec(t.start || ''), cls = `${shade(t)} ${sel === t.id ? 'ring-2 ring-ink' : ''}`
       if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + (t.hours || 1) * 60), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
       else allDay.push({ id: `t${t.id}`, label: t.title, cls, onClick: () => setSel(t.id) })
     }
     for (const x of deadlines) {
       if (x.date !== k) continue
-      const hm = HM.exec(x.time || ''), cls = 'bg-beni text-yuki-0', label = `Due: ${x.title}`
+      const hm = HM.exec(x.time || ''), cls = CAL.deadline, label = `Due: ${x.title}`
       if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `d${x.id}`, label, s, e: s + 30, cls, title: `${x.time} ${label}` }) }
       else allDay.push({ id: `d${x.id}`, label, cls })
     }
     ;(data.busy || []).forEach((x, j) => {
       if (evDay(x) !== k) return
-      const cls = 'bg-yuki-1 text-slate-700'
+      const cls = CAL.event
       if (x.d) return allDay.push({ id: `e${j}`, label: x.t, cls })
       const s = minutes(x.s), e = new Date(x.e).toLocaleDateString('sv') === k ? minutes(x.e) : 1440
       blocks.push({ id: `e${j}`, label: x.t, s, e: e > s ? e : s + 30, cls, title: `${hhmm(x.s)}-${hhmm(x.e)} ${x.t}` })
@@ -225,9 +227,9 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
                 </div>
               )}
               <div className="space-y-0.5">
-                {deadlines.filter((x) => x.date === key(d)).map((x) => <div key={x.id} title={`Deadline: ${x.title}`} className="truncate bg-beni px-1 text-xs text-yuki-0">Due: {x.title}</div>)}
+                {deadlines.filter((x) => x.date === key(d)).map((x) => <div key={x.id} title={`Deadline: ${x.title}`} className={`truncate px-1 text-xs ${CAL.deadline}`}>Due: {x.title}</div>)}
                 {day.map(chip)}
-                {events.slice(0, 2).map((x, j) => <div key={j} title={`${x.s ? `${hhmm(x.s)}-${hhmm(x.e)} ` : ''}${x.t}`} className="truncate bg-yuki-1 px-1 text-xs text-slate-700">{x.s ? `${hhmm(x.s)} ` : ''}{x.t}</div>)}
+                {events.slice(0, 2).map((x, j) => <div key={j} title={`${x.s ? `${hhmm(x.s)}-${hhmm(x.e)} ` : ''}${x.t}`} className={`truncate px-1 text-xs ${CAL.event}`}>{x.s ? `${hhmm(x.s)} ` : ''}{x.t}</div>)}
                 {events.length > 2 && <div className="px-1 text-xs text-slate-600" title={events.slice(2).map((x) => x.t).join(', ')}>+{events.length - 2} more</div>}
               </div>
             </div>

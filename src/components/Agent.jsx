@@ -4,7 +4,7 @@ import { BLUE, btn, ghost, input, LEVELS } from '../ui.js'
 import { Avatar } from '../px.jsx'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
-import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
+import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
 export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
   const [msgs, setMsgs] = useState([])
@@ -26,10 +26,11 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
         hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
       })
       if (typeof out.reply !== 'string') throw new Error('The AI gave an unreadable answer. Please try again.')
+      const checked = applyPlanChecked(data, out) // times the AI set are verified in code; anything that cannot fit is said out loud below
       setData((d) => applyPlan(d, out))
       const goals = (Array.isArray(out.goals) ? out.goals : []).filter((g) => g?.title && LEVELS.some((l) => l.name === g.level)).slice(0, 8)
         .map((g) => ({ title: String(g.title).slice(0, 120), level: LEVELS.findIndex((l) => l.name === g.level), happiness: !!g.happiness }))
-      setMsgs([...next, { role: 'assistant', content: out.reply, goals }])
+      setMsgs([...next, { role: 'assistant', content: out.reply, goals, notes: checked.problems }])
     } catch (err) { setError(err.message) }
     setBusy(false)
   }
@@ -80,6 +81,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
             {m.role !== 'user' && <Avatar />}
             <div className={`${bubble} ${m.role === 'user' ? 'px-btn-primary' : 'px-sunk'}`}>
             {m.label ?? m.content}
+            {m.notes?.length > 0 && <ul className="mt-2 list-disc pl-5 text-base">{m.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
             {m.goals?.length > 0 && (
               <ul className="mt-2 space-y-1.5">
                 {m.goals.map((g, k) => (
