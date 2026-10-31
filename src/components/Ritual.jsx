@@ -8,6 +8,7 @@ import { record, addOutcome, outcomeFor, rhythmOf } from '../rhythm.js'
 import { plannerArgs, applyPlanChecked, todayStr } from '../shared.jsx'
 import { lengthOf } from '../schedule.js'
 import BoxHead from './BoxHead.jsx'
+import { Icon } from '../icons.jsx'
 
 const hhmm = (t) => (t.start ? `${t.start} ` : '')
 const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toLocaleDateString('sv') }
@@ -24,6 +25,7 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
   const retract = (v) => { setHidden(v); try { localStorage.ritualHidden = v ? '1' : '0' } catch { /* storage blocked: it opens again next visit */ } }
   const [rows, setRows] = useState([]) // the tasks planned for today, as they were when the wrap-up started: they stay listed after you answer
   const [ans, setAns] = useState({}) // task id -> what you said about it
+  const [was, setWas] = useState({}) // task id -> the task as it was before you answered, for the undo icon
   const [partly, setPartly] = useState(null) // task id waiting for 'how much is left?'
   const [started, setStarted] = useState(false) // collapsed to one line and a Start button until the student chooses to begin
   const [asked, setAsked] = useState({}) // task id -> minutes chosen in the wrap-up
@@ -34,11 +36,12 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
   const untimed = finishedToday.filter((t) => !(t.spent > 0) && !rh.outcomes.some((o) => o.task === t.id))
   const set = (fn) => setData(fn)
   const tapEnergy = (l) => { track('energy_logged', { prompted: true }); setEnergy(l); set((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
-  const done = () => { if (kind === 'evening') track('wrapup_completed'); setStarted(false); setRows([]); setAns({}); finish() }
+  const done = () => { if (kind === 'evening') track('wrapup_completed'); setStarted(false); setRows([]); setAns({}); setWas({}); finish() }
   const finish = () => set((d) => finishRitual(feel ? { ...d, kodama: { ...d.kodama, feel: Object.fromEntries(Object.entries({ ...d.kodama?.feel, [today]: feel }).slice(-60)) } } : d, kind))
 
   const markDone = (t) => set((d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === t.id ? { ...x, done: true, doneAt: Date.now() } : x)) }))
-  const said = (t, text) => setAns((a) => ({ ...a, [t.id]: text }))
+  const said = (t, text) => { setWas((w) => ({ ...w, [t.id]: t })); setAns((a) => ({ ...a, [t.id]: text })) }
+  const undo = (id) => { set((d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === id ? was[id] : x)) })); setAns(({ [id]: _, ...a }) => a) }
   const toTomorrow = (t, extra = {}) => set((d) => applyPlanChecked(d, { updates: [{ id: t.id, when: tomorrow(), ...extra }] }).data)
   const finished = (t) => { markDone(t); said(t, 'Done') }
   const notDone = (t) => { toTomorrow(t); said(t, 'Not done. Moved to tomorrow.') }
@@ -102,7 +105,7 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
             return (
               <li key={id} className="flex flex-wrap items-center gap-2 border-t border-line py-1">
                 <span className="min-w-0 flex-1 basis-40 break-words">{hhmm(t)}{t.title}</span>
-                {ans[id] ? <span className="ml-auto text-slate-700">{ans[id]}</span>
+                {ans[id] ? <span className="ml-auto flex items-center gap-2 text-slate-700">{ans[id]}{!asked[id] && <button className={`${btn} ${ghost} !px-2`} aria-label={`Undo: ${t.title}`} title="Undo" onClick={() => undo(id)}><Icon name="Undo" small /></button>}</span>
                   : partly === id ? (
                     <span className="ml-auto flex flex-wrap items-center justify-end gap-2"><span className="text-slate-700">How much is left?</span>
                       {[['A little', 0.25], ['About half', 0.5], ['Most of it', 0.75]].map(([l, f]) => <button key={l} className={`${btn} ${ghost}`} onClick={() => someLeft(t, f)}>{l}</button>)}
