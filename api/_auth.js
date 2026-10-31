@@ -4,7 +4,7 @@
 // so one IP spraying many accounts and many IPs hammering one account both get stopped.
 // Without RESEND_API_KEY mails are printed to the server log and verification is not required (local dev); with it, sign-in needs a verified email.
 import { betterAuth } from 'better-auth'
-import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
+import { APIError, createAuthMiddleware, createEmailVerificationToken, isAPIError } from 'better-auth/api'
 import { haveIBeenPwned } from 'better-auth/plugins'
 import { Pool } from 'pg'
 
@@ -80,6 +80,10 @@ export const auth = betterAuth({
     maxPasswordLength: 128,
     requireEmailVerification: mail,
     revokeSessionsOnPasswordReset: true,
+    // Signing up again with an address that already exists answers the same as a new sign-up (no account probing), so the mail does the talking.
+    onExistingUserSignUp: ({ user }) => user.emailVerified
+      ? send(user.email, 'You already have a Desker account', `Someone (hopefully you) tried to sign up with this email. Sign in at ${process.env.BETTER_AUTH_URL}, or use "Forgot password?" there.`)
+      : createEmailVerificationToken(process.env.BETTER_AUTH_SECRET, user.email).then((t) => send(user.email, 'Confirm your Desker email', `Welcome to Desker. Confirm your email:\n${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${t}&callbackURL=%2Ftoday`)),
     sendResetPassword: ({ user, url }) => send(user.email, 'Reset your Desker password', `Open this link to choose a new password (valid for 1 hour):\n${url}\n\nNot you? Ignore this email.`),
   },
   emailVerification: {
