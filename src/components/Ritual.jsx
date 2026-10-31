@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { track } from '../analytics.js'
 import { btn, BLUE, ghost, panel } from '../ui.js'
 import { logEnergy } from '../energy.js'
-import { fmtMin } from './TimeAsk.jsx'
+import { getTaskTime, fmtMin } from '../taskTime.js'
 import { nameOf, finishRitual } from '../kodama.js'
-import { record, addOutcome, outcomeFor, rhythmOf } from '../rhythm.js'
+import { record, addOutcome, outcomeFor, rhythmOf, timeProfile, mayAsk } from '../rhythm.js'
 import { plannerArgs, applyPlanChecked, todayStr } from '../shared.jsx'
-import { lengthOf } from '../schedule.js'
 import BoxHead from './BoxHead.jsx'
 import { Icon } from '../icons.jsx'
 
@@ -49,7 +48,8 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
   const someLeft = (t, frac) => { const h = Math.max(0.25, Math.round((t.hours > 0 ? t.hours : 1) * frac * 4) / 4); toTomorrow(t, { hours: h }); said(t, `Partly. About ${h} h left, moved to tomorrow.`); setPartly(null) }
   const answer = (t, minutes) => { track('duration_logged', { source: 'chip' }); setAsked((a) => ({ ...a, [t.id]: minutes })); set((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap')))) }
 
-  const mins = planned.reduce((n, t) => n + lengthOf(t), 0)
+  const tp = timeProfile(data)
+  const mins = planned.reduce((n, t) => n + getTaskTime(t, tp).plannedMinutes, 0)
   const morning = kind === 'morning'
   const title = morning ? 'Morning plan' : 'Evening wrap-up'
   const skip = <button className={btn} onClick={() => retract(true)}>Hide</button>
@@ -83,10 +83,12 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
           {skip}
         </BoxHead>
         {planned.length > 0 && <ul className="mt-3 text-base text-slate-700">{planned.slice(0, 6).map((t) => <li key={t.id} className="break-words">{hhmm(t)}{t.title}</li>)}</ul>}
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span>How is your energy?</span>
-          <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} aria-pressed={energy === l} className="px-btn capitalize" onClick={() => tapEnergy(l)}>{l}</button>)}</div>
-        </div>
+        {mayAsk(data) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span>How is your energy?</span>
+            <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} aria-pressed={energy === l} className="px-btn capitalize" onClick={() => tapEnergy(l)}>{l}</button>)}</div>
+          </div>
+        )}
       </section>
     )
   }
@@ -129,11 +131,17 @@ export default function Ritual({ kind, due, data, setData, onReplan }) {
           <ul className="mt-2 space-y-1">{untimed.map((t) => (
             <li key={t.id} className="flex flex-wrap items-center gap-2 border-t border-line py-1"><span className="min-w-0 flex-1 break-words">{t.title}</span>
               {asked[t.id] ? <span className="ml-auto text-slate-700">{fmtMin(asked[t.id])}</span>
-                : <span className="ml-auto flex flex-wrap gap-2">{[15, 30, 60, 120].map((m) => <button key={m} className={`${btn} ${ghost}`} onClick={() => answer(t, m)}>{fmtMin(m).replace(' minutes', ' min')}</button>)}</span>}</li>
+                : <span className="ml-auto flex flex-wrap gap-2">{[15, 30, 60, 120].map((m) => <button key={m} className={`${btn} ${ghost}`} onClick={() => answer(t, m)}>{fmtMin(m)}</button>)}</span>}</li>
           ))}</ul>
         </>
       )}
       {!rows.length && !untimed.length && <p className="mt-3 text-slate-700">{finishedToday.length ? `${finishedToday.length} thing${finishedToday.length === 1 ? '' : 's'} done today.` : 'A quiet day. That is fine.'}</p>}
+      {mayAsk(data) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span>How is your energy now?</span>
+          <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} aria-pressed={energy === l} className="px-btn capitalize" onClick={() => tapEnergy(l)}>{l}</button>)}</div>
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span>How did today feel?</span>
         <div className="px-seg">{FEEL.map((f) => <button key={f} aria-pressed={feel === f} className="px-btn" onClick={() => setFeel(f)}>{f}</button>)}</div>

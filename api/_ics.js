@@ -1,6 +1,8 @@
 // Subscribable calendar feed of the user's tasks, deadlines and fun sessions (iCalendar).
 // Works with Google Calendar, Apple Calendar, Outlook and anything that can subscribe to a URL.
 import { loadDoc } from './_store.js'
+import { timeProfile } from '../src/rhythm.js'
+import { getTaskTime, fmtMin } from '../src/taskTime.js'
 
 const UID = /^[0-9a-f-]{36}$/
 const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
@@ -11,7 +13,8 @@ const next = (d) => ymd(new Date(Date.parse(d) + 864e5).toISOString().slice(0, 1
 export default async function handler(req, res) {
   const { uid, download } = req.query
   if (!UID.test(uid)) return res.status(400).send('bad uid')
-  const { tasks, deadlines } = await loadDoc(uid)
+  const doc = await loadDoc(uid)
+  const { tasks, deadlines } = doc, tp = timeProfile(doc)
   const stamp = new Date().toISOString().replace(/[-:]|\.\d+/g, '')
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Desker//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Desker', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H']
   const add = (id, date, title, desc) => {
@@ -22,7 +25,7 @@ export default async function handler(req, res) {
   for (const t of tasks) {
     if (t.done) continue
     add(`task-${t.id}`, t.when || t.due, `${t.fun ? '' : 'Task: '}${t.title}`,
-      [t.hours && `${t.hours}h`, t.when && t.due && `due ${t.due}`, t.reason].filter(Boolean).join(' · '))
+      [t.hours > 0 && (({ plannedMinutes: p, adjusted }) => adjusted ? `${t.hours}h, Desker plans ${fmtMin(p)}` : `${t.hours}h`)(getTaskTime(t, tp)), t.when && t.due && `due ${t.due}`, t.reason].filter(Boolean).join(' · '))
   }
   for (const d of deadlines) add(`deadline-${d.id}`, d.date, `Deadline: ${d.title}`, d.hours ? `${d.hours}h needed` : '')
   lines.push('END:VCALENDAR')

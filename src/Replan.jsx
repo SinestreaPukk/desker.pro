@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { post } from './api.js'
 import { btn, BLUE, ghost } from './ui.js'
 import { isMissed } from './tasks.js'
+import { withPlanned } from './taskTime.js'
+import { timeProfile } from './rhythm.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
 import { planWeek } from './schedule.js'
 import { plannerArgs } from './shared.jsx'
@@ -22,7 +24,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
     let aiPlan, aiNote = ''
     try {
       const out = await post('/api/replan', {
-        tasks: open.map(({ id, title, due, when, start, hours, readiness, important, urgent, deadlineId }) => ({ id, title, due, when, start, hours, readiness, important, urgent, deadlineId, missed: isMissed({ when, start, hours }) })),
+        tasks: withPlanned(open, timeProfile(data)).map(({ id, title, due, when, start, hours, plannedMinutes, readiness, important, urgent, deadlineId }) => ({ id, title, due, when, start, hours, plannedMinutes, readiness, important, urgent, deadlineId, missed: isMissed({ when, start, hours }) })),
         deadlines: (data.deadlines || []).map(({ id, title, date, time, hours }) => ({ id, title, date, time, hours })),
         freeHours: data.freeHours, freeToday: data.freeToday?.date === new Date().toLocaleDateString('sv') ? data.freeToday.hours : undefined,
         busy, energy, ratio, now: new Date().toLocaleString(),
@@ -36,7 +38,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
     if (!plan.length && !problems.length) return setState({ error: 'Nothing could be planned. Check your free time per day in the chat with your kodama.' })
     const d = diff(data.tasks, plan)
     track('plan_generated', { ai: !!aiPlan, moved: d.moved.length, problems: problems.length })
-    setState({ plan, d, note: aiNote, risk: [...problems.map((p) => p.why), ...risks(applyPlan(data.tasks, plan), data.deadlines || [], ctx.freeHours).map((r) => `${r.title}: ${r.why}`)] })
+    setState({ plan, d, note: aiNote, risk: [...problems.map((p) => p.why), ...risks(applyPlan(data.tasks, plan), data.deadlines || [], ctx.freeHours, undefined, timeProfile(data)).map((r) => `${r.title}: ${r.why}`)] })
   }
   useEffect(() => { run() }, [])
   const { loading, error, plan, d, note, risk } = state

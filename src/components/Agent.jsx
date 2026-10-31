@@ -5,7 +5,8 @@ import { Kodama } from '../px.jsx'
 import { nameOf } from '../kodama.js'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
-import { summaryForAI } from '../rhythm.js'
+import { summaryForAI, timeProfile } from '../rhythm.js'
+import { withPlanned } from '../taskTime.js'
 import { track } from '../analytics.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
@@ -25,7 +26,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
     try {
       const out = await post('/api/chat', {
         goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-        tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId }) => ({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId })),
+        tasks: withPlanned(data.tasks.filter((t) => !t.done), timeProfile(data)).map(({ id, title, due, readiness, hours, plannedMinutes, when, start, fun, deadlineId, projectId }) => ({ id, title, due, readiness, hours, plannedMinutes, when, start, fun, deadlineId, projectId })),
         pattern: patternOf(data), ratio: ratioOf(data.tasks), rhythm: summaryForAI(data), companion: name,
         projects: (data.projects || []).map(({ id, title, kind, date }) => ({ id, title, kind, date })),
         deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
@@ -62,7 +63,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
-  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
+  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals, Date.now(), timeProfile(data)).text}`, 'Weekly review')
   useEffect(() => { if (reviewReq) review() }, [reviewReq])
   const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
   const addGoals = (mi, ks) => {

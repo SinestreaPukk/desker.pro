@@ -3,14 +3,16 @@ import { btn, input, rowCard, Q } from '../ui.js'
 import { Icon } from '../icons.jsx'
 import { isMissed } from '../tasks.js'
 import { quadrant, REPEATS, Happy, fmtDate } from '../shared.jsx'
+import { getTaskTime, timeLabel } from '../taskTime.js'
 
 // One task: checkbox, title, one line of facts, a Start action and a menu for the rest.
 // `reorder` is optional: { drop(fromId), up(), down() } lets the row be dragged over another row, or moved from its menu (touch and keyboard).
-export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project, reorder }) {
+export default function Row({ t, update, onEdit, onDelete, move, onStart, cover, project, reorder, rhythm }) {
   const [over, setOver] = useState(false)
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(false)
   const [sub, setSub] = useState('')
+  const [why, setWhy] = useState(false)
   const subs = t.subs || []
   const q = quadrant(t)
   const setSubs = (next) => update(t.id, { subs: next })
@@ -22,10 +24,13 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
   }, [menu])
   // Core facts only, one muted line: when it is due, the planned slot, effort, project. Everything else lives in the task panel.
   const today = new Date().toLocaleDateString('sv')
+  const tt = t.hours > 0 ? getTaskTime(t, rhythm) : null
   const facts = [
     t.due && <span key="d" className={t.due < today && !t.done ? 'text-danger' : ''}>{t.from ? `${fmtDate(t.from)} to ${fmtDate(t.due)}` : `Due ${fmtDate(t.due)}`}{t.repeat ? ', repeats' : ''}</span>,
     t.when && <span key="w">Plan {fmtDate(t.when)}{t.start ? ` ${t.start}` : ''}</span>,
-    t.hours > 0 && <span key="h">{t.hours}h</span>,
+    tt && (tt.adjusted
+      ? <button key="h" type="button" className="underline decoration-dotted" title={tt.reason} aria-expanded={why} onClick={() => setWhy(!why)}>{timeLabel(tt)}</button>
+      : <span key="h">{timeLabel(tt)}</span>),
     q !== undefined && !cover && !project && <span key="q">{Q[q].name}</span>,
     project && <span key="p">{project}</span>,
   ].filter(Boolean)
@@ -62,6 +67,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
         </span>
       </div>
       {facts.length > 0 && <p className="flex flex-wrap gap-x-3 pb-1 pl-9 text-xs text-slate-700">{facts}</p>}
+      {why && tt && <p className="pb-1 pl-9 text-xs text-slate-700">{tt.reason}</p>}
       {open && (
         <div className="space-y-3 pb-1 pl-9 pt-3 text-base">
           <Happy value={t.happy} onChange={(happy) => update(t.id, { happy })} label="Feeling about it" />

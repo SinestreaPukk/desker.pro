@@ -1,4 +1,5 @@
 import { LEVELS } from './ui.js'
+import { getTaskTime } from './taskTime.js'
 
 export const SLICES = [...LEVELS.map((l) => l.name), 'Fun', 'No goal']
 export const SLICE_COLOR = { Vision: 'var(--color-yoru-1)', 'Long-term': 'var(--color-yoru-0)', 'Mid-term': 'var(--color-kori-2)', 'Short-term': 'var(--color-kori-1)', Fun: 'var(--color-matsu-1)', 'No goal': 'var(--color-yuki-3)' } // palette tokens, so dark mode follows, kori-2, kori-1, matsu-0, yuki-3
@@ -7,8 +8,8 @@ const zero = () => Object.fromEntries(SLICES.map((s) => [s, 0]))
 const h1 = (n) => Math.round(n * 10) / 10
 
 // How this week (Monday to Sunday) is split across the goal levels, fun and work with no goal.
-// Planned = hours on tasks with a planned day this week. Done = hours (timer time if logged) on tasks finished this week.
-export function weekReview(tasks, goals, now = Date.now()) {
+// Planned = hours Desker plans for tasks with a planned day this week (taskTime.js). Done = hours (timer time if logged) on tasks finished this week.
+export function weekReview(tasks, goals, now = Date.now(), rhythm = null) {
   const n = new Date(now), mon = new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7))
   const next = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 7)
   const [from, to] = [day(mon), day(next)]
@@ -17,7 +18,7 @@ export function weekReview(tasks, goals, now = Date.now()) {
   for (const t of tasks) {
     const g = goals.find((x) => x.id === t.goalId)
     const slice = t.fun ? 'Fun' : g ? LEVELS[g.level].name : 'No goal'
-    if (t.when && t.when >= from && t.when < to) planned[slice] += t.hours || 1
+    if (t.when && t.when >= from && t.when < to) planned[slice] += getTaskTime(t, rhythm).plannedMinutes / 60 // Desker's planned time (taskTime.js)
     if (t.done && t.doneAt >= mon.getTime() && t.doneAt < next.getTime()) { done[slice] += t.spent || t.hours || 1; if (!t.fun) doneCount++ }
   }
   const work = SLICES.filter((s) => s !== 'Fun').reduce((a, s) => a + planned[s], 0)

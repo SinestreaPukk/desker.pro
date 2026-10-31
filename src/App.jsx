@@ -9,7 +9,9 @@ import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
 import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
-import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile } from './rhythm.js'
+import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile, mayAsk } from './rhythm.js'
+import { logEnergy } from './energy.js'
+import EnergyAsk from './components/EnergyAsk.jsx'
 import TimeAsk from './components/TimeAsk.jsx'
 import { track } from './analytics.js'
 import Today from './screens/Today.jsx'
@@ -69,6 +71,7 @@ export default function App() {
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [cheer, setCheer] = useState(0) // bumps when Do First is cleared, to animate the logo
   const [toast, setToast] = useState(null) // { text, undo }
+  const [askEnergy, setAskEnergy] = useState(false) // "How is your energy now?" right after a focus session
   const [askTime, setAskTime] = useState(null) // { id, title, est }: "How long did that take?" for a task ticked off without the timer
   const [toastHeld, holdToast] = useState(false) // hover or focus pauses the countdown
   useEffect(() => {
@@ -228,11 +231,11 @@ export default function App() {
           <div key={tab} className="enter">
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
-            {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
+            {tab === 'Tasks' && <Tasks rhythm={rhythm} goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} onMilestone={milestoneReached} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
-            {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
+            {tab === 'Projects' && <Projects rhythm={rhythm} goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
             {tab === 'Rhythm' && <Rhythm data={data} setData={setData} onReplan={openReplan} />}
-            {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
+            {tab === 'Calendar' && <Calendar rhythm={rhythm} goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>
         </main>
       </div>
@@ -243,7 +246,7 @@ export default function App() {
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (
         <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask} suggestWork={rhythm.focus || undefined}
-          onSession={(s) => { track('focus_session_completed', { minutes: s.active, result: s.result }); setData((d) => record(d, (r) => addSession(r, { task: focusTask?.id, type: focusTask ? typeOf(focusTask) : undefined, ...s, lag: lagOf(focusTask, s.start) }))) }}
+          onSession={(s) => { track('focus_session_completed', { minutes: s.active, result: s.result }); setData((d) => record(d, (r) => addSession(r, { task: focusTask?.id, type: focusTask ? typeOf(focusTask) : undefined, ...s, lag: lagOf(focusTask, s.start) }))); if (s.active >= 5 && mayAsk(data)) setAskEnergy(true) }}
           onLog={(h) => focusTask && addSpent(focusTask.id, h)}
           onDone={(h) => { if (focusTask) setTasks(tasks.map((t) => (t.id === focusTask.id ? { ...t, done: true, spent: Math.round(((t.spent || 0) + h) * 1000) / 1000 } : t))); setFocus(null) }}
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
@@ -251,6 +254,11 @@ export default function App() {
       {askTime && (
         <div className={`fixed inset-x-4 z-40 mx-auto max-w-md md:left-8 md:right-auto md:mx-0 ${toast ? 'bottom-44 md:bottom-28' : 'bottom-24 md:bottom-6'}`}>
           <TimeAsk key={askTime.id} title={askTime.title} est={askTime.est} onSave={answerTime} onSkip={() => setAskTime(null)} />
+        </div>
+      )}
+      {askEnergy && !askTime && (
+        <div className={`fixed inset-x-4 z-40 mx-auto max-w-md md:left-8 md:right-auto md:mx-0 ${toast ? 'bottom-44 md:bottom-28' : 'bottom-24 md:bottom-6'}`}>
+          <EnergyAsk onTap={(l) => { track('energy_logged', { prompted: true }); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })); setAskEnergy(false) }} onSkip={() => setAskEnergy(false)} />
         </div>
       )}
       {toast && (

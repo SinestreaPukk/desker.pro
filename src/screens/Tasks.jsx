@@ -77,7 +77,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
   )
 }
 
-export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines }) {
+export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines, rhythm }) {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const [list, setList] = useState('plan')
   const [sel, setSel] = useState(null) // task id open in the detail panel
@@ -152,7 +152,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const deadlineOf = (t) => deadlines.find((d) => d.id === t.deadlineId)
   const projectName = (t) => projects.find((p) => p.id === t.projectId)?.title
   const row = (t, cover) => (
-    <Row key={t.id} t={t} cover={cover} project={projectName(t) || (deadlineOf(t) && `For ${deadlineOf(t).title}`)} update={update} move={move} onStart={startTask} onEdit={() => setSel(t.id)} onDelete={() => deleteTask(t)} />
+    <Row key={t.id} t={t} rhythm={rhythm} cover={cover} project={projectName(t) || (deadlineOf(t) && `For ${deadlineOf(t).title}`)} update={update} move={move} onStart={startTask} onEdit={() => setSel(t.id)} onDelete={() => deleteTask(t)} />
   )
   const lists = [['plan', 'Tasks'], ['inbox', 'Inbox'],
     ...projects.map((p) => [`p:${p.id}`, p.title]), ['done', 'Completed']]
@@ -181,7 +181,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
             <summary className="cursor-pointer text-base font-semibold">Deadlines <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
             <ul className="mt-2 space-y-3">
               {shownDeadlines.map((dl) => (
-                <DeadlineCard key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
+                <DeadlineCard rhythm={rhythm} key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
                   patch={(p) => setDeadlines(deadlines.map((x) => (x.id === dl.id ? { ...x, ...p } : x)))}
                   remove={() => setDeadlines(deadlines.filter((x) => x.id !== dl.id))} />
               ))}

@@ -15,8 +15,8 @@ function Bar({ label, values }) {
 }
 
 // Weekly goal-alignment card for the Goals tab.
-export default function Review({ tasks, goals, onAgent }) {
-  const r = weekReview(tasks, goals)
+export default function Review({ tasks, goals, onAgent, rhythm }) {
+  const r = weekReview(tasks, goals, Date.now(), rhythm)
   return (
     <section className="px-panel p-4" aria-label="This week">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

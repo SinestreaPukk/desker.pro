@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { track } from '../analytics.js'
 import { btn, ghost, panel, input, DANGER } from '../ui.js'
 import {
-  profile, rhythmOf, TYPES, accuracyByWeek, learnedThisWeek, rangesText, withPrefs, resetRhythm, MIN_CHECKINS,
+  profile, rhythmOf, TYPES, startingGrid, accuracyByWeek, learnedThisWeek, rangesText, withPrefs, resetRhythm, MIN_CHECKINS,
 } from '../rhythm.js'
 import { recap } from '../insights.js'
 import { fmtDate } from '../shared.jsx'
@@ -13,9 +13,10 @@ const hourLabel = (h) => (h === 12 ? '12p' : h > 12 ? `${h - 12}p` : `${h}a`)
 // three steps of one hue, plus a text label in the cell title: colour is never the only cue
 const SHADE = ['bg-yuki-1', 'bg-kori-1', 'bg-kori-2']
 
-function Heatmap({ curve }) {
+function Heatmap({ curve, sharpest }) {
+  const grid = curve.confident ? curve.grid : startingGrid(sharpest) // before enough check-ins: a drawn starting guess, never planned from
   return (
-    <div className="overflow-x-auto" role="img" aria-label={`Energy by weekday and hour. ${curve.confident ? `Usually high at ${rangesText(curve.hours('high')) || 'no clear hours'}.` : 'Not enough check-ins yet.'}`}>
+    <div className="overflow-x-auto" role="img" aria-label={`Energy by weekday and hour. ${curve.confident ? `Usually high at ${rangesText(curve.hours('high')) || 'no clear hours'}.` : `A starting guess until you have ${MIN_CHECKINS} check-ins.`}`}>
       <table className="border-separate border-spacing-px text-xs">
         <thead><tr><th />{HOURS.map((h) => <th key={h} className="w-7 font-normal text-slate-700">{h % 3 === 0 ? hourLabel(h) : ''}</th>)}</tr></thead>
         <tbody>
@@ -25,15 +26,15 @@ function Heatmap({ curve }) {
               <tr key={name}>
                 <th className="pr-1 text-right font-normal text-slate-700">{name}</th>
                 {HOURS.map((h) => {
-                  const v = curve.grid[dow][h], lvl = v >= 1.35 ? 2 : v <= 0.65 ? 0 : 1
-                  return <td key={h} title={`${name} ${hourLabel(h)}: ${['low', 'medium', 'high'][lvl]}`} className={`h-6 ${curve.confident ? SHADE[lvl] : 'bg-yuki-1'}`} />
+                  const v = grid[dow][h], lvl = v >= 1.35 ? 2 : v <= 0.65 ? 0 : 1
+                  return <td key={h} title={`${name} ${hourLabel(h)}: ${['low', 'medium', 'high'][lvl]}${curve.confident ? '' : ' (starting guess)'}`} className={`h-6 ${SHADE[lvl]}`} />
                 })}
               </tr>
             )
           })}
         </tbody>
       </table>
-      <p className="mt-1 text-xs text-slate-700">Darker means more energy.{!curve.confident && ` This is a guess until you have ${MIN_CHECKINS} check-ins.`}</p>
+      <p className="mt-1 text-xs text-slate-700">Stronger colour means more energy.{!curve.confident && ` This is a starting guess for a typical student${sharpest ? ' (using the time of day you told us)' : ''}.`}</p>
     </div>
   )
 }
@@ -50,7 +51,7 @@ export default function Rhythm({ data, setData, onReplan }) {
   const weeks = accuracyByWeek(p.visible.outcomes).slice(-8)
   const week = recap(data)
   const learned = learnedThisWeek(data)
-  const types = Object.entries(p.dur.byType).sort((a, b) => b[1].n - a[1].n)
+  const types = TYPES.map((type) => [type, { n: p.dur.byType[type]?.n || 0, mult: p.dur.multFor(type) }]).sort((a, b) => b[1].n - a[1].n) // every kind of work: the ones without timings yet show the starting guess
   const recent = [...r.outcomes].reverse().slice(0, 12)
   const byId = new Map(data.tasks.map((t) => [t.id, t]))
   const set = (fn) => setData((d) => ({ ...d, rhythm: fn(rhythmOf(d)) }))
@@ -86,13 +87,14 @@ export default function Rhythm({ data, setData, onReplan }) {
 
       <section className={panel} aria-label="How long things take">
         <h2 className="mb-2 text-2xl">How long things take you</h2>
-        {types.length > 0 && <p className="mb-2 text-base text-slate-700">The number is how many times your estimate it really takes. 1.5x means a 1 hour task takes 1.5 hours.</p>}
+        <p className="mb-2 text-base text-slate-700">The number is how many times your estimate it really takes. 1.5x means a 1 hour task takes 1.5 hours.</p>
         {types.length ? (
           <table className="w-full text-left text-base">
             <thead><tr className="text-slate-700"><th className="py-1 font-normal">Kind of work</th><th className="font-normal">Takes you</th><th className="font-normal">Based on</th></tr></thead>
-            <tbody>{types.map(([type, x]) => <tr key={type} className="border-t border-line"><td className="py-1">{type}</td><td>{x.mult}x</td><td className="text-slate-700">{x.n} task{x.n === 1 ? '' : 's'}{x.n < 3 ? ', still a guess' : ''}</td></tr>)}</tbody>
+            <tbody>{types.map(([type, x]) => <tr key={type} className="border-t border-line"><td className="py-1">{type}</td><td>{x.mult}x</td><td className="text-slate-700">{x.n === 0 ? 'starting guess' : `${x.n} task${x.n === 1 ? '' : 's'}${x.n < 3 ? ', still a guess' : ''}`}</td></tr>)}</tbody>
           </table>
-        ) : <p className="text-slate-700">Nothing yet. When you tick a task off, Desker asks how long it took. Use the timer and it knows without asking.</p>}
+        ) : null}
+        {p.dur.n === 0 && <p className="mt-2 text-base text-slate-700">When you tick a task off, Desker asks how long it took. Use the timer and it knows without asking.</p>}
         <h3 className="mt-4 font-semibold">How close the plans were</h3>
         <p className="text-base text-slate-700">How far off, on average, each week's time guesses were: your own estimate against what Desker reserved. Smaller is better.</p>
         {weeks.length ? (
@@ -105,7 +107,7 @@ export default function Rhythm({ data, setData, onReplan }) {
 
       <section className={panel} aria-label="Your energy">
         <h2 className="mb-2 text-2xl">When you have energy</h2>
-        <Heatmap curve={p.energy} />
+        <Heatmap curve={p.energy} sharpest={data.onboarding?.sharpest} />
         <p className="mt-2 text-slate-700">{p.energy.confident ? `Usually high at ${rangesText(p.energy.hours('high')) || 'no clear hours'}. Usually low at ${rangesText(p.energy.hours('low')) || 'no clear hours'}. Demanding work is planned into your high hours.` : `Tap your energy a few times a day (Today does the asking). After ${Math.max(1, MIN_CHECKINS - p.energy.n)} more check-ins this becomes yours.`}</p>
         <ul className="mt-2 space-y-1 text-base text-slate-700">
           {p.focus && <li>Your focus sessions usually run about {p.focus} minutes, so the timer starts there.</li>}
@@ -153,6 +155,7 @@ export default function Rhythm({ data, setData, onReplan }) {
         <p className="text-base text-slate-700">Desker records when you focus, how long finished tasks took and your energy taps. It stays in your account and is used only to plan for you. You can download it, ignore a stretch of time, switch learning off or delete it here.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={!p.off} onChange={(e) => set((x) => withPrefs(x, { off: e.target.checked ? undefined : true }))} />Learn from how I work</label>
+          <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={!p.prefs.noAsk} disabled={p.off} onChange={(e) => set((x) => withPrefs(x, { noAsk: e.target.checked ? undefined : true }))} />Ask me how my energy is now and then</label>
           <button className={`${btn} ${ghost}`} onClick={exportJson}>Download my rhythm data</button>
         </div>
         <div className="mt-3">

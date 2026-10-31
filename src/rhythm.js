@@ -32,6 +32,8 @@ export const isDeep = (t) => { const y = typeOf(t); return y !== 'Admin' && !(y 
 // ---- stored data ----------------------------------------------------------------------------------------------
 export const rhythmOf = (data) => ({ outcomes: [], sessions: [], signals: [], archive: {}, ...data?.rhythm, prefs: { excluded: [], ...data?.rhythm?.prefs } })
 export const isOff = (data) => !!data?.rhythm?.prefs?.off
+// Whether Desker may ask "how is your energy?": learning is on and the user has not switched the questions off.
+export const mayAsk = (data) => !isOff(data) && !data?.rhythm?.prefs?.noAsk
 const dateOf = (ms) => new Date(ms).toLocaleDateString('sv')
 export const isExcluded = (prefs, ms) => (prefs?.excluded || []).some((x) => x.from && x.to && dateOf(ms) >= x.from && dateOf(ms) <= x.to)
 
@@ -96,6 +98,15 @@ export function durationModel(outcomes = [], archive = {}, prior = PRIOR_MULT) {
   return { prior, n: all.n, overall: clampM(overall), byType, multFor: (type) => byType[type]?.mult ?? clampM(overall) }
 }
 
+// ---- day-one guess ----------------------------------------------------------------------------------------
+// Before anyone has tapped their energy, the Rhythm page still draws a plausible day: a typical student's (sharper mid-morning and in the
+// evening, a dip after lunch), or the peak they named at sign-up. It is only ever shown, labelled "starting guess"; planning ignores it.
+const TYPICAL = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.8, 1.2, 1.6, 1.6, 1.6, 1.2, 0.9, 0.5, 0.5, 0.9, 1.1, 1.2, 1.5, 1.5, 1.2, 0.8, 0.5]
+export function startingGrid(sharpest) {
+  if (PEAK[sharpest]) return energyCurve([], [], sharpest).grid
+  return Array.from({ length: 7 }, () => [...TYPICAL])
+}
+
 // ---- energy curve (hour x weekday) --------------------------------------------------------------------------
 const SCORE = { low: 0, medium: 1, high: 2 }
 export const MIN_CHECKINS = 8
@@ -142,11 +153,17 @@ export function startLag(sessions = []) {
 // ---- one profile for the whole app --------------------------------------------------------------------------
 export const confidenceOf = (n) => { const c = n / (n + K); return { score: Math.round(c * 100) / 100, label: n === 0 ? 'Just starting' : c < 0.4 ? 'Early days' : c < 0.6 ? 'Getting to know you' : 'Confident' } }
 
+const slowPriorOf = (data) => ({ Rarely: 1.0, Sometimes: 1.3, 'Almost always': 1.6 })[data?.onboarding?.slow] ?? PRIOR_MULT
+// Only the duration part of the profile (cheap): what getTaskTime in taskTime.js needs.
+export function timeProfile(data) {
+  const v = visible(data)
+  return { off: !!v.prefs.off, dur: durationModel(v.outcomes, v.archive, slowPriorOf(data)) }
+}
+
 export function profile(data) {
   const v = visible(data)
   const sharpest = data?.onboarding?.sharpest
-  const slowPrior = { Rarely: 1.0, Sometimes: 1.3, 'Almost always': 1.6 }[data?.onboarding?.slow] ?? PRIOR_MULT
-  const dur = durationModel(v.outcomes, v.archive, slowPrior)
+  const dur = durationModel(v.outcomes, v.archive, slowPriorOf(data))
   const energy = energyCurve(v.energy, v.tasks, sharpest)
   const lag = startLag(v.sessions)
   return { off: !!v.prefs.off, dur, energy, focus: focusLength(v.sessions), lag, confidence: confidenceOf(dur.n), prefs: v.prefs, visible: v }

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { post } from '../api.js'
 import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy } from '../energy.js'
-import { profile, plannerOf, realityCheck, record, addSignal, rhythmOf, isOff } from '../rhythm.js'
+import { profile, plannerOf, realityCheck, record, addSignal, rhythmOf, mayAsk } from '../rhythm.js'
 import { METHODS } from '../methods.js'
 import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
@@ -12,6 +12,7 @@ import BoxHead from '../components/BoxHead.jsx'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
 import { overlaps } from '../schedule.js'
+import { getTaskTime, timeSentence, workLeft, workLeftText, fmtMin, withPlanned } from '../taskTime.js'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
@@ -37,7 +38,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   // At most two unprompted "how is your energy?" questions a day, never at night, never twice within 3 hours of a tap.
   const [askEnergy, setAskEnergy] = useState(() => {
     const day = todayStr(), seen = data.rhythm?.ask, n = seen?.day === day ? seen.n : 0, h = new Date().getHours()
-    return !isOff(data) && n < 2 && h >= 8 && h < 21 && Date.now() - ((data.energyLog || []).at(-1)?.at || 0) > 3 * 36e5 && tasks.some((t) => !t.done && !t.fun)
+    return mayAsk(data) && n < 2 && h >= 8 && h < 21 && Date.now() - ((data.energyLog || []).at(-1)?.at || 0) > 3 * 36e5 && tasks.some((t) => !t.done && !t.fun)
   })
   useEffect(() => {
     if (askEnergy) setData((d) => record(d, (r) => ({ ...r, ask: { day: todayStr(), n: (r.ask?.day === todayStr() ? r.ask.n : 0) + 1 } })))
@@ -62,13 +63,13 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const stats = doneStats(tasks)
   const clashes = overlaps(tasks, data.busy || []).length // planned times that overlap (older plans, or edits by hand)
   const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
-  const left = (h) => (h > 0 ? Math.round(h * 10) / 10 : 0)
   const soon = [
     ...deadlines.filter((d) => !d.done).map((d) => {
       const mine = open.filter((t) => t.deadlineId === d.id) // work left = its open tasks, or the whole estimate if it has none yet
-      return { id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline', work: mine.length ? left(mine.reduce((n, t) => n + Math.max(0, (t.hours || 0) - (t.spent || 0)), 0)) : left(d.hours) }
+      const w = mine.length ? workLeft(mine, rhythm) : d.hours > 0 ? workLeft([{ title: d.title, hours: d.hours }], rhythm) : null
+      return { id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline', work: w && w.plannedMinutes > 0 ? workLeftText(w) : '' }
     }),
-    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task', work: left((t.hours || 0) - (t.spent || 0)), plan: t.when ? `${t.when === today ? 'today' : fmtDate(t.when)}${t.start ? ` at ${t.start}` : ''}` : '' })),
+    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task', work: t.hours > 0 ? workLeftText(workLeft([t], rhythm)) : '', plan: t.when ? `${t.when === today ? 'today' : fmtDate(t.when)}${t.start ? ` at ${t.start}` : ''}` : '' })),
   ].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))
   const daysTo = (date) => Math.round((new Date(`${date}T12:00`) - new Date(`${today}T12:00`)) / 864e5)
   const timeLeft = (date) => { const n = daysTo(date); return n === 0 ? 'Due today' : `${n} day${n === 1 ? '' : 's'} left` }
@@ -82,12 +83,14 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     : open.length ? `${open.length} open task${open.length === 1 ? '' : 's'}, none urgent.` : 'Nothing on your list yet. Add a task to begin.'
 
   const cal = fromCalendar(tasks)
-  const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy }) }))
+  const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy, planned: (t) => getTaskTime(t, rhythm).plannedMinutes }) }))
   const lead = picks.find((p) => p.r)
   const cur0 = focus || pick || cal || (lead && { taskId: lead.r.t.id, title: lead.r.t.title, method: lead.m.name, why: lead.r.why, minutes: lead.r.t.hours ? Math.round(lead.r.t.hours * 60) : undefined })
   // A pick or a running focus is a copy made earlier. Title, length and planned time are always read from the task itself, so an edit on the Tasks page shows here at once.
   const liveTask = cur0?.taskId ? tasks.find((x) => x.id === cur0.taskId) : null
   const cur = liveTask ? { ...cur0, title: liveTask.title, minutes: liveTask.hours ? Math.round(liveTask.hours * 60) : cur0.minutes } : cur0
+  const curTime = liveTask && liveTask.hours > 0 ? getTaskTime(liveTask, rhythm) : null
+  const curFacts = liveTask ? [curTime && fmtMin(curTime.plannedMinutes), liveTask.due && (liveTask.due === today ? 'due today' : `due ${fmtDate(liveTask.due)}`), liveTask.important === true ? 'high impact' : liveTask.important === false ? 'lighter impact' : ''].filter(Boolean).join(' · ') : ''
   const slotText = liveTask?.when ? `Planned ${liveTask.when === today ? 'today' : fmtDate(liveTask.when)}${liveTask.start ? ` at ${liveTask.start}` : ''}.` : ''
   const check = realityCheck(tasks, plannerOf(data), today, freeTodayOf(data) ?? data.freeHours ?? 4)
   const finish = () => {
@@ -100,7 +103,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     try {
       const out = await post('/api/now', {
         goals: goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-        tasks: tasks.filter((t) => !t.done).map(({ id, title, due, when, hours, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, readiness, important, urgent, fun })),
+        tasks: withPlanned(tasks.filter((t) => !t.done), rhythm).map(({ id, title, due, when, hours, plannedMinutes, readiness, important, urgent, fun }) => ({ id, title, due, when, hours, plannedMinutes, readiness, important, urgent, fun })),
         hobbies: (data.hobbies || []).map((h) => h.title),
         deadlines: deadlines.map(({ title, date, hours }) => ({ title, date, hours })),
         minutes, energy, pattern: patternOf(data), mood: data.mood, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), now: new Date().toLocaleString(),
@@ -186,7 +189,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <div className="min-w-0 flex-1 basis-60">
                 <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
                 <p className="mt-1 break-words text-2xl">{cur.title}</p>
-                <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
+                {liveTask
+                  ? <>{curFacts && <p className="mt-1 text-slate-700">{curFacts}</p>}
+                    {curTime?.adjusted && <p className="mt-1 text-slate-700" title={curTime.reason}>{timeSentence(curTime)}</p>}
+                    <p className="mt-1 text-slate-700">{cur.why}</p></>
+                  : <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>}
                 {slotText && <p className="mt-1 text-slate-700">{slotText}</p>}
               </div>
               <div className={ACT}>
@@ -243,7 +250,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                       <p className="text-xs text-slate-700">{m.how}</p>
                       {r ? <>
                         <p className="mt-1 break-words">{r.t.title}</p>
-                        <p className="mt-1 text-xs text-slate-700">{r.t.hours ? `${r.t.hours}h. ` : ''}{r.why}</p>
+                        <p className="mt-1 text-xs text-slate-700">{r.t.hours ? `${fmtMin(getTaskTime(r.t, rhythm).plannedMinutes)}. ` : ''}{r.why}</p>
                       </> : <p className="mt-1 text-slate-700">{open.length ? 'Nothing fits your minutes.' : 'No open tasks yet.'}</p>}
                     </div>
                     {r && <button className={`${btn} ${BLUE} mt-3 self-start`} onClick={() => choose(m, r.t, r.why)}>Pick this</button>}
@@ -285,7 +292,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <p className="break-words">{x.title}</p>
                 <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
                 {x.plan && <p className="text-xs text-slate-700">Planned {x.plan}</p>}
-                <p className="text-xs text-slate-700">{timeLeft(x.date)}{x.work ? `. ${x.work}h of work left` : ''}</p>
+                <p className="text-xs text-slate-700">{timeLeft(x.date)}{x.work ? `. ${x.work}` : ''}</p>
               </li>
             ))}
             {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask your kodama to plan tomorrow.</li>}
@@ -319,7 +326,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <button className={`${btn} ${BLUE}`}>Add task</button>
           </form>
           <ul className="mt-3">
-            {todays.map((t, i) => <Row key={t.id} t={t} reorder={reorderOf(t, i)} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
+            {todays.map((t, i) => <Row key={t.id} t={t} rhythm={rhythm} reorder={reorderOf(t, i)} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
             {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
           {hint && (
@@ -334,7 +341,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <div className="mt-6"><RhythmCard data={data} onOpen={() => goTab('Rhythm')} /></div>
         </section>
         <div className="flex flex-col gap-6 lg:col-span-6">
-          <Review tasks={tasks} goals={goals} onAgent={onReview} />
+          <Review tasks={tasks} goals={goals} rhythm={rhythm} onAgent={onReview} />
         </div>
       </div>
     </>

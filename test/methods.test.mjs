@@ -13,7 +13,7 @@ const T = [
 const pick = (name, o) => METHODS.find((m) => m.name === name).pick(T, o)?.t.title
 
 test('methods pick different tasks and skip done ones', () => {
-  assert.equal(pick('Eisenhower'), 'tax')
+  assert.equal(pick('Due soon, high impact'), 'tax')
   assert.equal(pick('Eat the Frog'), 'tax')
   assert.equal(pick('Quick wins'), 'email')
   assert.equal(pick('Fits my energy', { minutes: 120, energy: 'low' }), 'plan')

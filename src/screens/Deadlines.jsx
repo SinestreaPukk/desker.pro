@@ -4,9 +4,10 @@ import { addTasks, timeRatio } from '../tasks.js'
 import { validType } from '../rhythm.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
+import { getTaskTime, timeLabel, workLeft, workLeftText } from '../taskTime.js'
 import DateField from '../components/DateField.jsx'
 
-export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio }) {
+export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio, rhythm }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -19,6 +20,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const days = Math.ceil((new Date(dl.date) - new Date(new Date().toLocaleDateString('sv'))) / 864e5)
   const mine = tasks.filter((t) => t.deadlineId === dl.id)
   const linked = mine.length
+  const left = dl.done ? null : linked ? workLeft(mine, rhythm) : dl.hours > 0 ? workLeft([{ title: dl.title, hours: dl.hours }], rhythm) : null // Desker's planned time for what is not done yet
   const [own, setOwn] = useState('')
 
   const plan = async (context = dl.context) => {
@@ -79,7 +81,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
           <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-          {dl.hours != null && <span className="text-base text-slate-600">{dl.hours}h of work</span>}
+          {left && left.plannedMinutes > 0 && <span className="text-base text-slate-600" title="Desker's planned time for what is not done, minus time you already focused">{workLeftText(left)}</span>}
         </span>
         {linked > 0 && <span className="text-base tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={` px-3 py-0.5 text-base ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
@@ -99,7 +101,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
             <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
-            {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
+            {t.hours > 0 && (() => { const tt = getTaskTime(t, rhythm); return <span className="text-xs text-slate-600" title={tt.reason}>{timeLabel(tt)}</span> })()}
             </span>
           </li>
         ))}

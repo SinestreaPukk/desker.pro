@@ -5,11 +5,12 @@ import { validType } from '../rhythm.js'
 import { progress, unlink } from '../projects.js'
 import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
+import { getTaskTime, timeLabel, workLeft, workLeftText } from '../taskTime.js'
 import DateField from '../components/DateField.jsx'
 
 const KINDS = ['Exam', 'Assignment', 'Group project', 'Course', 'Personal']
 
-function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, ratio }) {
+function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, ratio, rhythm }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -19,6 +20,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
   const [title, setTitle] = useState('')
   const mine = tasks.filter((t) => t.projectId === p.id && !t.fun)
   const pr = progress(p, tasks)
+  const left = workLeft(tasks.filter((t) => t.projectId === p.id && !t.fun), rhythm)
   const goal = goals.find((g) => g.id === p.goalId)
 
   const plan = async (context = p.context) => {
@@ -64,7 +66,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           <h3 className="break-words font-semibold">{p.title} <span className="ml-1 bg-pale px-2 py-0.5 text-xs font-normal text-accent-dark">{p.kind || 'Project'}</span></h3>
           <p className="text-base text-slate-600">
             {p.date ? `Ends ${fmtDate(p.date)}` : 'No end date'}{goal && `, ${goal.title}`}
-            {pr.total > 0 && `, ${pr.done}/${pr.total} done`}{pr.hoursLeft > 0 && `, ${pr.hoursLeft}h left`}
+            {pr.total > 0 && `, ${pr.done}/${pr.total} done`}{left.plannedMinutes > 0 && `, ${workLeftText(left)}`}
           </p>
         </div>
         <span className="flex gap-1">
@@ -90,7 +92,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
           <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-2 text-base">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
             <span className={`line-clamp-2 min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
-            <span className="basis-full pl-8 text-xs text-slate-600 sm:basis-auto sm:shrink-0 sm:pl-0">{t.hours ? `${t.hours}h` : ''}{t.due ? `, ${fmtDate(t.due)}` : ''}</span>
+            <span className="basis-full pl-8 text-xs text-slate-600 sm:basis-auto sm:shrink-0 sm:pl-0">{t.hours ? timeLabel(getTaskTime(t, rhythm)) : ''}{t.due ? `, ${fmtDate(t.due)}` : ''}</span>
           </li>
         ))}
         {!mine.length && <li className="text-base text-slate-600">No tasks yet. Add one, or let the AI break it down.</li>}
@@ -151,7 +153,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
 }
 
 // Projects: a longer-running container (a course, a group project) that holds several deadlines and their tasks, and shows how far along it is.
-export default function Projects({ goals, projects, setProjects, tasks, setTasks, deadlines = [] }) {
+export default function Projects({ goals, projects, setProjects, tasks, setTasks, deadlines = [], rhythm }) {
   const blank = { title: '', kind: 'Exam', date: '', context: '' }
   const [d, setD] = useState(blank)
   const submit = (e) => {
@@ -176,7 +178,7 @@ export default function Projects({ goals, projects, setProjects, tasks, setTasks
       {!projects.length && <p className="text-base text-slate-600">No projects yet. A single exam or assignment is just a deadline: add it on the Tasks page. Make a project when a course or group project has several of them.</p>}
       <ul className="space-y-3">
         {projects.map((p) => (
-          <ProjectCard key={p.id} p={p} goals={goals} deadlines={deadlines.filter((d) => d.projectId === p.id)} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(p.id)}
+          <ProjectCard rhythm={rhythm} key={p.id} p={p} goals={goals} deadlines={deadlines.filter((d) => d.projectId === p.id)} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(p.id)}
             remove={() => { setTasks(unlink(tasks, p.id)); setProjects(projects.filter((x) => x.id !== p.id)) }} />
         ))}
       </ul>

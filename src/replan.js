@@ -1,4 +1,5 @@
 import { withSlot } from './schedule.js'
+import { getTaskTime } from './taskTime.js'
 // Helpers around the AI's replan answer: validate it, show what changes, and flag deadline risks.
 const DATE = /^\d{4}-\d\d-\d\d$/, TIME = /^\d\d:\d\d$/
 const day = (d) => d.toLocaleDateString('sv')
@@ -26,7 +27,7 @@ export function diff(tasks, plan) {
 export const applyPlan = (tasks, plan) => tasks.map((t) => { const p = plan.find((x) => x.id === t.id); return p ? withSlot(t, p) : t })
 
 // Deadline risks for a schedule: tasks planned after (or left past) their due date, and deadlines needing more hours than free time allows.
-export function risks(tasks, deadlines, freeHours, today = day(new Date())) {
+export function risks(tasks, deadlines, freeHours, today = day(new Date()), rhythm = null) {
   const out = []
   for (const t of tasks) {
     if (t.done || t.fun || !t.due) continue
@@ -36,7 +37,7 @@ export function risks(tasks, deadlines, freeHours, today = day(new Date())) {
   if (freeHours > 0) for (const d of deadlines) {
     const left = diffDays(today, d.date)
     if (left < 0 || d.done) continue
-    const need = tasks.filter((t) => t.deadlineId === d.id && !t.done).reduce((n, t) => n + (t.hours || 1), 0)
+    const need = Math.round(tasks.filter((t) => t.deadlineId === d.id && !t.done).reduce((n, t) => n + getTaskTime(t, rhythm).plannedMinutes, 0) / 15) / 4 // planned hours (taskTime.js)
     const cap = freeHours * (left + 1)
     if (need > cap) out.push({ title: d.title, why: `needs about ${need}h but only about ${cap}h of free time is left before ${d.date}` })
   }

@@ -14,7 +14,7 @@ Fixed commitments on their calendar (local time): ${JSON.stringify(busy.slice(0,
 ${pattern?.high?.length || pattern?.low?.length ? `Learned energy pattern (24h hours): high ${JSON.stringify(pattern.high)}, low ${JSON.stringify(pattern.low)}.\n` : ''}Free time they have now: ${Number(minutes) || 60} minutes. Their energy: ${energy || 'medium'}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Deadlines: ${JSON.stringify(deadlines)}
-Open tasks (important/urgent = Eisenhower ranking if known, readiness 0-100, hours = effort, when = planned date, fun = hobby session): ${JSON.stringify(tasks)}
+Open tasks (important/urgent = Eisenhower ranking if known, readiness 0-100, hours = the user's own guess in hours, plannedMinutes = the time Desker plans for it, when = planned date, fun = hobby session): ${JSON.stringify(tasks)}
 Hobbies: ${JSON.stringify(hobbies)}
 
 Offer exactly 3 options, one per method, each a different item when possible:

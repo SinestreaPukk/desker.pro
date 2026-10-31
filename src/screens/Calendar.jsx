@@ -4,11 +4,12 @@ import { useSession } from '../auth.js'
 import { BLUE, btn, input, ghost, panel, Q, CAL } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
-import { lengthOf } from '../schedule.js'
+import { getTaskTime, timeSentence, fmtMin } from '../taskTime.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
 import DateField from '../components/DateField.jsx'
 
-function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
+function Detail({ t, goals, deadlines, update, remove, close, onStart, rhythm }) {
+  const tt = getTaskTime(t, rhythm)
   const goal = goals.find((g) => g.id === t.goalId)
   const dl = deadlines.find((x) => x.id === t.deadlineId)
   const lbl = 'flex flex-col gap-1 text-base'
@@ -31,7 +32,7 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
         <label className={lbl}>Start time
           <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined })} />
         </label>
-        <label className={lbl}>Hours needed
+        <label className={lbl}>Your guess (hours)
           <input type="number" min="0" step="0.5" className={input} value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />
         </label>
         {!t.fun && <label className={lbl}>Repeat
@@ -47,7 +48,8 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
           <input type="checkbox" checked={t.done} onChange={() => update(t.id, { done: !t.done })} /> Done
         </label>
       </div>
-      {t.spent > 0 && <p className="mt-3 text-base">Focused so far: {Math.round(t.spent * 60)} min{t.hours ? ` of ${Math.round(t.hours * 60)} min estimated` : ''}</p>}
+      {t.hours > 0 && <p className="mt-3 text-base" title={tt.reason}>{timeSentence(tt)}</p>}
+      {t.spent > 0 && <p className="mt-3 text-base">Focused so far: {fmtMin(t.spent * 60)}{t.hours ? ` of ${fmtMin(tt.plannedMinutes)} planned` : ''}</p>}
       {dl && <p className="mt-3 text-base">For deadline: <b>{dl.title}</b> ({dl.date})</p>}
       {!t.fun && t.reason && (
         <p className="mt-3 text-base"><b>{Q[quadrant(t)].name}</b>
@@ -132,7 +134,7 @@ const shade = (t) => (t.done ? 'border border-line bg-yuki-1 text-yoru-0 line-th
 const HM = /^(\d\d):(\d\d)$/
 const VIEWS = ['month', 'week', 'day']
 
-export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, setDeadlines, data, setData, onStart, onReplan }) {
+export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday, deadlines, setDeadlines, data, setData, onStart, onReplan, rhythm }) {
   const [adding, setAdding] = useState(null) // date being given a deadline
   const [dl, setDl] = useState({ title: '', hours: '' })
   const [view, setView] = useState('month')
@@ -159,7 +161,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     for (const t of tasks) {
       if (dateKey(t) !== k) continue
       const hm = HM.exec(t.start || ''), cls = `${shade(t)} ${sel === t.id ? 'ring-2 ring-ink' : ''}`
-      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + lengthOf(t)), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
+      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + getTaskTime(t, rhythm).plannedMinutes), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
       else allDay.push({ id: `t${t.id}`, label: t.title, cls, onClick: () => setSel(t.id) })
     }
     for (const x of deadlines) {
@@ -219,7 +221,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           const day = d ? tasks.filter((t) => dateKey(t) === key(d)) : []
           const events = d ? (data.busy || []).filter((x) => evDay(x) === key(d)) : []
           const limit = key(d) === today && freeToday != null ? freeToday : freeHours // today's own number wins
-          const hrs = day.reduce((n, t) => n + (t.done ? 0 : t.hours || 0), 0)
+          const hrs = Math.round(day.reduce((n, t) => n + (t.done ? 0 : t.hours > 0 ? getTaskTime(t, rhythm).plannedMinutes : 0), 0) / 15) / 4 // planned hours, as Desker plans them
           return (
             <div key={i} className={`min-h-16 p-1 ${d ? 'border border-line bg-white' : ''} ${d && key(d) === today ? 'ring-2 ring-accent' : ''}`}>
               {d && (
@@ -264,7 +266,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
           <div className="flex flex-wrap gap-1">{undated.map((t) => <div key={t.id} className="w-40">{chip(t)}</div>)}</div>
         </section>
       )}
-      {selected && <Detail t={selected} goals={goals} deadlines={deadlines} update={update} remove={(id) => setTasks(tasks.filter((x) => x.id !== id))} close={() => setSel(null)} onStart={onStart} />}
+      {selected && <Detail rhythm={rhythm} t={selected} goals={goals} deadlines={deadlines} update={update} remove={(id) => setTasks(tasks.filter((x) => x.id !== id))} close={() => setSel(null)} onStart={onStart} />}
     </>
   )
 }

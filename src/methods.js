@@ -7,15 +7,15 @@ const date = (t) => (t.due ? Date.parse(t.due) : Infinity)
 const hrs = (t) => t.hours || 1
 
 export const METHODS = [
-  { name: 'Eisenhower', how: 'Due soon and high impact first',
+  { name: 'Due soon, high impact', how: 'Due soon and high impact first',
     pick: (tasks) => { const t = best(open(tasks), (t) => q(t) ?? 4, date); return t && { t, why: q(t) === undefined ? 'Earliest due date (not ranked yet).' : ['Due soon and high impact.', 'High impact, not due yet.', 'Due soon, lighter impact.', 'Lighter impact, no rush.'][q(t)] } } },
   { name: 'Eat the Frog', how: 'The big one you would rather dodge',
     pick: (tasks) => { const t = best(open(tasks), (t) => (q(t) ?? 1) < 2 ? 0 : 1, (t) => t.happy ?? 50, (t) => -hrs(t)); return t && { t, why: 'Important, big and the one you feel least like doing. Do it first.' } } },
   { name: 'Quick wins', how: 'Most value for the least effort',
     pick: (tasks) => { const t = best(open(tasks), (t) => -([4, 3, 2, 1][q(t)] ?? 2) / hrs(t)); return t && { t, why: `Worth the most per hour${t.hours ? ` (${t.hours}h)` : ''}.` } } },
   { name: 'Fits my energy', how: 'Matches your free minutes and energy',
-    pick: (tasks, { minutes = 60, energy = 'medium' } = {}) => {
-      const fits = open(tasks).filter((t) => !t.hours || t.hours * 60 <= minutes)
+    pick: (tasks, { minutes = 60, energy = 'medium', planned } = {}) => { // planned(t): minutes Desker plans for t (taskTime.js); without it the user's own estimate
+      const fits = open(tasks).filter((t) => !t.hours || (planned ? planned(t) : t.hours * 60) <= minutes)
       const t = energy === 'low' ? best(fits, (t) => -(t.happy ?? 50), hrs) : energy === 'high' ? best(fits, (t) => q(t) ?? 4, (t) => -hrs(t)) : best(fits, (t) => q(t) ?? 4, hrs)
       return t && { t, why: { low: 'Light and enjoyable for a low-energy moment.', medium: 'Fits your time and matters.', high: 'Demanding and important: use the energy.' }[energy] } } },
 ]
