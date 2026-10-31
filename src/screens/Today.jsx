@@ -288,10 +288,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       {ritualDue(data) && <Ritual key={ritualDue(data)} kind={ritualDue(data)} data={data} setData={setData} onReplan={onReplan} />}
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <section className={`${panel} !p-3 lg:col-span-6 lg:!p-4`} aria-label="Your tasks">
-          <BoxHead tab={`Your tasks ${open.length}`} tabClass="px-tab-matsu" line="Type what you need to do. Press Start on one to begin it.">
+        <section className="lg:col-span-6" aria-label="Your tasks">
+          <div className="flex items-center justify-between">
+            <h2>Your tasks <span className="text-xs text-slate-700">{open.length}</span></h2>
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
-          </BoxHead>
+          </div>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
             <input className={`${input} min-w-0 flex-1`} placeholder="Add a task (press N)" aria-label="Task" ref={quickRef} value={quick} onChange={(e) => setQuick(e.target.value)} />
             <button className={`${btn} ${BLUE}`}>Add task</button>
