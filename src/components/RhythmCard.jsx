@@ -1,5 +1,6 @@
 import { profile, learnedThisWeek, accuracyByWeek } from '../rhythm.js'
 import { btn, ghost, panel } from '../ui.js'
+import BoxHead from './BoxHead.jsx'
 
 // Today's small view of Your rhythm. On Sundays it becomes the weekly report.
 export default function RhythmCard({ data, onOpen }) {
@@ -13,11 +14,11 @@ export default function RhythmCard({ data, onOpen }) {
     : `Your work takes about ${p.dur.overall}x what you estimate.`
   return (
     <section className={`${panel} !p-3 lg:!p-4`} aria-label="Your rhythm">
-      <h2 className="px-tab px-tab-matsu mb-3 inline-block">{sunday ? 'Your week' : 'Your rhythm'}</h2>
-      <p>{p.confidence.label}.</p>
-      <p className="text-base text-slate-700">{line}</p>
+      <BoxHead tab={sunday ? 'Your week' : 'Your rhythm'} tabClass="px-tab-matsu" line={`${p.confidence.label}.`}>
+        <button className={`${btn} ${ghost}`} onClick={onOpen}>{sunday ? 'Open report' : 'Open'}</button>
+      </BoxHead>
+      <p className="mt-2 text-base text-slate-700">{line}</p>
       {learned.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-700">{learned.slice(0, 3).map((l) => <li key={l}>{l}</li>)}</ul>}
-      <button className={`${btn} ${ghost} mt-3`} onClick={onOpen}>{sunday ? 'Open this week’s report' : 'Open Your rhythm'}</button>
     </section>
   )
 }

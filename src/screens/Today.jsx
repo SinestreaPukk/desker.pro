@@ -8,6 +8,7 @@ import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
 import { track } from '../analytics.js'
 import { nameOf, lineFor, ritualDue, sceneChoice } from '../kodama.js'
+import BoxHead from '../components/BoxHead.jsx'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
 import { overlaps } from '../schedule.js'
@@ -114,6 +115,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     ['projects', deadlines.length >= 2 && !(data.projects || []).length, 'Juggling a course or group project with several deadlines? A project keeps them together.', 'Start a project', () => goTab('Projects')],
   ].find(([k, ok]) => ok && !seen.split(' ').includes(k))
   const card = 'px-rule pb-3'
+  const ROW = 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3' // text on the left, its buttons on the right
+  const ACT = 'ml-auto flex shrink-0 flex-wrap justify-end gap-2'
   const link = 'min-h-11 underline hover:text-yoru-0'
 
   return (
@@ -128,8 +131,6 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </div>
         <div className="order-1 lg:order-2"><Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)} /></div>
       </header>
-
-      {ritualDue(data) && <Ritual key={ritualDue(data)} kind={ritualDue(data)} data={data} setData={setData} onReplan={onReplan} />}
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
@@ -165,34 +166,40 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <div role="group" aria-label="How is your energy" className="px-rule mt-3 flex flex-wrap items-center gap-2 pb-3">
               <span>How is your energy right now?</span>
               <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} className="px-btn capitalize" onClick={() => tap(l, true)}>{l}</button>)}</div>
-              <button className={btn} onClick={() => setAskEnergy(false)}>Not now</button>
+              <button className={`${btn} ml-auto`} onClick={() => setAskEnergy(false)}>Not now</button>
             </div>
           )}
           {cur ? (
-            <div className={`${card} mt-3`}>
-              <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
-              <p className="mt-1 break-words text-2xl">{cur.title}</p>
-              <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
+            <div className={`${card} ${ROW} mt-3`}>
+              <div className="min-w-0 flex-1 basis-60">
+                <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
+                <p className="mt-1 break-words text-2xl">{cur.title}</p>
+                <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
+              </div>
+              <div className={ACT}>
                 <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
                 {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
                 {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
               </div>
             </div>
           ) : !tasks.length && !deadlines.length ? (
-            <div className={`${card} mt-3`}>
-              <p className="text-2xl">Nothing to pick from yet</p>
-              <p className="mt-1 text-slate-700">Add your first task or deadline. Desker will then suggest what to do next, right here.</p>
-              <div className="mt-4 flex flex-wrap gap-2">
+            <div className={`${card} ${ROW} mt-3`}>
+              <div className="min-w-0 flex-1 basis-60">
+                <p className="text-2xl">Nothing to pick from yet</p>
+                <p className="mt-1 text-slate-700">Add your first task or deadline. Desker will then suggest what to do next, right here.</p>
+              </div>
+              <div className={ACT}>
                 <button className={`${btn} ${BLUE}`} onClick={addFirst}>Add a task</button>
                 <button className={`${btn} ${ghost}`} onClick={() => goTab('Tasks')}>Add a deadline</button>
               </div>
             </div>
           ) : !tasks.length && deadlines.length ? (
-            <div className={`${card} mt-3`}>
-              <p className="text-2xl">{soon[0] ? `${soon[0].title} is next` : 'Your deadlines are set'}</p>
-              <p className="mt-1 text-slate-700">Break it into tasks and Desker can tell you what to do first.</p>
-              <div className="mt-4 flex flex-wrap gap-2"><button className={`${btn} ${BLUE}`} onClick={() => goTab('Tasks')}>Break it into tasks</button><button className={`${btn} ${ghost}`} onClick={addFirst}>Add a task</button></div>
+            <div className={`${card} ${ROW} mt-3`}>
+              <div className="min-w-0 flex-1 basis-60">
+                <p className="text-2xl">{soon[0] ? `${soon[0].title} is next` : 'Your deadlines are set'}</p>
+                <p className="mt-1 text-slate-700">Break it into tasks and Desker can tell you what to do first.</p>
+              </div>
+              <div className={ACT}><button className={`${btn} ${BLUE}`} onClick={() => goTab('Tasks')}>Break it into tasks</button><button className={`${btn} ${ghost}`} onClick={addFirst}>Add a task</button></div>
             </div>
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask your kodama to plan your day.</p>}
 
@@ -254,11 +261,10 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </details></>}
         </section>
 
-        <section className="lg:col-span-3" aria-label="Coming up">
-          <div className="flex items-center justify-between">
-            <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
+        <section className={`${panel} !p-3 lg:col-span-3 lg:!p-4`} aria-label="Coming up">
+          <BoxHead tab={`Coming up ${soon.length}`} tabClass="px-tab-matsu" line="Dates to keep in mind, soonest first.">
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
-          </div>
+          </BoxHead>
           <ul className="mt-3">
             {soon.slice(0, 5).map((x) => (
               <li key={x.id} className="px-rule py-2">
@@ -271,12 +277,13 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </section>
       </div>
 
+      {ritualDue(data) && <Ritual key={ritualDue(data)} kind={ritualDue(data)} data={data} setData={setData} onReplan={onReplan} />}
+
       <div className="grid gap-6 lg:grid-cols-12">
-        <section className="lg:col-span-6" aria-label="Your tasks">
-          <div className="flex items-center justify-between">
-            <h2>Your tasks <span className="text-xs text-slate-700">{open.length}</span></h2>
+        <section className={`${panel} !p-3 lg:col-span-6 lg:!p-4`} aria-label="Your tasks">
+          <BoxHead tab={`Your tasks ${open.length}`} tabClass="px-tab-matsu" line="Type what you need to do. Press Start on one to begin it.">
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
-          </div>
+          </BoxHead>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
             <input className={`${input} min-w-0 flex-1`} placeholder="Add a task (press N)" aria-label="Task" ref={quickRef} value={quick} onChange={(e) => setQuick(e.target.value)} />
             <button className={`${btn} ${BLUE}`}>Add task</button>
@@ -286,9 +293,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
           {hint && (
-            <div role="note" className="px-rule mt-3 pb-3">
-              <p className="text-slate-700">{hint[2]}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div role="note" className={`px-rule ${ROW} mt-3 pb-3`}>
+              <p className="min-w-0 flex-1 basis-60 text-slate-700">{hint[2]}</p>
+              <div className={ACT}>
                 <button className={`${btn} ${ghost}`} onClick={() => { dismissHint(hint[0]); hint[4]() }}>{hint[3]}</button>
                 <button className={btn} onClick={() => dismissHint(hint[0])}>Not now</button>
               </div>
