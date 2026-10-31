@@ -5,6 +5,12 @@ Goals, deadlines, tasks and a calendar, with an AI agent.
     npm install
     npx vercel dev   # runs the app and /api locally (load .env.local first: set -a; . ./.env.local; set +a)
 
+Or, with no keys or database to set up:
+
+    npm run dev:local   # http://localhost:3000
+
+`dev/` serves the same `api/` handlers, but AI calls go through your logged-in `claude` CLI (they use your Claude plan) and the database is PGlite in `.data/` (delete it to start clean). The `/dsb` password is `dev`. Testing only: it listens on localhost and is not used by Vercel. AI answers can differ a little from production, as the CLI ignores `max_tokens` and sends earlier chat turns as text.
+
 Look (tasteskill v2, editorial greeting): white ground, tonal pale-blue panels (`#f3f6fc`), Instrument Serif for the greeting and Instrument Sans for everything else, ink `#14213d`, calm pastel blue `#b4caf0` for primary actions and active states, deep `#35599a` for links. Shadows only on floating things (menus). Colours and radii live in the `@theme` block of `src/index.css`; shared classes in `src/ui.js`; icons in `src/icons.jsx`. Check changes with `node .agents/skills/design-taste-frontend/scripts/lint.mjs --app src`.
 
 Routes: `/today`, `/tasks`, `/goals`, `/projects`, `/calendar` (`/` and `/do-now` go to Today). `vercel.json` rewrites them to `index.html`.
