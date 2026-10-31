@@ -21,7 +21,7 @@ export default function Review({ tasks, goals, onAgent }) {
     <section className="px-panel p-4" aria-label="This week">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">This week {r.alignment !== null && <span className="text-xs text-slate-700">, {r.alignment}% of planned work links to a goal</span>}</h2>
-        <button className="min-h-11 underline" onClick={onAgent}>Discuss with the AI agent</button>
+        <button className="min-h-11 underline" onClick={onAgent}>Talk it over with your kodama</button>
       </div>
       {r.empty ? <p className="text-slate-700">Plan a few tasks for this week (give them a planned day) and you will see how your time splits across your goals.</p> : (
         <>

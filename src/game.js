@@ -1,5 +1,5 @@
-// The game layer. Nothing is stored: XP, level, quest and badges are all worked out from the tasks, goals and guide you already have,
-// so they can never drift from the real data. (Ceiling: deleting finished tasks lowers XP. Store a running total if that ever matters.)
+// The old XP game layer. The app no longer shows XP, levels, quests or badges (the kodama's growth replaced them: src/kodama.js);
+// this stays only so the saved XP total can be turned into the kodama's starting growth once (App.jsx), and so old data keeps meaning something.
 import { doneStats } from './tasks.js'
 import { dayStr } from './milestones.js'
 
@@ -38,11 +38,4 @@ export function badgesOf({ tasks = [], goals = [], guide }) {
   const s = { tasksDone: tasks.filter((t) => t.done).length, streak: doneStats(tasks).streak, guide: !!guide?.done,
     milestones: goals.reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length, 0), hours: tasks.reduce((n, t) => n + (t.spent || 0), 0) }
   return BADGES.map(([id, name, how, test]) => ({ id, name, how, got: test(s) }))
-}
-
-// Levels unlock the scene on Today: level 2 lets you pick the time of day, level 3 the season. Below that it follows the clock and the calendar.
-export const SCENE_UNLOCK = { variant: 2, season: 3 }
-export const sceneChoice = (data) => {
-  const level = levelOf(totalXp(data)).level, c = data.scene || {}
-  return { variant: level >= SCENE_UNLOCK.variant ? c.variant : undefined, season: level >= SCENE_UNLOCK.season ? c.season : undefined }
 }

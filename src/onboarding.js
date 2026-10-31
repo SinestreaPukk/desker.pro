@@ -13,5 +13,6 @@ export function startFrom(d, answers, first, now = new Date()) {
     const id = tasks[tasks.length - 1].id
     tasks = repair({ tasks, changed: [id], busy: d.busy || [], deadlines, freeHours: d.freeHours ?? 4, now, ...(plannerOf({ ...d, onboarding: answers }) || {}) }).tasks
   }
-  return { ...d, onboarding: answers, tasks, deadlines }
+  const { kodama: name, ...rest } = answers // the companion's name lives with the companion, not with the first-run answers
+  return { ...d, onboarding: rest, tasks, deadlines, ...(name && { kodama: { ...d.kodama, name } }) }
 }

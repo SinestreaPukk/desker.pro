@@ -4,8 +4,11 @@ import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { authClient, useSession } from './auth.js'
 import { Icon } from './icons.jsx'
+import { pushSupported, subscribe, unsubscribe } from './push.js'
+import { nameOf } from './kodama.js'
+import { QUIET } from './pushPlan.js'
 
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'xp', 'scene']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'kodama', 'xp', 'scene']
 const store = {
   get: (k) => { try { return localStorage[k] } catch { return undefined } },
   set: (k, v) => { try { localStorage[k] = v } catch { /* storage blocked: the toggle just will not persist */ } },
@@ -77,6 +80,25 @@ export default function Settings({ data, setData, row: inSidebar }) {
             <input type="checkbox" checked={rem} onChange={(e) => toggle(e.target.checked)} />
           </label>
           <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
+          {pushSupported() && (
+            <>
+              <label className={row}>Notes from {nameOf(data)}
+                <input type="checkbox" checked={!!data.push?.on} onChange={async (e) => {
+                  setMsg('')
+                  if (!e.target.checked) { await unsubscribe(); return setData((d) => ({ ...d, push: { ...d.push, on: false, sub: undefined } })) }
+                  try { const got = await subscribe(); setData((d) => ({ ...d, push: { quiet: QUIET, ...d.push, ...got, on: true } })) } catch (err) { setMsg(err.message) }
+                }} />
+              </label>
+              <p className="text-xs text-slate-700">At most two a day, a morning and an evening one, even when Desker is closed. None during quiet hours, and none if you have been away.</p>
+              {data.push?.on && (
+                <div className="flex items-center gap-2 text-base">Quiet from
+                  <input type="time" className={`${input} w-28`} aria-label="Quiet hours start" value={data.push.quiet?.from || QUIET.from} onChange={(e) => setData((d) => ({ ...d, push: { ...d.push, quiet: { ...(d.push.quiet || QUIET), from: e.target.value || QUIET.from } } }))} />
+                  to
+                  <input type="time" className={`${input} w-28`} aria-label="Quiet hours end" value={data.push.quiet?.to || QUIET.to} onChange={(e) => setData((d) => ({ ...d, push: { ...d.push, quiet: { ...(d.push.quiet || QUIET), to: e.target.value || QUIET.to } } }))} />
+                </div>
+              )}
+            </>
+          )}
           <hr />
           <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device.</p>
           <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => location.assign('/today'))}>Sign out</button>

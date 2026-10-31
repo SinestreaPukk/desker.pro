@@ -98,7 +98,7 @@ function CalendarSync({ data, setData }) {
         </section>
         <section>
           <h3 className="mb-1 text-base font-semibold">Bring your calendar into Desker</h3>
-          <p className="mb-2 text-base text-slate-600">The AI agent plans around your meetings and classes. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file.</p>
+          <p className="mb-2 text-base text-slate-600">Your kodama plans around your meetings and classes. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file.</p>
           <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) run({ url: url.trim() }) }}>
             <input className={`${input} min-w-0 flex-1`} aria-label="Calendar link" placeholder="https://… or webcal://…" value={url} onChange={(e) => setUrl(e.target.value)} />
             <button className={`${btn} ${BLUE}`} disabled={loading || !url.trim()}>{loading ? 'Reading…' : 'Import'}</button>

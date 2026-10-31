@@ -4,10 +4,10 @@ import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy } from '../energy.js'
 import { profile, plannerOf, realityCheck, record, addSignal, rhythmOf, isOff } from '../rhythm.js'
 import { METHODS } from '../methods.js'
-import { Scene } from '../px.jsx'
-import KodamaCard from '../components/KodamaCard.jsx'
+import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
+import Ritual from '../components/Ritual.jsx'
+import { nameOf, lineFor, ritualDue, sceneChoice } from '../kodama.js'
 import RhythmCard from '../components/RhythmCard.jsx'
-import { sceneChoice } from '../game.js'
 import Review from '../Review.jsx'
 import { overlaps } from '../schedule.js'
 import Row from '../components/Row.jsx'
@@ -109,7 +109,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const idle = !cur && !open.length // nothing to choose from: the pick controls would do nothing
   const hint = [
     ['goals', open.length >= 3 && !goals.length, 'Goals tell Desker what matters most, so it can rank your tasks.', 'Add a goal', () => goTab('Goals')],
-    ['ai', open.length >= 3, 'The AI agent can plan your week around your deadlines and free time.', 'Ask the AI agent', openAgent],
+    ['ai', open.length >= 3, 'Your kodama can plan your week around your deadlines and free time.', 'Talk to your kodama', openAgent],
     ['projects', deadlines.length >= 2 && !(data.projects || []).length, 'Juggling a course or group project with several deadlines? A project keeps them together.', 'Start a project', () => goTab('Projects')],
   ].find(([k, ok]) => ok && !seen.split(' ').includes(k))
   const card = 'px-rule pb-3'
@@ -121,19 +121,21 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
-          {check?.over && <p role="note" className="mt-2 text-slate-700">You planned {check.planned} h for today. At your usual pace that is about {check.real} h, and you have {check.free} h free. Replan to spread it out.</p>}
-          <KodamaCard goals={goals} onlyNews className="mt-3 hidden sm:flex" />
+          <p className="px-sunk mt-3 max-w-md break-words px-3 py-2" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
+          <KodamaSettings data={data} setData={setData} />
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
-        <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
+        <div className="order-1 lg:order-2"><Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)} /></div>
       </header>
+
+      {ritualDue(data) && <Ritual key={ritualDue(data)} kind={ritualDue(data)} data={data} setData={setData} onReplan={onReplan} />}
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
           <section role="dialog" aria-modal="true" aria-label="Getting started" className="px-panel w-full max-w-md bg-yuki-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-base">Start with one thing to do</h2>
             <p className="mt-2 text-slate-700">Add a task, or a deadline if it has a date you cannot miss. Desker then suggests what to do next, right here.</p>
-            <p className="mt-2 text-slate-700">Goals, projects and the AI agent can wait until you have a few tasks.</p>
+            <p className="mt-2 text-slate-700">Goals, projects and your kodama can wait until you have a few tasks.</p>
             <button autoFocus className={`${btn} ${BLUE} mt-4 w-full`} onClick={addFirst}>Add my first task</button>
             <div className="mt-2 flex flex-wrap justify-between gap-2">
               <button className={link} onClick={() => go('Tasks')}>Add a deadline instead</button>
@@ -191,7 +193,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <p className="mt-1 text-slate-700">Break it into tasks and Desker can tell you what to do first.</p>
               <div className="mt-4 flex flex-wrap gap-2"><button className={`${btn} ${BLUE}`} onClick={() => goTab('Tasks')}>Break it into tasks</button><button className={`${btn} ${ghost}`} onClick={addFirst}>Add a task</button></div>
             </div>
-          ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
+          ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask your kodama to plan your day.</p>}
 
           {!idle && <><div className="mt-4 flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1">Minutes free right now
@@ -251,7 +253,6 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </details></>}
         </section>
 
-        <KodamaCard goals={goals} onlyNews className="sm:hidden lg:col-span-12" />
         <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
             <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
@@ -264,7 +265,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
               </li>
             ))}
-            {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask the AI agent to plan tomorrow.</li>}
+            {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask your kodama to plan tomorrow.</li>}
           </ul>
         </section>
       </div>
@@ -281,7 +282,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </form>
           <ul className="mt-3">
             {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
-            {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask the AI agent to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
+            {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
           {hint && (
             <div role="note" className="px-rule mt-3 pb-3">

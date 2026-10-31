@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
 import { BLUE, btn, ghost, input, LEVELS } from '../ui.js'
-import { Avatar } from '../px.jsx'
+import { Kodama } from '../px.jsx'
+import { nameOf } from '../kodama.js'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
 import { summaryForAI } from '../rhythm.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
 export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
+  const name = nameOf(data)
+  const Face = () => <span style={{ '--px': '1px' }} className="shrink-0"><Kodama /></span> // 44px: the sprite at one screen pixel per art pixel
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -21,7 +24,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       const out = await post('/api/chat', {
         goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
         tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId }) => ({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId })),
-        pattern: patternOf(data), ratio: ratioOf(data.tasks), rhythm: summaryForAI(data),
+        pattern: patternOf(data), ratio: ratioOf(data.tasks), rhythm: summaryForAI(data), companion: name,
         projects: (data.projects || []).map(({ id, title, kind, date }) => ({ id, title, kind, date })),
         deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
         hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
@@ -69,17 +72,17 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-line px-3 py-2">
-        <Avatar label="Desker AI agent" />
+        <span className="flex items-center gap-2"><Face /><span className="text-base">{name}</span></span>
         {onClose && <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>}
       </header>
       <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
         <div className="mr-auto flex items-start gap-2">
-          <Avatar />
-          <div className={`${bubble} px-sunk`}>Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?</div>
+          <Face />
+          <div className={`${bubble} px-sunk`}>Hi, I am {name}. I can plan around your tasks, deadlines and free time. How are you feeling today?</div>
         </div>
         {msgs.map((m, i) => (
           <div key={i} className={`flex items-start gap-2 ${m.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
-            {m.role !== 'user' && <Avatar />}
+            {m.role !== 'user' && <Face />}
             <div className={`${bubble} ${m.role === 'user' ? 'px-btn-primary' : 'px-sunk'}`}>
             {m.label ?? m.content}
             {m.notes?.length > 0 && <ul className="mt-2 list-disc pl-5 text-base">{m.notes.map((n) => <li key={n}>{n}</li>)}</ul>}
@@ -99,7 +102,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
           </div>
         ))}
         {busy && (
-          <div className="mr-auto flex items-center gap-2" role="status" aria-label="AI agent is typing"><Avatar /><span className="px-sunk flex gap-1 px-3 py-3">
+          <div className="mr-auto flex items-center gap-2" role="status" aria-label={`${name} is typing`}><Face /><span className="px-sunk flex gap-1 px-3 py-3">
             <span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} /></span>
           </div>
         )}

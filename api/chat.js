@@ -1,16 +1,17 @@
 // Planning chatbot: asks about readiness / time, then returns plan updates. Prompt and key stay server-side.
 import { guard, askJSON } from './_ai.js'
 import guideHandler from './_guideHandler.js'
+import { personaPrompt } from '../src/persona.js'
 
 export default async function handler(req, res) {
   if (req.body?.mode?.startsWith('guide')) return guideHandler(req, res)
   if (!(await guard(req, res))) return
-  const { goals, tasks, hobbies, deadlines = [], projects = [], freeHours, freeToday, mood, busy = [], messages, pattern, ratio, rhythm } = req.body || {}
+  const { goals, tasks, hobbies, deadlines = [], projects = [], freeHours, freeToday, mood, busy = [], messages, pattern, ratio, rhythm, companion } = req.body || {}
   if (![goals, tasks, hobbies, deadlines, projects, busy, messages].every(Array.isArray) || tasks.length > 50 || goals.length > 50 || messages.length > 40
       || JSON.stringify(req.body).length > 50_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
   const today = new Date().toISOString().slice(0, 10)
-  const system = `You are a friendly planning agent inside a study planner for university students. Today is ${today}.
+  const system = `${personaPrompt(companion)} Today is ${today}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Hobbies / things the user wants to do for fun: ${JSON.stringify(hobbies)}
 Tasks (readiness 0-100 = how prepared they feel, hours = effort needed, when = planned date yyyy-mm-dd, start = planned start time HH:MM, fun = a hobby session): ${JSON.stringify(tasks)}

@@ -1,6 +1,6 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 4 and 6 done. Phases 5, 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
+Status: **Phases 1 to 6 done. Phases 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -65,7 +65,23 @@ Status: **Phases 1 to 4 and 6 done. Phases 5, 7, 8 follow (decisions recorded: k
 - **Not done**: splitting a long task into several blocks (one task = one slot in the data model; the timer length and break-friendly blocks are the substitute, say if you want real splitting);
   a separate AI call to classify old tasks (no new function: the Hobby plan caps at 12); a Rhythm stripe for the page banner (borrows the calendar stripe).
 
+## Phase 5: the kodama companion
+- **One character.** The AI agent is the kodama: "Talk to {name}" opens the chat, which now speaks in its voice (`src/persona.js` feeds the system prompt in `api/chat.js`; edit that file to retune it). You name it on the first-run screen
+  (optional) or from Today ("{name}, sapling" opens its name, growth and window view). Default name "Kodama". The Deskie shimaenaga stays the logo and favicon only.
+- **Home on Today**: the scene is now its window view with the kodama in it and a line from it next to the greeting. The lines (`lineFor` in `src/kodama.js`) know the time, your plan, the rhythm model (predicted energy, an over-full day) and your absence
+  ("Welcome back. No rush"). It never mentions missed days; after 23:00 it suggests rest. A test scans every line for pressure words.
+- **States**: idle, focus (while the timer runs), sleepy (night), happy / lucky (milestones, a task just finished), cozy (evening wrap-up done), calm (a heavy day). Only idle/blink, happy and lucky are drawn; focus, sleepy, cozy and calm reuse those frames at a different pace.
+- **Rituals** (both optional, skippable for the day, never counted against you): a *morning plan* (today's plan, an energy tap, "Looks good") and an *evening wrap-up* (mark what got done or move it to tomorrow, how long things took, how the day felt). They write timings and energy into the rhythm data.
+- **Growth replaces XP, levels, quests and badges.** Points come from honest habits: a real timing (3), a ritual (4), an energy tap (1, max 2 a day), a finished task (1, max 5 a day), plus the old XP total once (`xp / 8`, stored as `kodama.legacy` the first time the app loads; `data.xp` itself is untouched).
+  Stages: Seedling, Sprout, Sapling, Young tree, Elder. Growth never goes down. Sprout unlocks choosing the time of day for the window view, Sapling the season (these used to be levels 2 and 3). Stage up is announced once with a quiet toast.
+  The streak still exists with its one-rest-day-a-week forgiveness but is no longer used in any kodama message.
+- **Notifications (web push)**: toggle in Settings (only when the VAPID keys are set), quiet hours you can change, at most two a day (08:00 and 19:00 local), nothing when you have been away 5+ days. Needs `web-push` (new dependency),
+  `public/sw.js`, and an hourly caller for `/api/state?push=1` (all 12 Hobby functions are used, so it lives in `state.js`). **Not tested end to end: it needs real keys and a real browser subscription.** The rules (`src/pushPlan.js`) and the sender's logic are unit-tested or short enough to read.
+- **New env vars** (all optional, documented in `.env.example` and the README): `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`.
+- **Poses to draw** (the kodama sheet is 44x44 frames: idle a/b, happy a/b, lucky a/b): focusing (eyes down, a tiny book or lamp), sleepy (nodding, eyes closed, optional "z"), cozy (a blanket or a mug), calm-concerned (soft eyes, leaf drooping slightly), plus two accessories for Young tree (leaf crown) and Elder (lantern).
+- **Clash with the brief, resolved the safe way**: "reuse the user's kodama pixels" and "state sprites for six states" cannot both be met with the six frames that exist, so four states borrow frames; nothing was redrawn.
+
 ## Tests
-`npm test` (84 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (97 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.

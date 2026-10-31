@@ -6,6 +6,7 @@ import { Avatar } from './px.jsx'
 import Wallpaper from './Wallpaper.jsx'
 import DateField from './components/DateField.jsx'
 import { parseQuick } from './lists.js'
+import { cleanName, PERSONA } from './persona.js'
 
 export const SHARPEST = ['Morning', 'Afternoon', 'Evening', 'Late night']
 export const SLOW = ['Rarely', 'Sometimes', 'Almost always']
@@ -15,6 +16,7 @@ const Chip = ({ on, onClick, children }) => <button type="button" aria-pressed={
 export default function Welcome({ name, onDone }) {
   const [sharpest, setSharpest] = useState('')
   const [slow, setSlow] = useState('')
+  const [kname, setKname] = useState('')
   const [kind, setKind] = useState('Task')
   const [text, setText] = useState('')
   const [date, setDate] = useState('')
@@ -22,7 +24,7 @@ export default function Welcome({ name, onDone }) {
   const isDl = kind === 'Deadline'
   const parsed = text.trim() ? parseQuick(text) : null // "Statics quiz Monday 3pm" works here as in the Tasks add box
   const due = date || parsed?.due
-  const go = () => onDone({ sharpest, slow, at: Date.now() }, !parsed ? undefined : isDl ? { deadline: { id: Date.now(), title: parsed.title, date: due, ...(parsed.start && { time: parsed.start }) } } : { task: { ...parsed, ...(due && { due }) } })
+  const go = () => onDone({ sharpest, slow, at: Date.now(), ...(kname.trim() && { kodama: cleanName(kname) }) }, !parsed ? undefined : isDl ? { deadline: { id: Date.now(), title: parsed.title, date: due, ...(parsed.start && { time: parsed.start }) } } : { task: { ...parsed, ...(due && { due }) } })
   return (
     <div className="min-h-screen md:grid md:grid-cols-2">
       <aside className="relative h-36 md:sticky md:top-0 md:h-screen">
@@ -43,6 +45,9 @@ export default function Welcome({ name, onDone }) {
               <legend className="mb-1 text-base">Do your tasks usually take longer than you expect?</legend>
               <div className="flex flex-wrap gap-2">{SLOW.map((w) => <Chip key={w} on={slow === w} onClick={() => setSlow(slow === w ? '' : w)}>{w}</Chip>)}</div>
             </fieldset>
+            <label className="flex flex-col gap-1 text-base">Your study companion is a small kodama. Name it, or keep the default.
+              <input className={`${input} w-full`} maxLength="20" placeholder={PERSONA.defaultName} value={kname} onChange={(e) => setKname(e.target.value)} />
+            </label>
             <div className="space-y-2">
               <p className="text-base">What is coming up?</p>
               <div role="group" aria-label="Add a" className="px-seg">

@@ -27,7 +27,8 @@ import { btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
-import { xpOf, totalXp, levelOf } from './game.js'
+import { totalXp } from './game.js'
+import { nameOf, growthOf, legacyGrowth, STAGES } from './kodama.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar', Rhythm: '/rhythm' }
@@ -93,18 +94,26 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
-  // Level up: cheer when the level passes the one last seen on this device (the first visit just records it).
-  const level = data ? levelOf(totalXp(data)).level : 0
-  const earned = data ? xpOf(data) : 0
-  useEffect(() => { if (data && earned > (data.xp || 0)) setData((d) => ({ ...d, xp: earned })) }, [earned, data?.xp]) // raise the saved high-water mark
+  // The old XP/level system is gone. Its total becomes the kodama's starting growth, once, and is never touched again (data.xp stays as it was).
+  // `away` is how many days it was since the last visit, for the kodama's welcome back. Both are kept in data.kodama.
+  const loaded = !!data
   useEffect(() => {
-    if (!level) return
+    if (!loaded) return
+    setData((d) => {
+      const k = d.kodama || {}
+      return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(totalXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
+    })
+  }, [loaded])
+  // Growing into the next stage is announced once per device, quietly.
+  const stage = data?.kodama?.legacy !== undefined ? growthOf(data).index : -1 // not before the one-time XP migration has run
+  useEffect(() => {
+    if (stage < 0) return
     try {
-      const seen = +localStorage.seenLevel || 0
-      if (seen && level > seen) setToast({ stamp: true, hop: true, text: `Level up! You are level ${level}.` })
-      localStorage.seenLevel = Math.max(seen, level)
-    } catch { /* storage blocked: no cheer */ }
-  }, [level])
+      const seen = localStorage.seenStage
+      if (seen !== undefined && stage > +seen) setToast({ stamp: true, hop: true, text: `${nameOf(data)} grew into a ${STAGES[stage].name.toLowerCase()}. ${STAGES[stage].unlock}` })
+      localStorage.seenStage = Math.max(stage, +seen || 0)
+    } catch { /* storage blocked: no announcement */ }
+  }, [stage])
   if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
   if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => setData((d) => startFrom(d, onboarding, first))} />
 
@@ -196,7 +205,7 @@ export default function App() {
             <span><span className="block text-base font-semibold leading-tight">Desker</span><span className="block text-xs text-slate-600">Student planner</span></span>
           </button>
           <div className="flex items-center gap-2">
-            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Ask the AI agent</button>
+            <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Talk to {nameOf(data)}</button>
             <Settings data={data} setData={setData} />
           </div>
         </div>
@@ -213,7 +222,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo()}<span className="text-base font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
-            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} aria-label="Ask the AI agent" onClick={() => setAgentOpen(true)}><Icon name="Agent" /></button>
+            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} aria-label={`Talk to ${nameOf(data)}`} onClick={() => setAgentOpen(true)}><Icon name="Agent" /></button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
@@ -234,7 +243,7 @@ export default function App() {
         </main>
       </div>
 
-      <aside className={`${agentOpen ? 'fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white sm:w-[26rem] sm:border-l sm:border-line' : 'hidden'}`} aria-label="AI agent" onKeyDown={(e) => e.key === 'Escape' && setAgentOpen(false)}>
+      <aside className={`${agentOpen ? 'fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white sm:w-[26rem] sm:border-l sm:border-line' : 'hidden'}`} aria-label="Companion chat" onKeyDown={(e) => e.key === 'Escape' && setAgentOpen(false)}>
         <Agent data={data} setData={setData} onClose={() => setAgentOpen(false)} onReplan={openReplan} onGuide={() => openGuide(data.guide && !data.guide.done && !data.guide.skipped ? 'resume' : 'start')} reviewReq={reviewReq} />
       </aside>
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}

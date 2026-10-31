@@ -29,10 +29,10 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
       aiPlan = validPlan(out.plan, data.tasks)
       if (!aiPlan.length) throw new Error('unreadable')
       aiNote = typeof out.note === 'string' ? out.note : ''
-    } catch { aiPlan = undefined; aiNote = 'The AI agent could not be reached, so Desker planned this itself from your deadlines, free time and calendar.' }
+    } catch { aiPlan = undefined; aiNote = 'Your kodama could not be reached, so Desker planned this itself from your deadlines, free time and calendar.' }
     // Whatever the AI proposed is checked here: no overlaps, free-time caps and deadlines are enforced by code, not trusted.
     const { plan, problems } = planWeek({ ...ctx, aiPlan })
-    if (!plan.length && !problems.length) return setState({ error: 'Nothing could be planned. Check your free time per day in the AI agent panel.' })
+    if (!plan.length && !problems.length) return setState({ error: 'Nothing could be planned. Check your free time per day in the chat with your kodama.' })
     const d = diff(data.tasks, plan)
     setState({ plan, d, note: aiNote, risk: [...problems.map((p) => p.why), ...risks(applyPlan(data.tasks, plan), data.deadlines || [], ctx.freeHours).map((r) => `${r.title}: ${r.why}`)] })
   }

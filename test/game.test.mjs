@@ -33,7 +33,6 @@ test('total xp never drops below the saved high-water mark', () => {
 
 import { doneStats } from '../src/tasks.js'
 import { learned, recap } from '../src/insights.js'
-import { sceneChoice } from '../src/game.js'
 
 const at = (d, h = 10) => new Date(`${d}T${String(h).padStart(2, '0')}:00:00`).getTime()
 const doneOn = (...ds) => ds.map((d, i) => ({ id: i, done: true, doneAt: at(d) }))
@@ -50,9 +49,4 @@ test('insights: only says what the data supports', () => {
   assert.match(learned({ tasks: mornings })[0], /morning/)
   const r = recap({ tasks: doneOn('2026-10-26', '2026-10-27', '2026-10-20'), goals: [{ milestones: [{ at: '2026-10-27' }, { at: '2026-10-01' }] }] }, at('2026-10-30'))
   assert.deepEqual([r.done, r.last, r.milestones], [2, 1, 1])
-})
-test('scene choices need the level', () => {
-  const low = { scene: { variant: 'night', season: 'winter' }, tasks: [] }
-  assert.deepEqual(sceneChoice(low), { variant: undefined, season: undefined })
-  assert.deepEqual(sceneChoice({ ...low, xp: 100 }), { variant: 'night', season: 'winter' })
 })

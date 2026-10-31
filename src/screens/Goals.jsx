@@ -16,7 +16,7 @@ function Hobbies({ hobbies, setHobbies }) {
   return (
     <section className={`${panel} mt-6`}>
       <h2 className="text-base font-semibold">Things I want to do for fun</h2>
-      <p className="mb-3 text-base text-slate-600">Hobbies and things that make you happy. The AI agent schedules them between your tasks.</p>
+      <p className="mb-3 text-base text-slate-600">Hobbies and things that make you happy. Your kodama schedules them between your tasks.</p>
       <form className="mb-3 flex gap-2" onSubmit={add}>
         <input className={`${input} min-w-0 flex-1`} placeholder="e.g. Play guitar" aria-label="New hobby" value={v} onChange={(e) => setV(e.target.value)} />
         <button className={`${btn} ${BLUE}`}>Add</button>
