@@ -1,4 +1,4 @@
-// Today's weather from Open-Meteo (no key), at the browser's location. Cached for an hour; a refusal is remembered for a day.
+// Today's weather from Open-Meteo (no key) at the visitor's approximate location (from their IP, so no permission prompt). Cached for an hour.
 import { useEffect, useState } from 'react'
 
 const KEY = 'desker.weather'
@@ -12,11 +12,9 @@ export const cachedWeather = () => { const w = read(); return w && w.kind && Dat
 let pending
 const load = () => pending ||= fetchWeather().finally(() => { pending = null })
 async function fetchWeather() {
-  const old = read()
-  if (old?.deniedAt && Date.now() - old.deniedAt < 864e5) return null
-  const pos = await new Promise((ok) => navigator.geolocation ? navigator.geolocation.getCurrentPosition(ok, () => ok(null), { timeout: 8000, maximumAge: 36e5 }) : ok(null))
-  if (!pos) { localStorage.setItem(KEY, JSON.stringify({ deniedAt: Date.now() })); return null }
-  const { latitude: la, longitude: lo } = pos.coords
+  const geo = await (await fetch('https://get.geojs.io/v1/ip/geo.json')).json()
+  const la = Number(geo.latitude), lo = Number(geo.longitude)
+  if (!Number.isFinite(la) || !Number.isFinite(lo)) return null
   const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la.toFixed(2)}&longitude=${lo.toFixed(2)}&daily=weather_code,temperature_2m_max&timezone=auto&forecast_days=1`)
   if (!r.ok) return null
   const d = (await r.json()).daily

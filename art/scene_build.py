@@ -32,7 +32,10 @@ R = {
     'w_far': ('yoru-0', 'yuki-2', 'hada-1'), 'w_mid': ('yoru-1', 'kori-1', 'yoru-0'), 'w_near': ('yoru-2', 'kori-2', 'yoru-1'), 'glint': ('yuki-3', 'yuki-1', 'hada-0'),
     'sn_hi': ('yuki-1', 'yuki-0', 'hada-0'), 'sn_l': ('yuki-2', 'yuki-1', 'yuki-2'), 'sn_m': ('yuki-3', 'yuki-2', 'yuki-3'), 'sn_s': ('yoru-0', 'yuki-3', 'yoru-0'), 'sn_d': ('yoru-1', 'yoru-0', 'yoru-1'),
     'pine': ('matsu-1', 'matsu-0', 'matsu-1'), 'pine_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'pine_d': ('yoru-2', 'matsu-2', 'yoru-2'),
-    'thatch': ('yoru-0', 'yoru-0', 'yoru-0'), 'thatch_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'wood': ('yoru-0', 'yoru-0', 'yoru-0'), 'wood_s': ('yoru-1', 'yoru-1', 'yoru-1'),
+    'thatch': ('kuri', 'kuri', 'kuri'), 'thatch_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'wood': ('kuri', 'kuri', 'kuri'), 'wood_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'shade': ('yoru-2', 'yoru-2', 'yoru-2'),
+    'log': ('hada-1', 'hada-1', 'hada-1'), 'log_s': ('kuri', 'kuri', 'kuri'), 'wall_d': ('kuri', 'kuri', 'kuri'), 'wall_s': ('yoru-1', 'yoru-1', 'yoru-1'),
+    'wr_hi': ('hada-0', 'hada-0', 'hada-0'), 'wr_l': ('hada-1', 'hada-1', 'hada-1'), 'wr_m': ('kuri', 'kuri', 'kuri'), 'wr_s': ('yoru-1', 'yoru-1', 'yoru-1'),
+    'smoke_l': ('yuki-2', 'yuki-0', 'hada-0'), 'smoke': ('yoru-0', 'yuki-1', 'hada-1'), 'smoke_s': ('yoru-1', 'yuki-2', 'yoru-0'),
     'win': ('hada-0', 'hada-0', 'hada-0'), 'win_g': ('hada-1', 'hada-1', 'hada-1'), 'pool0': ('hada-1', 'yuki-2', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0'),
     'sail': ('yuki-2', 'yuki-0', 'hada-0'), 'sail_s': ('yuki-3', 'yuki-2', 'yuki-3'),
     'tor': ('beni', 'beni', 'beni'), 'tor_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'tor_h': ('hada-1', 'hada-1', 'hada-1'),
@@ -45,8 +48,7 @@ for new, old in (('rf_hi', 'sn_hi'), ('rf_l', 'sn_l'), ('rf_m', 'sn_m'), ('rf_s'
 BASE = dict(R)   # winter
 
 # Seasons recolour the same pixels. Each override is (night, morning, dusk). Winter is BASE.
-MOSS = {'rf_hi': ('matsu-0', 'matsu-0', 'matsu-0'), 'rf_l': ('matsu-0', 'matsu-0', 'matsu-0'), 'rf_m': ('matsu-1', 'matsu-1', 'matsu-1'), 'rf_s': ('matsu-2', 'matsu-2', 'matsu-2'),
-        'pool0': ('hada-1', 'matsu-0', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0')}
+MOSS = {'pool0': ('hada-1', 'matsu-0', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0')}
 GREEN_GROUND = {'sn_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'sn_l': ('matsu-1', 'matsu-0', 'matsu-1'), 'sn_m': ('matsu-2', 'matsu-1', 'matsu-2'), 'sn_s': ('yoru-2', 'matsu-2', 'yoru-1'), 'sn_d': ('yoru-2', 'matsu-2', 'yoru-2'),
                 'cap_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'cap_l': ('matsu-0', 'matsu-0', 'hada-1'), 'cap_s': ('matsu-1', 'matsu-1', 'matsu-1'),
                 'pn_hi': ('matsu-0', 'matsu-0', 'hada-0'), 'pn_l': ('matsu-0', 'matsu-0', 'matsu-0'), 'pn_s': ('matsu-1', 'matsu-1', 'matsu-1'),
@@ -119,7 +121,7 @@ def sky(A):
                 ring = d > rr - .6
                 put(A, x, y, 'moon_s' if ((ring and (x - cx) + (y - cy) > 1) or (x, y) in ((cx + 1, cy + 1), (cx + 2, cy - 1), (cx - 2, cy + 2), (cx + 1, cy + 3))) else 'moon')
     # stars: 1px dots and three 3px plus shapes, kept off the moon and the cloud lanes
-    for _ in range(26):
+    for _ in range(12):
         x, y = rng.randint(2, W - 3), rng.randint(1, 24)
         if math.hypot(x - cx, y - cy) > 16: put(A, x, y, 'star')
     for x, y in ((74, 4), (158, 7), (10, 10), (182, 21)):
@@ -177,7 +179,7 @@ def forest(A):
     for x in range(W):
         for y in range(top[x], 47): put(A, x, y, 'hill')
     g = random.Random(21)
-    for gx, n in ((12, 4), (52, 3), (84, 5), (108, 3), (186, 3)):                  # clumps of three or four, uneven heights, gaps between
+    for gx, n in ((12, 3), (60, 3), (90, 4), (108, 2)):                  # clumps of three or four, uneven heights, gaps between
         for i in range(n):
             x = gx + i * g.randint(3, 6)
             if 118 <= x <= 176: continue
@@ -196,12 +198,12 @@ def lake(A):
     for x, y, w in ((24, 47, 6), (22, 49, 9), (25, 52, 5), (23, 55, 7), (26, 58, 3), (22, 60, 5)):
         for i in range(w): put(A, x + i, y, 'glint')
     g = random.Random(5)
-    for _ in range(34):                                                  # calm surface: sparse 1px ripples
+    for _ in range(12):                                                  # calm surface: sparse 1px ripples
         x, y = g.randint(0, W - 6), g.randint(47, 64)
         if is_(A, x, y, 'w_far', 'w_mid', 'w_near'):
             for i in range(g.randint(3, 7)): put(A, x + i, y, 'w_far' if y > 53 else 'w_mid' if y > 49 else 'w_mid')
 
-REFL = {'sail': 'sail_s', 'sail_s': 'w_near', 'rf_hi': 'rf_l', 'rf_l': 'rf_m', 'rf_m': 'rf_s', 'rf_s': 'w_near', 'cap_hi': 'cap_l', 'cap_l': 'cap_s', 'cap_s': 'w_near', 'pn_hi': 'pn_l', 'pn_l': 'pn_s', 'pn_s': 'pine_s', 'br': 'br_s', 'br_s': 'br_d', 'br_d': 'w_near', 'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near',
+REFL = {'sail': 'sail_s', 'sail_s': 'w_near', 'rf_hi': 'rf_l', 'rf_l': 'rf_m', 'rf_m': 'rf_s', 'rf_s': 'w_near', 'cap_hi': 'cap_l', 'cap_l': 'cap_s', 'cap_s': 'w_near', 'pn_hi': 'pn_l', 'pn_l': 'pn_s', 'pn_s': 'pine_s', 'br': 'br_s', 'br_s': 'br_d', 'br_d': 'w_near', 'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near', 'wr_hi': 'wr_l', 'wr_l': 'wr_m', 'wr_m': 'wr_s', 'wr_s': 'w_near', 'shade': 'w_near', 'log': 'log_s', 'log_s': 'w_near', 'wall_d': 'w_near', 'wall_s': 'w_near', 'smoke_l': 'smoke', 'smoke': 'smoke_s', 'smoke_s': 'w_near',
         'win': 'win_g', 'win_g': 'win_g', 'tor': 'tor_s', 'tor_s': 'thatch_s', 'tor_h': 'tor', 'pine': 'pine_s', 'pine_s': 'pine_d', 'pine_d': 'w_near', 'stone_l': 'stone_s', 'stone_s': 'stone_d'}
 def reflect(A, L, base, shear=1):
     """Mirror an object layer about its waterline: one ramp step darker, 1px ripple gaps, a gentle sideways wobble."""
@@ -263,40 +265,42 @@ def pine(L, cx, base, h, seed, w_scale=1.0):
 
 HOUSE_X, HOUSE_Y = 133, 46     # front-left corner of the front wall, waterline of the far shore
 def house(L):
-    """A small log cabin on the far shore: low gabled roof under a snow load, log walls, two lit windows, a stone chimney with a thread of smoke."""
+    """A plain wooden cabin on the far shore, the same in every season: shingled roof, plank gable, log walls, two lit windows, a stone chimney with smoke."""
     x0, yb, W1, HW, HG, DX, DY = HOUSE_X, HOUSE_Y, 22, 7, 10, 12, -4
     ax, ay = x0 + W1 // 2, yb - HW - HG
     ex, ey = x0 + W1 + 2, yb - HW
     def P(pts, r): poly(L, pts, r)
-    P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wood_s')      # right wall, in shade
-    for y in range(yb - HW + 1, yb, 2):                                                                          # log courses on the side wall
-        for x in range(x0 + W1, x0 + W1 + DX + 1): put(L, x, y + round((x - x0 - W1) * DY / DX), 'thatch_s')
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'thatch_s')                                    # side roof: shingles...
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 3), (ex - 2, ey - 3)], 'rf_s')                           # ...under a shaded snow load
-    for i in range(DX + 1):
-        put(L, ax + i, ay + round(i * DY / DX), 'rf_m')
-        y = ey - 3 - round(i * 4 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'rf_m'); put(L, ex - 2 + i, y + 1, 'rf_s')
-    for i in range(0, DX + 1, 2): put(L, ex + i, ey - round(i * 4 / DX) - 1, 'wood_s')                          # eave shadow
-    rect(L, x0, yb - HW, x0 + W1, yb, 'wood')                                                                    # front wall: horizontal logs
-    for y in range(yb - HW + 1, yb + 1, 2): rect(L, x0, y, x0 + W1, y, 'wood_s')
-    rect(L, x0, yb - HW, x0, yb, 'wood_s')
-    for wx in (x0 + 3, x0 + 14):                                                                                 # two lit windows with frames
-        rect(L, wx - 1, yb - 6, wx + 4, yb - 2, 'wood_s'); rect(L, wx, yb - 5, wx + 3, yb - 3, 'win'); put(L, wx + 1, yb - 4, 'win_g')
-    rect(L, x0 + 9, yb - 5, x0 + 11, yb, 'wood_s'); put(L, x0 + 10, yb - 2, 'win_g')                             # door
-    P([(x0 - 3, yb - HW), (x0 + W1 + 3, yb - HW), (ax, ay)], 'rf_l')                                             # front gable: snow...
-    P([(x0 + 2, yb - HW), (x0 + W1 - 2, yb - HW), (ax, ay + 5)], 'wood')                                          # ...with planks showing inside
-    for yy in range(ay + 6, yb - HW):
-        for x in range(x0 + 3, x0 + W1 - 2):
-            if x % 3 == 0 and L[yy, x] == IDX['wood']: L[yy, x] = IDX['wood_s']
-    rect(L, ax - 1, ay + 7, ax + 1, ay + 8, 'win')                                                               # a small gable window
-    for i in range(HG):                                                                                          # snow on the rafters: lit left, cool right
-        y = ay + i; hw = (i * (W1 // 2 + 3)) // HG
-        put(L, ax - hw, y, 'rf_hi'); put(L, ax - hw + 1, y, 'rf_hi' if i > 2 else 'rf_l'); put(L, ax + hw, y, 'rf_m'); put(L, ax + hw - 1, y, 'rf_s')
-    for x in range(x0 - 3, x0 + W1 + 4):
-        if x % 2 == 0: put(L, x, yb - HW + 1, 'rf_l' if x < ax else 'rf_m')
-    cx_ = ax + 6; cy = ay + round(6 * DY / DX)                                                                   # chimney on the ridge
-    rect(L, cx_, cy - 5, cx_ + 2, cy + 1, 'stone_s'); rect(L, cx_, cy - 5, cx_, cy + 1, 'stone_l'); rect(L, cx_ - 1, cy - 6, cx_ + 3, cy - 6, 'rf_l')
-    for k, (dx, dy) in enumerate(((1, -8), (2, -10), (1, -12), (2, -14))): put(L, cx_ + dx, cy + dy, 'cloud_l' if k % 2 else 'cloud')
+    P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wall_d')      # side wall, in shade
+    for y in range(yb - HW + 1, yb, 2):
+        for x in range(x0 + W1, x0 + W1 + DX + 1): put(L, x, y + round((x - x0 - W1) * DY / DX), 'wall_s')
+    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'wr_m')                                         # side roof plane
+    for k in range(1, 13, 3):                                                                                       # shingle courses, parallel to the ridge
+        for i in range(DX + 1):
+            x, y = ax + i + k * 0, ay + round(i * DY / DX) + k
+            if is_(L, x, y, 'wr_m'): put(L, x, y, 'wr_s')
+    for i in range(DX + 1): put(L, ax + i, ay + round(i * DY / DX), 'wr_l')                                         # lit ridge
+    rect(L, x0, yb - HW, x0 + W1, yb, 'log')                                                                       # front wall: logs
+    for y in range(yb - HW + 1, yb + 1, 2): rect(L, x0, y, x0 + W1, y, 'log_s')
+    rect(L, x0, yb - HW, x0, yb, 'log_s')
+    for wx in (x0 + 3, x0 + 14):                                                                                    # two lit windows
+        rect(L, wx - 1, yb - 6, wx + 4, yb - 2, 'shade'); rect(L, wx, yb - 5, wx + 3, yb - 3, 'win'); put(L, wx + 1, yb - 4, 'win_g')
+    rect(L, x0 + 9, yb - 5, x0 + 11, yb, 'shade'); put(L, x0 + 10, yb - 2, 'win_g')                                 # door
+    P([(x0 - 2, yb - HW), (x0 + W1 + 2, yb - HW), (ax, ay)], 'log')                                                # front gable: planks
+    for yy in range(ay + 1, yb - HW):
+        for x in range(x0 - 2, x0 + W1 + 3):
+            if x % 3 == 0 and L[yy, x] == IDX['log']: L[yy, x] = IDX['log_s']
+    for i in range(HG + 1):                                                                                         # bargeboards: lit left, shaded right
+        y = ay + i; hw = (i * (W1 // 2 + 2)) // HG
+        put(L, ax - hw, y, 'wr_hi'); put(L, ax - hw + 1, y, 'wr_l'); put(L, ax + hw, y, 'wr_s'); put(L, ax + hw - 1, y, 'wr_m')
+    rect(L, x0 - 2, yb - HW, x0 + W1 + 2, yb - HW, 'wr_s')                                                          # eave shadow
+    rect(L, ax - 1, ay + 5, ax + 1, ay + 6, 'win')                                                                  # gable window
+    cx_ = ax + 7; cy = ay + round(7 * DY / DX)                                                                      # chimney on the roof
+    rect(L, cx_, cy - 6, cx_ + 3, cy + 1, 'stone_s'); rect(L, cx_, cy - 6, cx_, cy + 1, 'stone_l'); rect(L, cx_ - 1, cy - 7, cx_ + 4, cy - 7, 'stone_l')
+    for k, (dx, dy, sz) in enumerate(((1, -9, 3), (2, -13, 3), (4, -17, 4), (6, -21, 4), (9, -25, 5))):             # smoke: puffs that widen and drift right
+        for j in range(sz):
+            for i in range(sz):
+                if sz > 2 and (i in (0, sz - 1)) and (j in (0, sz - 1)): continue                                  # round the corners
+                put(L, cx_ + dx + i, cy + dy + j, 'smoke_s' if k > 3 else 'smoke_l' if (i + j) < 2 else 'smoke')
     return ax, ay
 
 def pool(A):
@@ -336,17 +340,11 @@ def bank(A):
             r = 'sn_l' if d < 5 else 'sn_m' if d < 12 or (d < 14 and (x + y) % 2 == 0) else 'sn_l'
             put(A, x, y, r)
         put(A, x, b, 'sn_hi'); put(A, x, b + 1, 'sn_hi' if x % 3 else 'sn_l')
-        if (x // 6) % 2: put(A, x, b + 5, 'sn_s')                                                          # wet shadow at the waterline
     # drifts: 1px highlight on the lit crest, a shaded lee below it
-    for cx, cy, w in ((40, 72, 30), (92, 75, 36), (150, 73, 30), (8, 77, 22), (186, 77, 16)):
+    for cx, cy, w in ((50, 73, 34), (150, 74, 34)):
         for x in range(cx - w // 2, cx + w // 2 + 1):
             t = (x - cx) / (w / 2); yy = cy - round(2.5 * (1 - t * t)) - (1 if t < 0 else 0)
             put(A, x, yy, 'sn_hi'); put(A, x, yy + 1, 'sn_l'); put(A, x + 1, yy + 2, 'sn_m'); put(A, x + 2, yy + 3, 'sn_s' if x % 2 else 'sn_m')
-    for _ in range(90):                                                                                  # wind-packed sparkles
-        x, y = g.randint(0, W - 1), g.randint(BANK(0) + 6, H - 1)
-        if is_(A, x, y, 'sn_l', 'sn_m'): put(A, x, y, 'sn_hi' if g.random() < .5 else 'sn_m')
-    for i, (x, y) in enumerate(((98, 78), (95, 75), (99, 72), (96, 69), (100, 67), (104, 66), (108, 66), (112, 66), (116, 68))):   # footprints: a trail to the post
-        put(A, x, y, 'sn_s'); put(A, x + 1, y, 'sn_s'); put(A, x, y + 1, 'sn_d' if i % 2 == 0 else 'sn_s')
 
 # ---------------------------------------------------------------- the post the avatar perches on (feet land on its top row)
 AV_X, AV_Y = 114, 43
@@ -371,11 +369,10 @@ def rock_and_reeds(A):
         if x % 3: put(A, x, y0 + 2, 'cap_l' if x < 22 else 'cap_s')
     for y in range(70, 78): put(A, 8 + (y % 3), y, 'stone_s') if y % 2 else None                           # cracks
     g = random.Random(3)
-    for i, (x, h, lean) in enumerate(((3, 17, 1), (7, 12, -1), (11, 19, 1), (15, 10, 0), (30, 13, -1), (34, 18, 1), (38, 11, 0), (42, 15, -1), (46, 9, 1), (1, 9, 0))):
+    for i, (x, h, lean) in enumerate(((3, 17, 1), (8, 12, -1), (13, 15, 1), (34, 18, 1), (40, 12, -1))):
         for j in range(h):
             xx = x + (lean * j) // 5; yy = 79 - j
             put(A, xx, yy, 'reed' if i % 2 else 'reed_s')
-            if j > 3 and g.random() < .25: put(A, xx + (1 if lean >= 0 else -1), yy, 'reed_s')
         tx = x + (lean * h) // 5
         for k in range(3): put(A, tx, 79 - h - k, 'reed_h'); put(A, tx + (1 if k == 1 else 0), 79 - h - k, 'reed_h')
         put(A, tx, 79 - h - 3, 'cap_l')
@@ -412,7 +409,7 @@ def build(season='winter'):
     for L in (ho, p3, p4, p5, p1, p2): stamp(A, L)
     pool(A)
     to = new(); boat(to, 62, 58); reflect(A, to, 58); stamp(A, to); boat_rings(A, 62, 58)
-    bank(A); post(A); rock_and_reeds(A); branch(A)
+    bank(A); post(A); rock_and_reeds(A)
     return A
 
 SHIMMER = [[25, 51, 6], [23, 54, 8], [24, 57, 5]]       # [x, y, width] dashes on the moon's path that slide 1px at 2 fps
