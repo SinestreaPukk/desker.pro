@@ -146,7 +146,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
           <div className="px-sunk mt-3 flex max-w-md flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
             <p className="min-w-0 flex-1 basis-40 break-words" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
-            <KodamaSettings data={data} setData={setData} />
+            <KodamaSettings data={data} setData={setData} focusing={!!focus} />
           </div>
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>

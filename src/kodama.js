@@ -12,8 +12,8 @@ export const STAGES = [
   { name: 'Seedling', from: 0, unlock: 'It follows the clock for the view from your window.' },
   { name: 'Sprout', from: 25, unlock: 'Choose the time of day in your window view.' },
   { name: 'Sapling', from: 70, unlock: 'Choose the season in your window view.' },
-  { name: 'Young tree', from: 150, unlock: 'A leaf crown (needs art, see CHANGES.md).' },
-  { name: 'Elder', from: 300, unlock: 'A small lantern (needs art, see CHANGES.md).' },
+  { name: 'Young tree', from: 150, unlock: 'A leaf crown is on its way.' },
+  { name: 'Elder', from: 300, unlock: 'A small lantern is on its way.' },
 ]
 const DAILY_CAP = { done: 5, energy: 2 } // volume is capped per day: ticking 40 tiny tasks in an hour is not more growth than 5 real ones
 const days = (list, key, cap) => { const by = {}; for (const x of list) { const d = dayStr(new Date(key(x))); by[d] = Math.min(cap, (by[d] || 0) + 1) } return Object.values(by).reduce((a, b) => a + b, 0) }

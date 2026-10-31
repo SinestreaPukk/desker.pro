@@ -1,5 +1,5 @@
-// The old XP game layer. The app no longer shows XP, levels, quests or badges (the kodama's growth replaced them: src/kodama.js);
-// this stays only so the saved XP total can be turned into the kodama's starting growth once (App.jsx), and so old data keeps meaning something.
+// The XP game layer: XP, level, daily quest and badges. They are shown in the kodama's dialog on Today (components/KodamaHome.jsx) next to its growth stage (src/kodama.js).
+// The saved XP total also became the kodama's starting growth, once (App.jsx).
 import { doneStats } from './tasks.js'
 import { dayStr } from './milestones.js'
 

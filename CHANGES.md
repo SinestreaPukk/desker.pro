@@ -81,6 +81,8 @@ Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migra
 - **Poses to draw** (the kodama sheet is 44x44 frames: idle a/b, happy a/b, lucky a/b): focusing (eyes down, a tiny book or lamp), sleepy (nodding, eyes closed, optional "z"), cozy (a blanket or a mug), calm-concerned (soft eyes, leaf drooping slightly), plus two accessories for Young tree (leaf crown) and Elder (lantern).
 - **Clash with the brief, resolved the safe way**: "reuse the user's kodama pixels" and "state sprites for six states" cannot both be met with the six frames that exist, so four states borrow frames; nothing was redrawn.
 
+- **Update (after review):** at your request the XP, level, daily quest and badges are shown again, together with the growth stage as a "rank", the kodama's current state, the streak and your numbers, all in the dialog behind the "Kodama, {stage}" button on Today. Nothing was deleted by the Phase 5 change, so everything earned is back. There is no leaderboard against other students: that needs other people's data and their consent, so "rank" is your own ladder of five stages.
+
 ## Phase 7: calm, snowy, one kit
 - **Palette retuned** (still Yuki, same names): slightly bluer snow; **icy blue** is the accent (`kori-3`, links, active tab, primary buttons, progress bars, focus colour); **lantern amber** (`ando-0/1/2`, new) is used sparingly for the one thing to look at
   (the "Right now", Morning plan and Evening wrap-up tabs); the red (`beni`) is muted and kept for danger and the done stamp. The scene's `daidai` oranges are pulled toward amber. `yuki-3` was darkened so field and panel outlines reach 3:1.
