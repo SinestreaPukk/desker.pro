@@ -38,7 +38,7 @@ export default function Welcome({ name, onDone }) {
           <div className="flex items-center gap-3"><Avatar /><span className="text-2xl">Desker</span></div>
           <section className={`${panel} space-y-4`} aria-label="Welcome">
             <h1 className="text-2xl">{first ? `Welcome, ${first}!` : 'Welcome!'}</h1>
-            <p>Desker learns how long your work really takes and when you focus best, then plans around you. It starts with a guess, so two quick taps help.</p>
+            <p>Desker is the study planner for university students. It learns how long your work really takes and when you focus best, then plans around you. It starts with a guess, so two quick taps help.</p>
             <fieldset className="space-y-2">
               <legend className="mb-1 text-base">When do you usually feel sharpest?</legend>
               <div className="flex flex-wrap gap-2">{SHARPEST.map((w) => <Chip key={w} on={sharpest === w} onClick={() => setSharpest(sharpest === w ? '' : w)}>{w}</Chip>)}</div>

@@ -1,7 +1,7 @@
 {
   "name": "Desker",
   "short_name": "Desker",
-  "description": "A study planner for university students: deadlines, tasks and a calendar, planned around how you work.",
+  "description": "The study planner that learns how you study, with a kodama that plans each day around you. For university students.",
   "start_url": "/today",
   "scope": "/",
   "display": "standalone",

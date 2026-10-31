@@ -33,8 +33,8 @@ export default function Landing() {
       <main className="mx-auto max-w-[1100px] px-5 pb-16">
         <section className="space-y-8 py-6 lg:py-12" aria-label="Desker">
           <div>
-            <h1 className="text-4xl md:text-5xl">The planner that learns how you study.</h1>
-            <p className="mt-4 max-w-xl text-slate-700">Desker learns how long things really take you and when you focus best, and your kodama plans each day around it. Built for university students with deadlines.</p>
+            <h1 className="text-4xl md:text-5xl">The study planner that learns how you study.</h1>
+            <p className="mt-4 max-w-xl text-slate-700">Desker learns how long things really take you and when you focus best, with a kodama that plans each day around you. Built for university students with deadlines.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a className={`${btn} ${BLUE} inline-flex items-center`} href="/signup">Meet your kodama, it is free</a>
               <a className={`${btn} ${ghost} inline-flex items-center`} href="/login">Sign in</a>

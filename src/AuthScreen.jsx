@@ -23,7 +23,7 @@ const TITLE = { in: 'Sign in', up: 'Create your account', forgot: 'Forgot your p
 const GO = { in: 'Sign in', up: 'Create account', forgot: 'Email me a reset link', reset: 'Save new password' }
 
 // What Desker is for, shown above the form on the two first-contact steps.
-const INTRO = 'A planner for students and anyone juggling deadlines. Add what is due and Desker shows what to do next, then its kodama breaks big jobs into steps.'
+const INTRO = 'The study planner for university students. Add what is due and Desker shows what to do next, and its kodama plans each day around you.'
 
 export function Shell({ kind, intro, children }) {
   const [scene, label, caption] = SCENE[kind]
