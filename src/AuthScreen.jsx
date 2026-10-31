@@ -17,6 +17,8 @@ const SCENE = {
   reset: ['dusk', NIGHT, 'Pick a new password and you are good to go.'],
   sent: ['dusk', NIGHT, 'Your confirmation email is on its way.'],
 }
+const PATH = { in: '/login', up: '/signup', forgot: '/forgot-password', reset: '/reset-password' } // each step has its own URL
+const modeOf = () => Object.keys(PATH).find((m) => PATH[m] === location.pathname && (m !== 'reset' || token)) || 'in'
 const TITLE = { in: 'Welcome back', up: 'Create your account', forgot: 'Forgot your password?', reset: 'Choose a new password' }
 const GO = { in: 'Sign in', up: 'Create account', forgot: 'Email me a reset link', reset: 'Save new password' }
 
@@ -56,14 +58,19 @@ function Field({ label, name, error, hint, secret, ...rest }) {
 }
 
 export default function AuthScreen() {
-  const [mode, setMode] = useState(location.pathname === '/reset-password' && token ? 'reset' : 'in')
+  const [mode, setMode] = useState(modeOf)
   const [msg, setMsg] = useState(params.get('error') ? 'That link is invalid or has expired. Ask for a new one.' : '')
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
   const [sentTo, setSentTo] = useState(null) // set after sign-up (or sign-in while unverified): the check-your-inbox step. '' = address unknown
   const [social, setSocial] = useState([])
   useEffect(() => { fetch('/api/auth/providers').then((r) => r.json()).then(setSocial).catch(() => {}) }, [])
-  const go = (m) => { setMode(m); setMsg(''); setErrors({}) }
+  const go = (m) => { if (PATH[m] !== location.pathname) history.pushState(null, '', PATH[m]); setMode(m); setMsg(''); setErrors({}) }
+  useEffect(() => {
+    if (location.pathname !== PATH[mode]) history.replaceState(null, '', PATH[mode]) // any other address lands on /login
+    const back = () => { setMode(modeOf()); setMsg(''); setErrors({}) }
+    addEventListener('popstate', back); return () => removeEventListener('popstate', back)
+  }, [])
 
   const submit = async (e) => {
     e.preventDefault()

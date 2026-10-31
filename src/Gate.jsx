@@ -1,4 +1,4 @@
-// Shows the app to signed-in users and the sign-in screen to everyone else. Also handles the password-reset link (/reset-password?token=...).
+// Shows the app to signed-in users and the sign-in screen to everyone else. Also handles the password-reset link (/reset-password?token=...); the steps live at /login, /signup, /forgot-password and /reset-password.
 import { useEffect, useState } from 'react'
 import App from './App.jsx'
 import AuthScreen from './AuthScreen.jsx'
