@@ -1,11 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
-import { stateUrl } from './api.js'
+import { useState, useEffect } from 'react'
 import { settle } from './tasks.js'
 import { applyPlan as applyReplan } from './replan.js'
 import Replan from './Replan.jsx'
 import Focus from './Focus.jsx'
 import Settings from './Settings.jsx'
-import { migrate } from './storage.js'
 import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
@@ -29,6 +27,7 @@ import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
 import { totalXp } from './game.js'
+import { useSync } from './useSync.js'
 import { nameOf, growthOf, legacyGrowth, STAGES } from './kodama.js'
 
 // One URL per section. The old /do-now lives on Today now.
@@ -73,28 +72,12 @@ export default function App() {
     const id = setTimeout(() => setToast(null), 15000)
     return () => clearTimeout(id)
   }, [toast, toastHeld])
-  const [data, setData] = useState(null)
-  const [loadError, setLoadError] = useState('')
-  const [saveError, setSaveError] = useState(false)
-  const saving = useRef(Promise.resolve())
-  const rev = useRef(0) // version of the server copy we last saw; a save from a stale copy is refused (409), never overwrites
-  useEffect(() => {
-    fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then((d) => { rev.current = d._rev || 0; setData(migrate(d)) }).catch((e) => setLoadError(e.message))
-  }, [])
+  const { data, setData, loadError, status: saveStatus } = useSync(user?.id)
   // keep an imported calendar fresh (at most hourly)
   const stale = data?.sync?.url && Date.now() - data.sync.at > 36e5 ? data.sync.url : null
   useEffect(() => {
     if (stale) importCalendar({ url: stale }).then((busy) => setData((d) => ({ ...d, busy, sync: { ...d.sync, at: Date.now() } }))).catch(() => {})
   }, [stale])
-  useEffect(() => {
-    if (!data) return
-    const id = setTimeout(() => {
-      // one save at a time, so each carries the version the previous one returned
-      saving.current = saving.current.then(() => fetch(stateUrl, { method: 'PUT', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...data, _rev: rev.current }) })
-        .then(async (r) => { if (r.ok) rev.current = (await r.json()).rev ?? rev.current; setSaveError(r.status === 409 ? 'conflict' : !r.ok) }).catch(() => setSaveError(true)))
-    }, 500)
-    return () => clearTimeout(id)
-  }, [data])
   // The old XP/level system is gone. Its total becomes the kodama's starting growth, once, and is never touched again (data.xp stays as it was).
   // `away` is how many days it was since the last visit, for the kodama's welcome back. Both are kept in data.kodama.
   const loaded = !!data
@@ -211,6 +194,7 @@ export default function App() {
             <span className="block text-base font-semibold leading-tight">Desker</span>
           </button>
           <div className="flex items-center gap-2">
+            <span role="status" className="hidden text-xs text-slate-700 sm:block">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : ''}</span>
             <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Talk to {nameOf(data)}</button>
             <Settings data={data} setData={setData} />
           </div>
@@ -234,7 +218,7 @@ export default function App() {
         </header>
 
         <main className={`mx-auto w-full px-4 pb-32 pt-4 md:px-8 md:pt-8 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
-          {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">{saveError === 'conflict' ? <>Desker was changed on another device, so your latest edits were not saved. <button className="underline" onClick={() => location.reload()}>Reload to get the latest</button>.</> : 'Your latest changes could not be saved. Check your connection; they will retry on the next change.'}</p>}
+          {saveStatus === 'offline' && <p role="alert" className="px-panel mb-4 p-3 text-danger">Desker cannot reach the server right now. Your changes are kept on this device and will save as soon as it is back.</p>}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan), { auto: true }); setReplanOpen(false) }} />}
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>

@@ -4,6 +4,7 @@ import feed from './_ics.js'
 import push from './_push.js'
 import events from './_events.js'
 import { loadDoc, saveDoc, hasContent, sql, SETTINGS } from './_store.js'
+import { apply, isEmpty } from '../src/sync.js'
 
 const UID = /^[0-9a-f-]{36}$/
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', ...SETTINGS] // anything else in a PUT is dropped
@@ -16,6 +17,23 @@ export default async function handler(req, res) {
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
   if (!(await limit(req, res, { scope: 'state', max: 600, id: uid }))) return // autosave PUTs are frequent
   if (req.query.events) return events(req, res, uid) // analytics (api/_events.js), off unless ANALYTICS=on
+  if (req.method === 'GET' && req.query.rev) { // cheap "has anything changed?" for the polling in other tabs and devices
+    const [row] = await sql.query("select settings->>'_rev' as rev from users where id = $1", [uid])
+    return res.json({ rev: Number(row?.rev ?? 0) })
+  }
+  if (req.method === 'PATCH') { // a device's changes since its last copy, laid on top of whatever is stored now (src/sync.js). Never refused for being out of date.
+    const patch = req.body?.patch
+    if (!patch || typeof patch !== 'object' || JSON.stringify(patch).length > 200_000) return res.status(400).json({ error: 'Invalid or too large' })
+    for (let attempt = 0; attempt < 5; attempt++) { // two saves can land together: the version check makes one of them look again and merge on top of the other
+      const doc = await loadDoc(uid)
+      const next = isEmpty(patch) ? doc : apply(doc, patch)
+      try {
+        const rev = isEmpty(patch) ? Number(doc._rev ?? 0) : await saveDoc(uid, Object.fromEntries(KEYS.filter((k) => next[k] !== undefined).map((k) => [k, next[k]])), Number(doc._rev ?? 0))
+        return res.json({ ok: true, rev, doc: { ...next, _rev: rev } })
+      } catch (e) { if (!e.conflict) throw e }
+    }
+    return res.status(503).json({ error: 'Busy, try again' })
+  }
   if (req.method === 'GET') {
     const doc = await loadDoc(uid)
     await sql.query('insert into user_day (user_id) select id from users where id = $1 on conflict do nothing', [uid]) // no users row yet = nothing to count
