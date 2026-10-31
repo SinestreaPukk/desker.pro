@@ -8,6 +8,7 @@ import Row from '../components/Row.jsx'
 import Syllabus from '../Syllabus.jsx'
 import { DeadlineCard } from './Deadlines.jsx'
 import { post } from '../api.js'
+import DateField from '../components/DateField.jsx'
 
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
 // The Eisenhower matrix and AI sorting are one switch away.
@@ -21,7 +22,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
       </div>
       <input className={`${input} w-full !text-base font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <label className={field}>Due date<input type="date" className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value || undefined })} /></label>
+        <label className={field}>Due date<DateField className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value || undefined })} /></label>
         <label className={field}>Repeat
           <select className={input} value={t.repeat || ''} onChange={(e) => update(t.id, { repeat: e.target.value || undefined })}>
             {REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -49,8 +50,8 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
       <details className="mt-4">
         <summary className="cursor-pointer text-base text-accent">More options</summary>
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <label className={field}>Starts (for ongoing work)<input type="date" className={input} max={t.due || undefined} value={t.from || ''} onChange={(e) => update(t.id, { from: e.target.value || undefined })} /></label>
-          <label className={field}>Do it on<input type="date" className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
+          <label className={field}>Starts (for ongoing work)<DateField className={input} max={t.due || undefined} value={t.from || ''} onChange={(e) => update(t.id, { from: e.target.value || undefined })} /></label>
+          <label className={field}>Do it on<DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
           <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
           <label className={field}>Part of project
             <select className={input} value={t.projectId ?? ''} onChange={(e) => update(t.id, { projectId: e.target.value === '' ? undefined : +e.target.value })}>

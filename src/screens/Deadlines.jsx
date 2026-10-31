@@ -3,6 +3,7 @@ import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
+import DateField from '../components/DateField.jsx'
 
 export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
@@ -73,11 +74,11 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${dl.done ? 'text-slate-500 line-through' : ''}`}
             aria-label="Deadline name (click to rename)" defaultValue={dl.title} maxLength={200} onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
             onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== dl.title) patch({ title: v }); else e.target.value = dl.title }} />
-          <input type="date" className="w-36 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
+          <DateField className="w-36 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
             value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
-          <input type="time" className="w-24 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
+          <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline time (optional)"
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
-          {dl.hours != null && <span className="text-base text-slate-600">{dl.hours}h</span>}
+          {dl.hours != null && <span className="text-base text-slate-600">{dl.hours}h of work</span>}
         </span>
         {linked > 0 && <span className="text-base tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={` px-3 py-0.5 text-base ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
@@ -92,9 +93,9 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
               aria-label="Task name (click to rename)" defaultValue={t.title} maxLength={200}
               onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) upd(t.id, { title: v }); else e.target.value = t.title }} />
-            <input type="date" className="w-36 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
+            <DateField className="w-36 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
-            <input type="time" className="w-24 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
+            <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
             {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
           </li>
@@ -133,7 +134,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             </select>
           </label>
           <label className="flex items-center gap-1">Date
-            <input type="date" className={input} value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
+            <DateField className={input} value={dl.date} onChange={(e) => e.target.value && patch({ date: e.target.value })} />
           </label>
           <label className="flex items-center gap-1">Time
             <input type="time" className={input} value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />

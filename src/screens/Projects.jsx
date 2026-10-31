@@ -4,6 +4,7 @@ import { addTasks } from '../tasks.js'
 import { progress, unlink } from '../projects.js'
 import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
+import DateField from '../components/DateField.jsx'
 
 const KINDS = ['Investment', 'Exam', 'Test', 'Study', 'Work', 'Trip', 'Personal']
 
@@ -102,7 +103,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
         <summary className="cursor-pointer text-accent">Details</summary>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1">End date
-            <input type="date" className={input} value={p.date || ''} onChange={(e) => patch({ date: e.target.value || undefined })} />
+            <DateField className={input} value={p.date || ''} onChange={(e) => patch({ date: e.target.value || undefined })} />
           </label>
           <label className="flex items-center gap-1">Hours I need
             <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={p.hours ?? ''} onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
@@ -166,7 +167,7 @@ export default function Projects({ goals, projects, setProjects, tasks, setTasks
         <input className={`${input} min-w-48 flex-1`} aria-label="Project name" placeholder="Project, e.g. Build an index-fund portfolio" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
         <input className={`${input} w-36`} list="project-kinds" aria-label="Kind" placeholder="Kind" value={d.kind} onChange={(e) => setD({ ...d, kind: e.target.value })} />
         <datalist id="project-kinds">{KINDS.map((k) => <option key={k} value={k} />)}</datalist>
-        <input type="date" aria-label="End date (optional)" title="End date (optional)" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
+        <DateField aria-label="End date (optional)" title="End date (optional)" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
         <textarea className={`${input} w-full`} rows={2} aria-label="Context" placeholder="What is it about? Scope, budget, topics, how ready you feel (optional)"
           value={d.context} onChange={(e) => setD({ ...d, context: e.target.value })} />
         <button className={`${btn} ${BLUE}`}>Add project</button>

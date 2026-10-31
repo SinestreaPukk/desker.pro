@@ -6,6 +6,7 @@ import { Avatar } from './px.jsx'
 import Wallpaper from './Wallpaper.jsx'
 import { WHO, WANTS } from './authForm.js'
 import { parseQuick } from './lists.js'
+import DateField from './components/DateField.jsx'
 
 const Chip = ({ on, onClick, children }) => <button type="button" aria-pressed={on} onClick={onClick} className={`${btn} ${on ? BLUE : ghost}`}>{children}</button>
 
@@ -41,7 +42,7 @@ export default function Welcome({ name, onDone }) {
               <input className={`${input} w-full`} aria-label={isDl ? 'First deadline' : 'First task'} value={text} onChange={(e) => setText(e.target.value)}
                 placeholder={isDl ? 'e.g. Statics midterm Monday 3pm' : 'e.g. Call dentist tomorrow 3pm'} />
               {(isDl || parsed) && <label className="flex flex-col gap-1 text-base text-slate-600">{isDl ? 'Date (required)' : 'Due date (optional)'}
-                <input type="date" className={`${input} w-full`} value={date || parsed?.due || ''} onChange={(e) => setDate(e.target.value)} />
+                <DateField className={`${input} w-full`} value={date || parsed?.due || ''} onChange={(e) => setDate(e.target.value)} />
               </label>}
             </div>
             <details>

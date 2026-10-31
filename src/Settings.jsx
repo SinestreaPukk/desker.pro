@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { btn, BLUE, ghost, input } from './ui.js'
+import { btn, BLUE, ghost, input, DANGER } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { authClient, useSession } from './auth.js'
@@ -19,6 +19,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
   const [rem, setRem] = useState(() => store.get('reminders') === '1' && 'Notification' in window && Notification.permission === 'granted')
   const [msg, setMsg] = useState('')
   const [del, setDel] = useState(false)
+  const [showKey, setShowKey] = useState(false)
   const [incoming, setIncoming] = useState(null)
   const latest = useRef(data)
   latest.current = data
@@ -78,23 +79,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
           <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
           <hr />
           <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device.</p>
-          <div className="text-xs text-slate-700">
-            <p>API key (see README). Keep it private.</p>
-            <input readOnly className={`${input} mt-1 w-full font-mono text-xs`} aria-label="Your API key" value={user.id} onFocus={(e) => e.target.select()} />
-          </div>
           <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => location.assign('/today'))}>Sign out</button>
-          {del ? (
-            <div role="alert" className="bg-yuki-1 p-2 text-base">
-              Delete your account and everything in it (tasks, goals, projects)? We email you a link to confirm. This cannot be undone.
-              <div className="mt-2 flex gap-2">
-                <button className={`${btn} text-danger`} onClick={async () => {
-                  const { error } = await authClient.deleteUser({ callbackURL: '/today' })
-                  setDel(false); setMsg(error ? error.message || 'Could not start deletion.' : 'Check your email for the confirmation link.')
-                }}>Send link</button>
-                <button className={`${btn} ${ghost}`} onClick={() => setDel(false)}>Cancel</button>
-              </div>
-            </div>
-          ) : <button className={`${btn} ${ghost} text-danger`} onClick={() => setDel(true)}>Delete account</button>}
           <div className="flex flex-wrap gap-2">
             <button className={`${btn} ${ghost}`} onClick={exportData}>Export JSON</button>
             <label className={`${btn} inline-flex cursor-pointer items-center ${ghost}`}>Import JSON
@@ -110,6 +95,33 @@ export default function Settings({ data, setData, row: inSidebar }) {
               </div>
             </div>
           )}
+          <details>
+            <summary className="underline">Advanced</summary>
+            <div className="mt-2 text-xs text-slate-700">
+              <p>Developer API key. It lets scripts add and read your tasks, so keep it private.</p>
+              <div className="mt-1 flex flex-wrap gap-1">
+                <input readOnly className={`${input} w-full text-xs`} aria-label="Your API key" value={showKey ? user.id : `••••-${user.id.slice(-5)}`} onFocus={(e) => e.target.select()} />
+                <button className={`${btn} ${ghost}`} aria-pressed={showKey} onClick={() => setShowKey(!showKey)}>{showKey ? 'Hide' : 'Reveal'}</button>
+                <button className={`${btn} ${ghost}`} onClick={() => navigator.clipboard?.writeText(user.id).then(() => setMsg('API key copied.'), () => setMsg('Could not copy. Reveal it and copy by hand.'))}>Copy</button>
+              </div>
+            </div>
+          </details>
+          <hr />
+          <section className="border border-danger p-2" aria-label="Danger zone">
+            <h3 className="text-base text-danger">Danger zone</h3>
+            {del ? (
+              <div role="alert" className="mt-1 text-base">
+                Delete your account and everything in it (tasks, goals, projects)? We email you a link to confirm. This cannot be undone.
+                <div className="mt-2 flex gap-2">
+                  <button className={`${btn} ${DANGER}`} onClick={async () => {
+                    const { error } = await authClient.deleteUser({ callbackURL: '/today' })
+                    setDel(false); setMsg(error ? error.message || 'Could not start deletion.' : 'Check your email for the confirmation link.')
+                  }}>Send link</button>
+                  <button className={`${btn} ${ghost}`} onClick={() => setDel(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : <button className={`${btn} ${DANGER} mt-1`} onClick={() => setDel(true)}>Delete account</button>}
+          </section>
           {msg && <p role="status" className="text-base">{msg}</p>}
         </div>
       )}

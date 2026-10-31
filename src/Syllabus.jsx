@@ -4,6 +4,7 @@ import { btn, input, BLUE, ghost } from './ui.js'
 import { encodeFile } from './files.js'
 import { addTasks } from './tasks.js'
 import { validItems, spreadBlocks } from './syllabus.js'
+import DateField from './components/DateField.jsx'
 
 // Pasted outline or PDF/photo -> review list -> deadlines plus study blocks spread backwards from each due date.
 export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, ratio }) {
@@ -60,7 +61,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
               <li key={i.id} className="flex flex-wrap items-center gap-2 bg-slate-50 p-2">
                 <input type="checkbox" aria-label={`Include ${i.title}`} checked={i.on} onChange={(e) => patch(i.id, { on: e.target.checked })} />
                 <input className={`${input} min-w-40 flex-1`} aria-label="Title" value={i.title} onChange={(e) => patch(i.id, { title: e.target.value })} />
-                <input type="date" className={input} aria-label="Due date" value={i.date} onChange={(e) => patch(i.id, { date: e.target.value, past: false })} />
+                <DateField className={input} aria-label="Due date" value={i.date} onChange={(e) => patch(i.id, { date: e.target.value, past: false })} />
                 <label className="flex items-center gap-1 text-base">Hours
                   <input type="number" min="0.5" step="0.5" className={`${input} w-20`} value={i.hours} onChange={(e) => patch(i.id, { hours: +e.target.value || 1 })} />
                 </label>

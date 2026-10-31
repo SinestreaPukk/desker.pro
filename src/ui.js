@@ -3,6 +3,7 @@ export const BLUE = 'px-btn-primary'
 export const btn = 'px-btn'
 export const ghost = 'px-btn-secondary'
 export const input = 'px-field'
+export const DANGER = 'px-btn-danger'
 export const panel = 'px-panel p-4'
 export const rowCard = 'px-rule'
 

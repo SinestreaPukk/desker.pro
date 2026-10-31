@@ -162,7 +162,7 @@ export default function App() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 hidden border-b border-line bg-white md:block">
-        <div className="mx-auto max-w-[1400px] px-8 pt-3">
+        <div className={`mx-auto px-8 pt-3 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
         <div className="flex items-center justify-between">
           <button className="flex items-center gap-3 py-1 pr-3 text-left" onClick={() => setTab('Today')} aria-label="Desker, go to Today">
             {logo()}
@@ -191,7 +191,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1400px] px-4 pb-32 pt-4 md:px-8 md:pt-8">
+        <main className={`mx-auto w-full px-4 pb-32 pt-4 md:px-8 md:pt-8 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
           {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">{saveError === 'conflict' ? <>Desker was changed on another device, so your latest edits were not saved. <button className="underline" onClick={() => location.reload()}>Reload to get the latest</button>.</> : 'Your latest changes could not be saved. Check your connection; they will retry on the next change.'}</p>}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
           <Banner tab={tab} />

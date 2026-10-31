@@ -32,7 +32,8 @@ export default function TimeGrid({ cols, onHead }) {
           </div>
           {cols.map((c) => (
             <div key={c.key} className={`hour-lines relative border-l border-line ${c.today ? 'bg-yuki-1' : ''}`}
-              style={{ height: (H1 - H0) * PX, '--hour': `${PX}px` }}>
+              style={{ height: (H1 - H0) * PX }}>
+              {hours.map((h) => <span key={h} aria-hidden="true" className="absolute inset-x-0 border-t border-line" style={{ top: (h - H0) * PX }} />)}
               {lanes(c.blocks).filter((b) => b.e > H0 * 60 && b.s < H1 * 60).map((b) => {
                 const s = Math.max(b.s, H0 * 60), e = Math.min(b.e, H1 * 60)
                 return (

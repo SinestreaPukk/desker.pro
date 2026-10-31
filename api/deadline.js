@@ -19,7 +19,13 @@ ${ratio ? `Calibration: from their finished, timed tasks this user really takes 
 Decide:
 - If hours are unknown AND the context is too thin to estimate them AND you have asked fewer than 2 questions so far (asked so far: ${asked}), reply with ONLY {"question": "<one short question that would help most, e.g. topics covered, current readiness, past experience>"}.
 - Otherwise reply with ONLY {"hours": <total hours needed, use the user's number if given>, "summary": "<1 sentence on how you got there>", "options": [{"title": "<specific action>", "hours": <number>, "due": "<yyyy-mm-dd between today and the deadline>"}]}
-If the whole job is one clear action of about 2 hours or less, give exactly 1 option. Otherwise give 3 to 6 concrete, distinct options, e.g. one per topic or milestone, ordered by due date, hours adding up to roughly the total, with weaker areas getting more time. The last option should land at least a day before the deadline when possible.`
+If the whole job is one clear action of about 2 hours or less, give exactly 1 option. Otherwise give 3 to 6 concrete, distinct options, e.g. one per topic or milestone, ordered by due date, hours adding up to roughly the total, with weaker areas getting more time. The last option should land at least a day before the deadline when possible.
+
+Task quality rules (these matter more than anything above):
+- Every option title starts with a verb and names concrete content taken from the title or context (a topic, chapter, week, assignment part). Good: "Solve the 10 practice problems on beam deflection from chapter 6". Bad: "Work practice problems on your weakest topics", "Study", "Review material".
+- Never refer to things you do not know, such as which topics the user finds hard. If that matters and you have asked fewer than 2 questions, ask. Otherwise make the first option a task that finds out, for example "List the 3 topics you feel least sure about for <the deadline>" (15 minutes).
+- Give realistic durations. No option longer than 1.5 hours: split bigger work into parts (for example by chapter or by problem set). Short admin tasks are 0.25 to 0.5 hours.
+`
   try {
     res.json(await askJSON({ req, messages: [{ role: 'user', content: prompt }] }))
   } catch (err) {

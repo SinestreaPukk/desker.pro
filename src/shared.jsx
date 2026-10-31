@@ -101,7 +101,10 @@ export const freeTodayOf = (d) => (d.freeToday?.date === todayStr() ? d.freeToda
 export const QUICK = ['Help me plan my day', 'Replan my week', 'Weekly review', 'Help me set my goals', 'Help me find my goals', "I'm feeling stressed", "I'm low on energy"]
 
 // "Fri 31 Oct" from yyyy-mm-dd
-export const fmtDate = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) : '')
+// One date format everywhere, English: "Sat, Oct 31" (with the year when it is not this year).
+export const fmtDate = (d) => (d ? new Date(`${d}T00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', ...(d.slice(0, 4) !== String(new Date().getFullYear()) && { year: 'numeric' }) }) : '')
+// Same, with "Today", "Tomorrow" and "Yesterday" where they read better (date fields, lists).
+export const fmtDay = (d) => { const n = Math.round((new Date(`${d}T12:00`) - new Date(`${todayStr()}T12:00`)) / 864e5); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday' : fmtDate(d) }
 
 export function Happy({ value = 50, onChange, label = 'How do you feel about this task?' }) {
   return (

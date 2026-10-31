@@ -160,8 +160,6 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @keyframes step { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(calc(-1 * var(--px))); } }
 
 /* calendar hour lines */
-/* one 2px line per hour; --hour is the hour height (not --px, which would also resize every border drawn inside the grid) */
-.hour-lines { background-image: linear-gradient(var(--color-yuki-2) var(--px), transparent var(--px)); background-size: 100% var(--hour); }
 
 @keyframes hop { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(calc(-4 * var(--px))) } }
 .px-hop > .px-avatar { display: block; }
@@ -208,3 +206,6 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @keyframes wp-blink { 0%, 55% { opacity: 0; } 55.1%, 78% { opacity: 1; } 78.1%, 100% { opacity: 0; } }
 @keyframes wp-frame { 0%, 33.3% { opacity: 1; } 33.4%, 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .wp * { animation: none !important; } .wp-frame:first-of-type { opacity: 1; } }
+
+/* DateField: the invisible native input takes focus, so the visible wrapper shows the ring */
+.px-datefield:focus-within { outline: var(--px) solid var(--ink); outline-offset: var(--px); }

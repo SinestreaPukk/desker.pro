@@ -4,6 +4,7 @@ import { addTasks } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { REPEATS, todayStr, fmtDate, WorkHelp } from '../shared.jsx'
 import { parseQuick, inList } from '../lists.js'
+import DateField from './DateField.jsx'
 
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv') }
 const label = 'flex flex-col gap-1 text-xs text-slate-600'
@@ -84,12 +85,12 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
       <div className={`mt-3 flex-wrap items-end gap-3 ${parsed ? 'flex' : 'hidden group-focus-within:flex'}`}> {/* options appear once you start typing */}
         <div className={label}>When
           <div className="flex items-center gap-1">
-            <input type="date" className={ctl} aria-label="Date" value={f.date || parsed?.due || ''} onChange={(e) => set({ date: e.target.value })} />
-            <input type="time" className={ctl} aria-label="Time" value={f.time || parsed?.start || ''} onChange={(e) => set({ time: e.target.value })} />
+            <DateField className={ctl} aria-label="Date" value={f.date || parsed?.due || ''} onChange={(e) => set({ date: e.target.value })} />
+            <input type="time" className={`${ctl} w-32`} aria-label="Time" value={f.time || parsed?.start || ''} onChange={(e) => set({ time: e.target.value })} />
           </div>
         </div>
         {!isDl && <label className={label}>Until (optional)
-          <input type="date" className={ctl} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
+          <DateField className={ctl} min={begin || undefined} value={f.until} onChange={(e) => set({ until: e.target.value })} />
         </label>}
         <div className="flex gap-1" role="group" aria-label="Quick dates">
           {[['Today', 0], ['Tomorrow', 1]].map(([n, d]) => <button key={n} type="button" className={`${btn} ${ghost} chip h-10`} onClick={() => set({ date: plus(d) })}>{n}</button>)}

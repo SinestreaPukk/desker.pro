@@ -5,6 +5,7 @@ import { BLUE, btn, input, ghost, panel, Q, CAL } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
+import DateField from '../components/DateField.jsx'
 
 function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
   const goal = goals.find((g) => g.id === t.goalId)
@@ -21,10 +22,10 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart }) {
           <input className={input} value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
         </label>
         {!t.fun && <label className={lbl}>Due date
-          <input type="date" className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value })} />
+          <DateField className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value })} />
         </label>}
         <label className={lbl}>Planned for
-          <input type="date" className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value })} />
+          <DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value })} />
         </label>
         <label className={lbl}>Start time
           <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined })} />
