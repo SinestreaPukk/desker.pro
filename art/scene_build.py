@@ -32,12 +32,12 @@ R = {
     'w_far': ('yoru-0', 'yuki-2', 'hada-1'), 'w_mid': ('yoru-1', 'kori-1', 'yoru-0'), 'w_near': ('yoru-2', 'kori-2', 'yoru-1'), 'glint': ('yuki-3', 'yuki-1', 'hada-0'),
     'sn_hi': ('yuki-1', 'yuki-0', 'hada-0'), 'sn_l': ('yuki-2', 'yuki-1', 'yuki-2'), 'sn_m': ('yuki-3', 'yuki-2', 'yuki-3'), 'sn_s': ('yoru-0', 'yuki-3', 'yoru-0'), 'sn_d': ('yoru-1', 'yoru-0', 'yoru-1'),
     'pine': ('matsu-1', 'matsu-0', 'matsu-1'), 'pine_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'pine_d': ('yoru-2', 'matsu-2', 'yoru-2'),
-    'thatch': ('kuri', 'kuri', 'kuri'), 'thatch_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'wood': ('kuri', 'kuri', 'kuri'), 'wood_s': ('yoru-1', 'yoru-1', 'yoru-1'),
+    'thatch': ('yoru-0', 'yoru-0', 'yoru-0'), 'thatch_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'wood': ('yoru-0', 'yoru-0', 'yoru-0'), 'wood_s': ('yoru-1', 'yoru-1', 'yoru-1'),
     'win': ('hada-0', 'hada-0', 'hada-0'), 'win_g': ('hada-1', 'hada-1', 'hada-1'), 'pool0': ('hada-1', 'yuki-2', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0'),
     'sail': ('yuki-2', 'yuki-0', 'hada-0'), 'sail_s': ('yuki-3', 'yuki-2', 'yuki-3'),
-    'tor': ('beni', 'beni', 'beni'), 'tor_s': ('kuri', 'kuri', 'kuri'), 'tor_h': ('hada-1', 'hada-1', 'hada-1'),
+    'tor': ('beni', 'beni', 'beni'), 'tor_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'tor_h': ('hada-1', 'hada-1', 'hada-1'),
     'stone_l': ('yuki-3', 'yuki-3', 'yuki-3'), 'stone_s': ('yoru-0', 'yoru-0', 'yoru-0'), 'stone_d': ('yoru-1', 'yoru-1', 'yoru-1'),
-    'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'reed_h': ('kuri', 'kuri', 'kuri'),
+    'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'reed_h': ('yuki-3', 'yuki-2', 'yuki-3'),
 }
 for new, old in (('rf_hi', 'sn_hi'), ('rf_l', 'sn_l'), ('rf_m', 'sn_m'), ('rf_s', 'sn_s'), ('cap_hi', 'sn_hi'), ('cap_l', 'sn_l'), ('cap_s', 'sn_s'),
                  ('pn_hi', 'sn_hi'), ('pn_l', 'sn_l'), ('pn_s', 'sn_s'), ('br', 'pine'), ('br_s', 'pine_s'), ('br_d', 'pine_d')):
@@ -45,35 +45,32 @@ for new, old in (('rf_hi', 'sn_hi'), ('rf_l', 'sn_l'), ('rf_m', 'sn_m'), ('rf_s'
 BASE = dict(R)   # winter
 
 # Seasons recolour the same pixels. Each override is (night, morning, dusk). Winter is BASE.
-STRAW = {'rf_hi': ('hada-0', 'hada-0', 'hada-0'), 'rf_l': ('hada-1', 'hada-1', 'hada-1'), 'rf_m': ('hada-1', 'hada-1', 'hada-1'), 'rf_s': ('kuri', 'kuri', 'kuri'),
-         'pool0': ('hada-1', 'matsu-0', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0')}
+MOSS = {'rf_hi': ('matsu-0', 'matsu-0', 'matsu-0'), 'rf_l': ('matsu-0', 'matsu-0', 'matsu-0'), 'rf_m': ('matsu-1', 'matsu-1', 'matsu-1'), 'rf_s': ('matsu-2', 'matsu-2', 'matsu-2'),
+        'pool0': ('hada-1', 'matsu-0', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0')}
 GREEN_GROUND = {'sn_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'sn_l': ('matsu-1', 'matsu-0', 'matsu-1'), 'sn_m': ('matsu-2', 'matsu-1', 'matsu-2'), 'sn_s': ('yoru-2', 'matsu-2', 'yoru-1'), 'sn_d': ('yoru-2', 'matsu-2', 'yoru-2'),
                 'cap_hi': ('matsu-0', 'yuki-1', 'hada-0'), 'cap_l': ('matsu-0', 'matsu-0', 'hada-1'), 'cap_s': ('matsu-1', 'matsu-1', 'matsu-1'),
                 'pn_hi': ('matsu-0', 'matsu-0', 'hada-0'), 'pn_l': ('matsu-0', 'matsu-0', 'matsu-0'), 'pn_s': ('matsu-1', 'matsu-1', 'matsu-1'),
                 'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2')}
 SEASONS = {
     'winter': {},
-    'spring': {**STRAW, **GREEN_GROUND,
-        'sky0': ('yoru-2', 'kori-1', 'yoru-0'), 'sky1': ('yoru-1', 'yuki-1', 'hada-1'), 'sky2': ('yoru-0', 'hada-0', 'hada-0'), 'halo': ('yoru-0', 'hada-0', 'hada-0'),
-        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
-        'pn_hi': ('yuki-2', 'yuki-1', 'hada-0'),
-        'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2'), 'br_hi': ('yuki-2', 'yuki-1', 'hada-0')},
-    'summer': {**STRAW, **GREEN_GROUND,
+    'summer': {**MOSS, **GREEN_GROUND,
         'sky0': ('yoru-2', 'kori-2', 'yoru-1'), 'sky1': ('yoru-1', 'kori-1', 'yoru-0'), 'sky2': ('yoru-0', 'yuki-1', 'hada-0'), 'halo': ('yoru-0', 'yuki-0', 'hada-0'),
         'sn_hi': ('matsu-0', 'yuki-0', 'hada-0'),
         'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
         'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2')},
-    'autumn': {**STRAW,
-        'sky0': ('yoru-2', 'kori-1', 'yoru-1'), 'sky1': ('yoru-1', 'hada-0', 'yoru-0'), 'sky2': ('yoru-0', 'hada-1', 'hada-1'), 'halo': ('yoru-0', 'hada-0', 'hada-0'),
-        'hill': ('matsu-2', 'kuri', 'kuri'), 'hill_l': ('matsu-1', 'hada-1', 'hada-1'),
-        'sn_hi': ('hada-1', 'hada-0', 'hada-0'), 'sn_l': ('kuri', 'hada-1', 'hada-1'), 'sn_m': ('yoru-0', 'kuri', 'kuri'), 'sn_s': ('yoru-1', 'yoru-0', 'yoru-0'), 'sn_d': ('yoru-2', 'yoru-1', 'yoru-1'),
-        'cap_hi': ('hada-1', 'hada-0', 'hada-0'), 'cap_l': ('hada-1', 'hada-1', 'hada-1'), 'cap_s': ('kuri', 'kuri', 'kuri'),
-        'pn_hi': ('hada-1', 'hada-1', 'hada-1'), 'pn_l': ('matsu-1', 'matsu-0', 'matsu-1'), 'pn_s': ('matsu-2', 'matsu-1', 'matsu-2'),
-        'br': ('kuri', 'hada-1', 'hada-1'), 'br_s': ('yoru-1', 'beni', 'beni'), 'br_d': ('yoru-2', 'kuri', 'kuri'),
-        'reed': ('kuri', 'hada-1', 'kuri'), 'reed_s': ('yoru-1', 'kuri', 'yoru-1'), 'reed_h': ('hada-1', 'beni', 'hada-1')},
+    # Rainy: a flat grey sky, a muted lake and green banks, no stars or moon, no snow on the peaks.
+    'rainy': {**MOSS, **GREEN_GROUND,
+        'sky0': ('yoru-2', 'yuki-3', 'yoru-1'), 'sky1': ('yoru-1', 'yuki-2', 'yoru-0'), 'sky2': ('yoru-1', 'yuki-1', 'yuki-3'), 'halo': ('yoru-1', 'yuki-1', 'yuki-3'),
+        'star': ('yoru-1', 'yuki-2', 'yoru-0'), 'starb': ('yoru-1', 'yuki-2', 'yoru-0'),
+        'moon': ('yoru-0', 'yuki-1', 'yuki-3'), 'moon_s': ('yoru-1', 'yuki-2', 'yoru-0'),
+        'cloud_l': ('yoru-0', 'yuki-1', 'yuki-3'), 'cloud': ('yoru-1', 'yuki-2', 'yoru-0'), 'cloud_s': ('yoru-2', 'yuki-3', 'yoru-1'),
+        'w_far': ('yoru-1', 'yuki-2', 'yoru-0'), 'w_mid': ('yoru-1', 'yuki-3', 'yoru-0'), 'w_near': ('yoru-2', 'yoru-0', 'yoru-1'), 'glint': ('yoru-0', 'yuki-1', 'yuki-3'),
+        'sn_hi': ('matsu-0', 'matsu-0', 'matsu-0'),
+        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
+        'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2')},
 }
-SNOWLINE_AT = {'winter': 31, 'spring': 29, 'autumn': 27, 'summer': 21}   # how far down the peaks the snow reaches
-FALL = {'winter': 'snow', 'spring': 'petal', 'summer': 'none', 'autumn': 'leaf'}
+SNOWLINE_AT = {'winter': 31, 'summer': 21, 'rainy': 12}   # how far down the peaks the snow reaches
+FALL = {'winter': 'snow', 'summer': 'none', 'rainy': 'rain'}
 CUR = 'winter'
 def table(season): return {**BASE, **SEASONS[season]}
 
@@ -449,7 +446,7 @@ def main():
         for v in VARIANTS:
             colour(A, v, season).save(out / f'scene-{season}-{v}.png')
             hexof = lambda n: '#%s' % PAL[T[n][VARIANTS.index(v)]].lstrip('#')
-            fall = {'snow': ('sn_m', 'sn_hi'), 'petal': ('yuki-2', 'yuki-0'), 'leaf': ('kuri', 'hada-1'), 'none': ('sn_m', 'sn_hi')}[FALL[season]]
+            fall = {'snow': ('sn_m', 'sn_hi'), 'rain': ('kori-1', 'yuki-2'), 'none': ('sn_m', 'sn_hi')}[FALL[season]]
             col = lambda n: ('#%s' % PAL[n].lstrip('#')) if n in PAL else hexof(n)
             motion[season][v] = {'back': col(fall[0]), 'front': col(fall[1]), 'glint': hexof('glint')}
         if '--check' in sys.argv: check(A, season)

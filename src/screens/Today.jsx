@@ -4,6 +4,7 @@ import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy, energyProfile, ranges } from '../energy.js'
 import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
+import { useWeather } from '../weather.js'
 import KodamaCard from '../components/KodamaCard.jsx'
 import Review from '../Review.jsx'
 import Row from '../components/Row.jsx'
@@ -47,6 +48,7 @@ const Tile = ({ label, caption, children, keep }) => (
 
 // Today: one question, "what should I do right now?", with the week around it.
 export default function Today({ data, setData, tasks, goals, deadlines, focus, pick, setFocus, setPick, setTasks, goTab, openTimer, deleteTask, openAgent, onReplan, onReview }) {
+  const weather = useWeather()
   const [minutes, setMinutes] = useState(60)
   const [energy, setEnergy] = useState('medium')
   const [opts, setOpts] = useState(null)
@@ -113,7 +115,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     <>
       <header className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:gap-8">
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
-          <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
+          <h1 className="flex items-center gap-2 text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.{weather && <img src={`/pixel/i-w-${weather.kind}.png`} alt={weather.kind === 'sun' ? 'Clear today' : weather.kind === 'cloud' ? 'Cloudy today' : `${weather.kind[0].toUpperCase()}${weather.kind.slice(1)} today`} width="32" height="32" className="px-art block h-8 w-8 shrink-0" />}</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
           <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />
           {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}

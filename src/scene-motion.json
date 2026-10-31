@@ -17,24 +17,6 @@
       "glint": "#F0D2C2"
     }
   },
-  "spring": {
-    "fall": "petal",
-    "night": {
-      "back": "#B4C5D1",
-      "front": "#F4F7F6",
-      "glint": "#8394AE"
-    },
-    "morning": {
-      "back": "#B4C5D1",
-      "front": "#F4F7F6",
-      "glint": "#DDE6EA"
-    },
-    "dusk": {
-      "back": "#B4C5D1",
-      "front": "#F4F7F6",
-      "glint": "#F0D2C2"
-    }
-  },
   "summer": {
     "fall": "none",
     "night": {
@@ -53,22 +35,22 @@
       "glint": "#F0D2C2"
     }
   },
-  "autumn": {
-    "fall": "leaf",
+  "rainy": {
+    "fall": "rain",
     "night": {
-      "back": "#8C6A5C",
-      "front": "#D49E95",
-      "glint": "#8394AE"
+      "back": "#8DBCCB",
+      "front": "#B4C5D1",
+      "glint": "#5A6283"
     },
     "morning": {
-      "back": "#8C6A5C",
-      "front": "#D49E95",
+      "back": "#8DBCCB",
+      "front": "#B4C5D1",
       "glint": "#DDE6EA"
     },
     "dusk": {
-      "back": "#8C6A5C",
-      "front": "#D49E95",
-      "glint": "#F0D2C2"
+      "back": "#8DBCCB",
+      "front": "#B4C5D1",
+      "glint": "#8394AE"
     }
   },
   "shimmer": [

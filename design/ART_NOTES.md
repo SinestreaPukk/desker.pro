@@ -47,3 +47,6 @@ A wins: the clearest three-plane read, one focal point, and a zig-zag path. Ligh
 ## Scene redo: how the variants stay readable
 
 Pixels are drawn once as roles. Morning is a low sun from the left (the moon becomes the sun), a pale lilac horizon and long cool shadows (`sn_s` is yuki-3). Dusk is a cold hada-1 / yoru-0 sky with a pink-lit snow face and rim. Stars map to the sky colour in the morning. The light pool maps to plain snow in the morning. If a variant stops reading, fix its column in `R` in `scene_build.py`, not the art.
+
+## Weather and seasons (wallpaper)
+Three scenes: winter, summer, rainy (no spring/autumn, no brown: cabin and reeds are slate, roofs mossy). The day's weather picks it (`src/weather.js`, Open-Meteo at the browser's location): rain or storm is rainy, snow or a high under 4C is winter, else summer; with no location the month decides. Local time picks morning (6-16), dusk (16-19) or night, and the banner re-checks every minute. The greeting shows the weather icon (`art/authoring/gen_weather.py`, `i-w-*.png`). `?season=winter|summer|rainy` overrides.

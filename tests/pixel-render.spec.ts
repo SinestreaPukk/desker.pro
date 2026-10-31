@@ -34,7 +34,7 @@ async function open(page: Page, hour: number) {
 
 for (const width of [390, 768, 1440]) {
   for (const dpr of [1, 2]) {
-    for (const [name, hour] of [['morning', 9], ['dusk', 15], ['night', 22]] as const) {
+    for (const [name, hour] of [['morning', 9], ['dusk', 17], ['night', 22]] as const) {
       if (name !== 'morning' && !(width === 1440 || (width === 390 && dpr === 2))) continue // variants: desktop 1x and phone 2x are enough
       test(`pixel art is crisp: ${width}px @${dpr}x, ${name}`, async ({ browser }) => {
         const ctx = await browser.newContext({ viewport: { width, height: 2400 }, deviceScaleFactor: dpr })
