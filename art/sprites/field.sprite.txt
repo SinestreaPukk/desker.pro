@@ -8,9 +8,9 @@ h yuki-2
 frame rest
 .KKKKKK.
 KhhhhhhK
-Khffffff
-Khffffff
-Khffffff
+KhfffffK
+KhfffffK
+KhfffffK
 KffffffK
 .KKKKKK.
 ........
