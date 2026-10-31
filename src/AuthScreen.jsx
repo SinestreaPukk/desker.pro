@@ -19,10 +19,13 @@ const SCENE = {
 }
 const PATH = { in: '/login', up: '/signup', forgot: '/forgot-password', reset: '/reset-password' } // each step has its own URL
 const modeOf = () => Object.keys(PATH).find((m) => PATH[m] === location.pathname && (m !== 'reset' || token)) || 'in'
-const TITLE = { in: 'Welcome back', up: 'Create your account', forgot: 'Forgot your password?', reset: 'Choose a new password' }
+const TITLE = { in: 'Sign in', up: 'Create your account', forgot: 'Forgot your password?', reset: 'Choose a new password' }
 const GO = { in: 'Sign in', up: 'Create account', forgot: 'Email me a reset link', reset: 'Save new password' }
 
-export function Shell({ kind, children }) {
+// What Desker is for, shown above the form on the two first-contact steps.
+const INTRO = 'A planner for students and anyone juggling deadlines. Add what is due and Desker shows what to do next, then its AI agent breaks big jobs into steps.'
+
+export function Shell({ kind, intro, children }) {
   const [scene, label, caption] = SCENE[kind]
   return (
     <div className="min-h-screen md:grid md:grid-cols-2">
@@ -33,6 +36,7 @@ export function Shell({ kind, children }) {
       <main className="flex min-h-[calc(100vh-9rem)] items-center justify-center p-5 md:min-h-screen md:p-10">
         <div className="w-full max-w-sm space-y-4">
           <div className="flex items-center gap-3"><Avatar /><span className="text-2xl">Desker</span></div>
+          {intro && <p className="text-slate-700">{intro}</p>}
           {children}
         </div>
       </main>
@@ -100,7 +104,12 @@ export default function AuthScreen() {
 
   if (sentTo !== null) return <CheckInbox email={sentTo} back={() => { setSentTo(null); go('in') }} />
   return (
-    <Shell kind={mode}>
+    <Shell kind={mode} intro={mode === 'in' || mode === 'up' ? INTRO : undefined}>
+      {(mode === 'in' || mode === 'up') && (
+        <div role="group" aria-label="Sign in or create an account" className="px-seg flex w-full">
+          {[['in', 'Sign in'], ['up', 'Create account']].map(([m, name]) => <button key={m} type="button" aria-pressed={mode === m} className="flex-1" onClick={() => go(m)}>{name}</button>)}
+        </div>
+      )}
       <form onSubmit={submit} noValidate className={`${panel} space-y-3`} aria-label={TITLE[mode]}>
         <h1 className="text-2xl">{TITLE[mode]}</h1>
         {mode === 'up' && <>
@@ -124,11 +133,7 @@ export default function AuthScreen() {
           </div>
         </div>
       )}
-      <p className="text-base">
-        {mode === 'in' ? <>New here? <button className="underline" onClick={() => go('up')}>Create an account</button></>
-          : mode === 'up' ? <>Already have an account? <button className="underline" onClick={() => go('in')}>Sign in</button></>
-          : <button className="underline" onClick={() => go('in')}>Back to sign in</button>}
-      </p>
+      {mode !== 'in' && mode !== 'up' && <p className="text-base"><button className="underline" onClick={() => go('in')}>Back to sign in</button></p>}
     </Shell>
   )
 }

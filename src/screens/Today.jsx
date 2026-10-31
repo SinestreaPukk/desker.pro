@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { post } from '../api.js'
 import { addTasks, doneStats, isMissed } from '../tasks.js'
 import { logEnergy, energyProfile, ranges } from '../energy.js'
@@ -56,9 +56,13 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [quick, setQuick] = useState('')
+  const quickRef = useRef(null)
+  const [seen, setSeen] = useState(() => { try { return localStorage.hintsSeen || '' } catch { return '' } }) // next-step tips already dismissed
+  const dismissHint = (k) => { const v = `${seen} ${k}`; setSeen(v); try { localStorage.hintsSeen = v } catch { /* storage blocked: it shows again next visit */ } }
   const [guide, setGuide] = useState(() => { try { return !localStorage.guideSeen } catch { return true } }) // shown once, over the dashboard
   const closeGuide = () => { setGuide(false); try { localStorage.guideSeen = '1' } catch { /* storage blocked: it shows again next visit */ } }
   const go = (tab) => { closeGuide(); goTab(tab) }
+  const addFirst = () => { closeGuide(); setTimeout(() => quickRef.current?.focus(), 0) }
 
   const today = todayStr()
   const open = tasks.filter((t) => !t.done && !t.fun)
@@ -109,6 +113,12 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
   const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
   const todays = [...open].sort((a, b) => (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9')).slice(0, 5)
+  const idle = !cur && !open.length // nothing to choose from: the pick controls would do nothing
+  const hint = [
+    ['goals', open.length >= 3 && !goals.length, 'Goals tell Desker what matters most, so it can rank your tasks.', 'Add a goal', () => goTab('Goals')],
+    ['ai', open.length >= 3, 'The AI agent can plan your week around your deadlines and free time.', 'Ask the AI agent', openAgent],
+    ['projects', open.length >= 5 && !(data.projects || []).length, 'Working towards something bigger, like an exam or a launch? A project keeps its tasks and deadlines together.', 'Start a project', () => goTab('Projects')],
+  ].find(([k, ok]) => ok && !seen.split(' ').includes(k))
   const card = 'px-rule pb-3'
   const link = 'min-h-11 underline hover:text-yoru-0'
 
@@ -118,7 +128,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
-          <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />
+          {goals.length > 0 && <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />} {/* the milestone prompt waits until there is a goal: a new user needs a first task, not this */}
           {missed.length > 0 && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
@@ -127,13 +137,14 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       {guide && !goals.length && !tasks.length && !deadlines.length && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={closeGuide} onKeyDown={(e) => e.key === 'Escape' && closeGuide()}>
           <section role="dialog" aria-modal="true" aria-label="Getting started" className="px-panel w-full max-w-md bg-yuki-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base">Start in three steps</h2>
-            <ol className="mt-2 list-decimal space-y-1 pl-5 text-slate-700">
-              <li>Add one goal you care about. <button className={link} onClick={() => go('Goals')}>Goals</button></li>
-              <li>Add a task with a date, or import a syllabus. <button className={link} onClick={() => go('Tasks')}>Tasks</button></li>
-              <li>Ask the <button className={link} onClick={() => { closeGuide(); openAgent() }}>AI agent</button> to plan your week.</li>
-            </ol>
-            <button autoFocus className={`${btn} ${BLUE} mt-4 w-full`} onClick={closeGuide}>Got it</button>
+            <h2 className="text-base">Start with one thing to do</h2>
+            <p className="mt-2 text-slate-700">Add a task, or a deadline if it has a date you cannot miss. Desker then suggests what to do next, right here.</p>
+            <p className="mt-2 text-slate-700">Goals, projects and the AI agent can wait until you have a few tasks.</p>
+            <button autoFocus className={`${btn} ${BLUE} mt-4 w-full`} onClick={addFirst}>Add my first task</button>
+            <div className="mt-2 flex flex-wrap justify-between gap-2">
+              <button className={link} onClick={() => go('Tasks')}>Add a deadline instead</button>
+              <button className={link} onClick={closeGuide}>Not now</button>
+            </div>
           </section>
         </div>
       )}
@@ -164,9 +175,18 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
               </div>
             </div>
+          ) : !tasks.length && !deadlines.length ? (
+            <div className={`${card} mt-3`}>
+              <p className="text-2xl">Nothing to pick from yet</p>
+              <p className="mt-1 text-slate-700">Add your first task or deadline. Desker will then suggest what to do next, right here.</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button className={`${btn} ${BLUE}`} onClick={addFirst}>Add a task</button>
+                <button className={`${btn} ${ghost}`} onClick={() => goTab('Tasks')}>Add a deadline</button>
+              </div>
+            </div>
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
 
-          <div className="mt-4 flex flex-wrap items-end gap-4">
+          {!idle && <><div className="mt-4 flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1">Minutes free right now
               <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
             </label>
@@ -223,10 +243,10 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <Energy log={data.energyLog || []} reset={() => setData((d) => ({ ...d, energyLog: [] }))} />
               </div>
             </div>
-          </details>
+          </details></>}
         </section>
 
-        <KodamaCard goals={goals} className="sm:hidden lg:col-span-12" />
+        {goals.length > 0 && <KodamaCard goals={goals} className="sm:hidden lg:col-span-12" />}
         <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
             <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
@@ -251,13 +271,22 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
-            <input className={`${input} min-w-0 flex-1`} placeholder="Add a task (press N)" aria-label="Task" value={quick} onChange={(e) => setQuick(e.target.value)} />
+            <input className={`${input} min-w-0 flex-1`} placeholder="Add a task (press N)" aria-label="Task" ref={quickRef} value={quick} onChange={(e) => setQuick(e.target.value)} />
             <button className={`${btn} ${BLUE}`}>Add task</button>
           </form>
           <ul className="mt-3">
             {todays.map((t) => <Row key={t.id} t={t} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
-            {!todays.length && <li className="text-slate-700">Nothing due today. Add a task or ask the AI agent to plan tomorrow.</li>}
+            {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask the AI agent to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
+          {hint && (
+            <div role="note" className="px-rule mt-3 pb-3">
+              <p className="text-slate-700">{hint[2]}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button className={`${btn} ${ghost}`} onClick={() => { dismissHint(hint[0]); hint[4]() }}>{hint[3]}</button>
+                <button className={btn} onClick={() => dismissHint(hint[0])}>Not now</button>
+              </div>
+            </div>
+          )}
           <div className="mt-6"><Insights data={data} onReplan={onReplan} /></div>
         </section>
         <div className="flex flex-col gap-6 lg:col-span-6">

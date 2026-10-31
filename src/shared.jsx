@@ -4,6 +4,18 @@ import { energyProfile } from './energy.js'
 import { encodeFile } from './files.js'
 import { LEVELS, Q } from './ui.js'
 
+// Plain-language answer to "where does this belong?", shown where work is created.
+export const WorkHelp = ({ className = '' }) => (
+  <details className={className}>
+    <summary className="underline">Task, deadline or project?</summary>
+    <ul className="mt-2 space-y-1 text-base text-slate-700">
+      <li><b className="font-semibold">Task:</b> one thing to do. Give it a date if it has to be done by then.</li>
+      <li><b className="font-semibold">Deadline:</b> a date you cannot miss, like an exam. It can hold several tasks that lead up to it.</li>
+      <li><b className="font-semibold">Project:</b> something bigger, like a final exam or a launch. It groups tasks and deadlines and shows your progress. Create one on the Projects page.</li>
+    </ul>
+  </details>
+)
+
 // undefined until the AI has ranked the task
 export const quadrant = (t) => t.important === undefined ? undefined : (t.important ? 0 : 2) + (t.urgent ? 0 : 1)
 

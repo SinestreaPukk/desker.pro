@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
-import { REPEATS, todayStr, fmtDate } from '../shared.jsx'
+import { REPEATS, todayStr, fmtDate, WorkHelp } from '../shared.jsx'
 import { parseQuick, inList } from '../lists.js'
 
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv') }
@@ -75,6 +75,8 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
       <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 bg-white p-1">
         {['Deadline', 'Task'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary text-yuki-0' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
       </div>
+      <p className="mb-1 text-base text-slate-700">{isDl ? 'A date you cannot miss. Use Estimate to split it into tasks.' : 'One thing to do. Add a date if it has to be done by then.'}</p>
+      <WorkHelp className="mb-3" />
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder={isDl ? 'Deadline, e.g. "Statics midterm Monday 3pm"' : 'What needs doing? e.g. "Call dentist tomorrow 3pm"'} aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />
         <button className={`${btn} ${BLUE}`} disabled={!parsed || (isDl && !due)} title={isDl && !due ? 'Pick a date first' : undefined}>{isDl ? 'Add deadline' : 'Add'}</button>
@@ -105,7 +107,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
         {(isDl ? projects.length > 0 : deadlines.length > 0 || projects.length > 0) && (
           <label className={label}>Belongs to
             <select className={ctl} value={f.belongs} onChange={(e) => set({ belongs: e.target.value })}>
-              <option value="">Nothing</option>
+              <option value="">{isDl ? 'No project' : 'Nothing, a standalone task'}</option>
               {!isDl && deadlines.some((d) => !d.done) && <optgroup label="Deadlines">{deadlines.filter((d) => !d.done).map((d) => <option key={d.id} value={`d:${d.id}`}>{d.title}, {fmtDate(d.date)}</option>)}</optgroup>}
               {projects.length > 0 && <optgroup label="Projects">{projects.map((p) => <option key={p.id} value={`p:${p.id}`}>{p.title}</option>)}</optgroup>}
             </select>
