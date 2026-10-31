@@ -1,0 +1,27 @@
+# Badge: On a roll (red).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+g ando-0
+j beni
+l hada-1
+m kuri
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKljKKKW...
+..WKKlljjjjKKW..
+.WKKlljjgjjjKKW.
+.WKlljjggjjjmKW.
+WKKljjgggjjmmKKW
+WKljjggggjmmmmKW
+WKjjjgggggmmmmKW
+WKKjjgggggmmmKKW
+.WKjjgggggmmmKW.
+.WKKjjgggmmmKKW.
+..WKKmmmmmmKKW..
+...WKKKmmKKKW...
+....WWKKKKWW....
+......WWWW......

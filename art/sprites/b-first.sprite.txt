@@ -1,0 +1,26 @@
+# Badge: First step (bronze).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+k hada-0
+l hada-1
+m kuri
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKklKKKW...
+..WKKkkllllKKW..
+.WKKkkllllllKKW.
+.WKkkllllllKmKW.
+WKKkllllllKKmKKW
+WKklKllllKKmmmKW
+WKllKKllKKmmmmKW
+WKKllKKKKmmmmKKW
+.WKlllKKmmmmmKW.
+.WKKllmmmmmmKKW.
+..WKKmmmmmmKKW..
+...WKKKmmKKKW...
+....WWKKKKWW....
+......WWWW......

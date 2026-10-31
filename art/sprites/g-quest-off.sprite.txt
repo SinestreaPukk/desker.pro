@@ -1,0 +1,22 @@
+# A task still to do for the daily quest.
+size 16 16
+palette yuki16
+. transparent
+o yuki-3
+frame rest
+................
+.....oooooo.....
+...ooo....ooo...
+..oo........oo..
+..o..........o..
+.oo..........oo.
+.o............o.
+.o............o.
+.o............o.
+.o............o.
+.oo..........oo.
+..o..........o..
+..oo........oo..
+...ooo....ooo...
+.....oooooo.....
+................

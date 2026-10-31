@@ -1,0 +1,27 @@
+# Badge: Deep focus (navy).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+g ando-0
+o yuki-3
+p yoru-0
+q yoru-1
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKopKKKW...
+..WKKooppppKKW..
+.WKKggggggggKKW.
+.WKoogppppgpqKW.
+WKKoppgppgpqqKKW
+WKoppppggpqqqqKW
+WKpppppggqqqqqKW
+WKKpppgpqgqqqKKW
+.WKppggggggqqKW.
+.WKKggggggggKKW.
+..WKKqqqqqqKKW..
+...WKKKqqKKKW...
+....WWKKKKWW....
+......WWWW......

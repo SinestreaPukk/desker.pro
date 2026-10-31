@@ -1,0 +1,26 @@
+# Badge: Milestone maker (green).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+a matsu-0
+b matsu-1
+d kori-1
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKdaKKKW...
+..WKKddaaaaKKW..
+.WKKdWaaaaaaKKW.
+.WKddWWWWaaabKW.
+WKKdaWWWWWabbKKW
+WKdaaWWWWabbbbKW
+WKaaaWaaabbbbbKW
+WKKaaWaabbbbbKKW
+.WKaaWabbbbbbKW.
+.WKKWWWbbbbbKKW.
+..WKKbbbbbbKKW..
+...WKKKbbKKKW...
+....WWKKKKWW....
+......WWWW......

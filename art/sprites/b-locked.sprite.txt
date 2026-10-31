@@ -1,0 +1,26 @@
+# A badge you have not earned yet.
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+n yuki-2
+o yuki-3
+p yoru-0
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKWnKKKW...
+..WKKWWnnnnKKW..
+.WKKWWppppnnKKW.
+.WKWWpnnnnpnoKW.
+WKKWnpnnnnpooKKW
+WKWnppppppppooKW
+WKnnppppppppooKW
+WKKnpppnopppoKKW
+.WKnppppppppoKW.
+.WKKppppppppKKW.
+..WKKooooooKKW..
+...WKKKooKKKW...
+....WWKKKKWW....
+......WWWW......

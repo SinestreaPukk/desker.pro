@@ -1,0 +1,27 @@
+# Badge: Pathfinder (blue).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+d kori-1
+e kori-2
+f kori-3
+g ando-0
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKdeKKKW...
+..WKKddeeeeKKW..
+.WKKddeggeeeKKW.
+.WKddeggggeefKW.
+WKKdeggeeggffKKW
+WKdeggeggeggffKW
+WKeeggeggfggffKW
+WKKeeggefggffKKW
+.WKeeeggggfffKW.
+.WKKeefggfffKKW.
+..WKKffffffKKW..
+...WKKKffKKKW...
+....WWKKKKWW....
+......WWWW......

@@ -233,4 +233,28 @@ def rhythm():
         for dx, dy in ((-3, -4), (5, -4), (1, -9)): c.px(x + dx, t + dy, 'ando-0')
     c.save('strip-rhythm')
 
-goals(); projects(); calendar(); tasks(); rhythm()
+def kodama():
+    """The kodama's clearing at night: dark pines either side, fireflies, a stone lantern and a few red-capped mushrooms. The kodama itself is drawn over the middle by the dialog."""
+    c = Cv(); sky(c, 'yoru-2', 'yoru-1', 'yoru-0', 8, 15)
+    for x, y in ((14, 3), (40, 8), (70, 2), (96, 6), (122, 3), (150, 9), (176, 4), (188, 10), (58, 11), (134, 12)): c.px(x, y, 'yuki-1' if (x // 2) % 2 else 'yuki-2')
+    for dx, dy in ((0, 0), (1, 0), (2, 0), (-1, 1), (0, 1), (-2, 2), (-2, 3), (-2, 4), (-1, 5), (0, 6), (1, 6), (2, 6)): c.px(160 + dx, 2 + dy, 'yuki-0')
+    for x in (4, 20, 34, 156, 172, 186):  # pines
+        h = 14 + (x % 5)
+        for r in range(h):
+            half = 1 + r // 3
+            c.rect(x - half, 24 - h + r, 2 * half + 1, 1, 'matsu-2' if r % 4 else 'matsu-1')
+        c.rect(x, 21, 1, 3, 'kuri')
+    c.rect(0, 20, W, 4, 'matsu-1'); c.dither(0, 20, W, 1, 'matsu-1', 'matsu-0'); c.rect(0, 22, W, 2, 'matsu-2')
+    for x, w in ((50, 10), (84, 6), (110, 12), (138, 8)): c.rect(x, 20, w, 1, 'yuki-1'); c.rect(x + 1, 19, w - 2, 1, 'yuki-0')  # snow patches
+    # stone lantern
+    c.rect(124, 11, 1, 1, 'ando-1'); c.rect(121, 12, 7, 1, 'yuki-3'); c.rect(122, 13, 5, 4, 'ando-0'); c.rect(123, 14, 3, 2, 'ando-1'); c.rect(120, 17, 9, 1, 'yuki-3'); c.rect(123, 18, 3, 2, 'yuki-2')
+    for x, y in ((118, 10), (130, 11), (116, 14), (132, 15)): c.px(x, y, 'ando-0')
+    # mushrooms
+    for x in (64, 78, 102, 146):
+        c.rect(x, 18, 4, 1, 'beni'); c.rect(x - 1, 19, 6, 1, 'beni'); c.px(x + 1, 18, 'hada-0'); c.rect(x + 1, 20, 2, 2, 'hada-0')
+    # fireflies
+    for x, y in ((24, 10), (46, 6), (74, 13), (92, 9), (108, 5), (150, 7), (166, 12), (182, 6), (12, 14), (60, 4)):
+        c.px(x, y, 'ando-0'); c.px(x + 1, y, 'ando-1') if (x // 3) % 2 else c.px(x, y + 1, 'ando-1')
+    c.save('strip-kodama')
+
+goals(); projects(); calendar(); tasks(); rhythm(); kodama()

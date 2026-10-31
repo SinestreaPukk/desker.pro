@@ -1,0 +1,27 @@
+# Badge: Week warrior (red).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+g ando-0
+j beni
+l hada-1
+m kuri
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKljKKKW...
+..WKKlljjjjKKW..
+.WKKllgjjgjjKKW.
+.WKlljggjggjmKW.
+WKKljggggggmmKKW
+WKljjggggggmmmKW
+WKjjjggggggmmmKW
+WKKjjgggggmmmKKW
+.WKjjjgggmmmmKW.
+.WKKjjmmmmmmKKW.
+..WKKmmmmmmKKW..
+...WKKKmmKKKW...
+....WWKKKKWW....
+......WWWW......

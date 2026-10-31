@@ -1,0 +1,24 @@
+# A task done towards the daily quest.
+size 16 16
+palette yuki16
+. transparent
+a matsu-0
+b matsu-1
+k hada-0
+frame rest
+................
+.....bbbbbb.....
+...bbbaaaabbb...
+..bbaaaaaaaabb..
+..baaaaaaaaaab..
+.bbaaaaaaaakabb.
+.baaaaaaaakkaab.
+.baakaaaakkaaab.
+.baakkaakkaaaab.
+.baaakkkkaaaaab.
+.bbaaakkaaaaabb.
+..baaaaaaaaaab..
+..bbaaaaaaaabb..
+...bbbaaaabbb...
+.....bbbbbb.....
+................

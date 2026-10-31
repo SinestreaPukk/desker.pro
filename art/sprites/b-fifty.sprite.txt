@@ -1,0 +1,26 @@
+# Badge: Fifty down (gold).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+g ando-0
+h ando-1
+i ando-2
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKghKKKW...
+..WKKgghhhhKKW..
+.WKKKKKKKKKKKKW.
+.WKgKhKKKKhKiKW.
+WKKgKhKKKKhKiKKW
+WKghhKKKKKKiiiKW
+WKhhhhKKKKiiiiKW
+WKKhhhhKKiiiiKKW
+.WKhhhKKKKiiiKW.
+.WKKhKKKKKKiKKW.
+..WKKiiiiiiKKW..
+...WKKKiiKKKW...
+....WWKKKKWW....
+......WWWW......
