@@ -267,10 +267,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </details></>}
         </section>
 
-        <section className={`${panel} !p-3 lg:col-span-3 lg:!p-4`} aria-label="Coming up">
-          <BoxHead tab={`Coming up ${soon.length}`} tabClass="px-tab-matsu" line="Dates to keep in mind, soonest first.">
+        <section className="lg:col-span-3" aria-label="Coming up">
+          <div className="flex items-center justify-between">
+            <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
-          </BoxHead>
+          </div>
           <ul className="mt-3">
             {soon.slice(0, 5).map((x) => (
               <li key={x.id} className="px-rule py-2">
