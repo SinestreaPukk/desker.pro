@@ -13,7 +13,7 @@ const BANNERS = {
 // Page head: title and sentence on the left, a strip of the scene on the right (above on small screens).
 export function PageHead({ title, sub, icon, strip, children }) {
   return (
-    <header className="mb-8 flex flex-col gap-4 md:mb-10 lg:flex-row lg:gap-8">
+    <header className="mb-8 flex max-w-[1100px] flex-col gap-4 md:mb-10 lg:flex-row lg:gap-8">
       <Hero name={strip} className="lg:order-2" />
       <div className="min-w-0 flex-1 lg:order-1">
         <div className="flex items-center gap-3">{icon}<h1 className="text-4xl md:text-5xl">{title}</h1></div>

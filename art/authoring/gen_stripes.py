@@ -150,9 +150,6 @@ def calendar():
     for i, x in enumerate(xs):
         col = 'hada-0' if i == today else 'yoru-1'
         c.rect(x + 1, 19 + (i % 2), 3, 1, col); c.rect(x + 2, 21 + (i % 2), 1, 1, col)
-    c.rect(0, 20, 52, 4, 'matsu-1'); c.dither(0, 20, 52, 1, 'matsu-1', 'matsu-2'); c.rect(0, 22, 52, 2, 'matsu-2')
-    for x in range(52, 58): c.rect(x, 20 + (x - 52) // 2, 1, 4 - (x - 52) // 2, 'matsu-2')
-    for x in (3, 36): c.rect(x, 18, 1, 2, 'matsu-0'); c.px(x - 1, 18, 'matsu-0'); c.px(x + 1, 17, 'matsu-0')
     c.save('strip-calendar')
 
 goals(); projects(); calendar()
