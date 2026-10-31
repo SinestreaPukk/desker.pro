@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Scene, Kodama, SEASONS } from '../px.jsx'
 import { input, btn, ghost } from '../ui.js'
-import { nameOf, growthOf, stateOf, STAGES } from '../kodama.js'
+import { nameOf, growthOf, stateOf, STAGES, WRAP_HOURS, wrapHour } from '../kodama.js'
 import { cleanName } from '../persona.js'
 import { badgesOf, nextBadge, habitStreak, habitDays } from '../game.js'
 import { notesOf, addNote, editNote, removeNote, clearNotes, MAX_LEN } from '../memory.js'
@@ -223,6 +223,11 @@ export function KodamaSettings({ data, setData, focusing }) {
                       )
                     })}
                   </div>
+                  <label className="mt-3 flex items-center gap-2">Evening wrap-up opens at
+                    <select className={`${input} !min-h-0 w-auto`} value={wrapHour(data)} onChange={(e) => setData((d) => ({ ...d, kodama: { ...d.kodama, wrapAt: +e.target.value } }))}>
+                      {WRAP_HOURS.map((h) => <option key={h} value={h}>{h}:00</option>)}
+                    </select>
+                  </label>
                   <label className="mt-3 flex min-h-11 items-center gap-2"><input type="checkbox" checked={streakOn} onChange={(e) => setData((d) => ({ ...d, kodama: { ...d.kodama, streak: e.target.checked || undefined } }))} />Show a habit streak</label>
                   <p className="text-xs text-slate-700">Counts days when you logged a time, tapped your energy, planned or wrapped up. Up to two rest days a week are fine. Off by default.</p>
                 </Card>

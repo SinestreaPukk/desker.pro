@@ -121,3 +121,17 @@ test('xp only goes up, and an unchanged document produces an empty patch', () =>
   assert.equal(w.server.doc.xp, 200)
   assert.equal(isEmpty(diff(w.server.doc, clone(w.server.doc))), true)
 })
+
+test('chat: two devices keep each other\'s messages, clearing removes them, adding a proposed goal counts as a change', async () => {
+  const { diff, apply } = await import('../src/sync.js')
+  const m = (at, role, extra = {}) => ({ at, role, content: 'x', ...extra })
+  const base = { chat: [m(1, 'user'), m(2, 'assistant', { goals: [{ title: 'g' }] })] }
+  const phone = { ...base, chat: [...base.chat, m(3, 'user'), m(4, 'assistant')] }
+  const laptop = { ...base, chat: [...base.chat, m(5, 'user')] }
+  const server = apply(apply(base, diff(base, phone)), diff(base, laptop))
+  assert.deepEqual(server.chat.map((x) => x.at).sort(), [1, 2, 3, 4, 5])
+  const added = { chat: [base.chat[0], { ...base.chat[1], goals: [{ title: 'g', added: true }] }] }
+  assert.equal(apply(base, diff(base, added)).chat[1].goals[0].added, true)
+  assert.deepEqual(apply(base, diff(base, { chat: [] })).chat, [])
+  assert.equal(apply(base, diff(base, { chat: Array.from({ length: 80 }, (_, i) => m(10 + i, 'user')) })).chat.length, 50)
+})

@@ -22,7 +22,8 @@ const LISTS = {
   'rhythm.sessions': { key: (s) => JSON.stringify([s?.start ?? s?.at ?? s?.id, s?.task]), cap: 150 },
   'rhythm.signals': { key: (s) => `${s?.k}|${s?.at}|${s?.task}`, cap: 150 },
   'kodama.notes': { key: (n) => n?.id, cap: 60 },
-  chat: { key: (m) => `${m?.at}|${m?.role}`, cap: 50 },
+  // a message changes only when a proposed goal in it is added, so that counts as a new version of it
+  chat: { key: (m) => `${m?.at}|${m?.role}|${(m?.goals || []).filter((g) => g?.added).length}`, cap: 50 },
   'kodama.rituals.morning': { key: String, cap: 120 },
   'kodama.rituals.evening': { key: String, cap: 120 },
 }

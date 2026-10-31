@@ -11,7 +11,7 @@ const PAGES = {
     ['In short', <>Desker is a study planner. It keeps what you put into it so it can plan your days, and it learns from how you work so the plans get better. Nobody can see your tasks except you. We do not sell your data, show ads, or use a third-party analytics service. You can download everything or delete your account at any time.</>],
     ['What Desker keeps', <>
       <p>Your account: email address, username, and a password (stored only as a scrambled hash, never as readable text). If you sign in with Google or GitHub we receive your name and email from them.</p>
-      <p className="mt-2">What you add: tasks, deadlines, goals, projects, hobbies and free hours, the dates and times of events from any calendar file or link you import. Your chat with the kodama is not kept on our servers; it lives in your browser tab and is gone when you close it.</p>
+      <p className="mt-2">What you add: tasks, deadlines, goals, projects, hobbies and free hours, the dates and times of events from any calendar file or link you import. Your chat with the kodama (the last 50 messages) is saved with your account so it is still there next time; you can clear it any time with “Clear chat”, and files or web pages you attach are read once and not kept. The kodama also keeps short notes made from things you said or did (for example how an exam went). You can read, edit and delete every note under “What the kodama remembers”.</p>
       <p className="mt-2">What Desker learns: when you focus, how long finished tasks really took compared with your guess, your energy taps, and how your plans went. This is the “Rhythm” page. It stays in your account and is used only to plan for you.</p>
       <p className="mt-2">Your settings and progress: theme, kodama stage, wrap-up answers and similar.</p>
       <p className="mt-2">Technical records: when you sign in, your browser type and network address are kept with your sign-in session so you can stay signed in and we can spot abuse. Temporary counters of your network address limit how often someone can try to sign in; they are removed automatically. We also record that an AI request happened (the time, which feature, and how much text it used), but not what it said.</p>
@@ -20,7 +20,7 @@ const PAGES = {
     ['AI and the kodama', <>
       <p>Desker uses Claude, made by Anthropic, to talk with you and to make plans. When you use one of these features, the text it needs is sent to Anthropic through their API, and the answer comes back to you:</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
-        <li><b>Chat with the kodama and planning</b>: your goals, tasks, deadlines, projects and hobbies, free hours, calendar event titles and times for the next two weeks, your mood and energy pattern, a short summary of your rhythm, and the messages in the current chat (including anything you type to the kodama).</li>
+        <li><b>Chat with the kodama and planning</b>: your goals, tasks, deadlines, projects and hobbies, free hours, calendar event titles and times for the next two weeks, your mood and energy pattern, a short summary of your rhythm, the kodama’s notes about you, and the recent messages in your chat (including anything you type to the kodama).</li>
         <li><b>“What should I do now”, “Prioritise”, “Replan”, deadline and project breakdowns</b>: the tasks, deadlines and free time those need, and what you typed.</li>
         <li><b>Reading a syllabus, photo, PDF or web page you add</b>: that file or the text of that page.</li>
       </ul>

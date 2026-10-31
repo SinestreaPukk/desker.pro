@@ -7,7 +7,8 @@ import { METHODS } from '../methods.js'
 import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
 import { track } from '../analytics.js'
-import { lineFor, ritualDue, sceneChoice } from '../kodama.js'
+import { lineFor, ritualDue, sceneChoice, followUpDue, wrapReply, wrappedToday } from '../kodama.js'
+import FollowUp from '../components/FollowUp.jsx'
 import BoxHead from '../components/BoxHead.jsx'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
@@ -74,6 +75,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const daysTo = (date) => Math.round((new Date(`${date}T12:00`) - new Date(`${today}T12:00`)) / 864e5)
   const timeLeft = (date) => { const n = daysTo(date); return n === 0 ? 'Due today' : `${n} day${n === 1 ? '' : 's'} left` }
   const thisWeek = soon.filter((x) => x.date <= weekEnd)
+  const ritual = ritualDue(data)
   const finding = clashes
     ? `${clashes === 1 ? 'Two things are' : 'Some things are'} planned at the same time. Replan to fix it.`
     : missed.length
@@ -92,6 +94,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const curTime = liveTask && liveTask.hours > 0 ? getTaskTime(liveTask, rhythm) : null
   const curFacts = liveTask ? [curTime && fmtMin(curTime.plannedMinutes), liveTask.due && (liveTask.due === today ? 'due today' : `due ${fmtDate(liveTask.due)}`), liveTask.important === true ? 'high impact' : liveTask.important === false ? 'lighter impact' : ''].filter(Boolean).join(' · ') : ''
   const slotText = liveTask?.when ? `Planned ${liveTask.when === today ? 'today' : fmtDate(liveTask.when)}${liveTask.start ? ` at ${liveTask.start}` : ''}.` : ''
+  const comingUp = soon.filter((x) => x.id !== `t${cur?.taskId}`) // the task in Right now is not listed a second time
   const check = realityCheck(tasks, plannerOf(data), today, freeTodayOf(data) ?? data.freeHours ?? 4)
   const finish = () => {
     if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
@@ -121,7 +124,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     : { important: qi < 2, urgent: qi % 2 === 0, manual: true, reason: 'You placed this here yourself.' })
   const addQuick = (e) => { e.preventDefault(); if (quick.trim()) { setTasks(addTasks(tasks, [{ title: quick.trim() }])); setQuick('') } }
   // Your order wins once you have moved something (rank); everything you have not placed yet sorts by priority and date above it.
-  const ordered = [...open].sort((a, b) => (a.rank ?? -1) - (b.rank ?? -1) || (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9'))
+  const ordered = [...open].filter((t) => t.id !== cur?.taskId).sort((a, b) => (a.rank ?? -1) - (b.rank ?? -1) || (quadrant(a) ?? 9) - (quadrant(b) ?? 9) || (a.due || '9').localeCompare(b.due || '9'))
   const todays = ordered.slice(0, 5)
   const moveTo = (fromId, toId) => {
     const ids = ordered.map((t) => t.id), f = ids.indexOf(fromId), to = ids.indexOf(toId)
@@ -136,6 +139,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     ['ai', open.length >= 3, 'Your kodama can plan your week around your deadlines and free time.', 'Talk to your kodama', openAgent],
     ['projects', deadlines.length >= 2 && !(data.projects || []).length, 'Juggling a course or group project with several deadlines? A project keeps them together.', 'Start a project', () => goTab('Projects')],
   ].find(([k, ok]) => ok && !seen.split(' ').includes(k))
+  const followUp = followUpDue(data)
   const card = 'px-rule pb-3'
   const ROW = 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3' // text on the left, its buttons on the right
   const ACT = 'ml-auto flex shrink-0 flex-wrap justify-end gap-2'
@@ -174,6 +178,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </div>
       )}
 
+      {followUp && <FollowUp key={followUp.id} data={data} setData={setData} deadline={followUp} />}
+
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
           <h2 className="px-tab px-tab-ando inline-block">Right now</h2>
@@ -194,7 +200,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                     {curTime?.adjusted && <p className="mt-1 text-slate-700" title={curTime.reason}>{timeSentence(curTime)}</p>}
                     <p className="mt-1 text-slate-700">{cur.why}</p></>
                   : <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>}
-                {slotText && <p className="mt-1 text-slate-700">{slotText}</p>}
+                {slotText && !cur.why?.startsWith('Planned') && <p className="mt-1 text-slate-700">{slotText}</p>}
               </div>
               <div className={ACT}>
                 <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
@@ -283,11 +289,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
 
         <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
-            <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
+            <h2>Coming up <span className="text-xs text-slate-700">{comingUp.length}</span></h2>
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <ul className="mt-3">
-            {soon.slice(0, 5).map((x) => (
+            {comingUp.slice(0, 5).map((x) => (
               <li key={x.id} className="px-rule py-2">
                 <p className="break-words">{x.title}</p>
                 <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
@@ -295,7 +301,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <p className="text-xs text-slate-700">{timeLeft(x.date)}{x.work ? `. ${x.work}` : ''}</p>
               </li>
             ))}
-            {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask your kodama to plan tomorrow.</li>}
+            {!comingUp.length && <li className="text-slate-700">{soon.length ? 'Nothing else due soon.' : 'Nothing due soon.'} Add a task with a date, or ask your kodama to plan tomorrow.</li>}
           </ul>
         </section>
       </div>
@@ -313,12 +319,17 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </div>
       </details>
 
-      <Ritual key={ritualDue(data) || 'evening'} kind={ritualDue(data) || 'evening'} due={!!ritualDue(data)} data={data} setData={setData} onReplan={onReplan} /> {/* the wrap-up is always here; it can be retracted */}
+      {ritual ? <Ritual key={ritual} kind={ritual} due data={data} setData={setData} onReplan={onReplan} />
+        : wrappedToday(data) && (
+          <section className={`${panel} mb-6 !py-2`} aria-label="Evening wrap-up">
+            <BoxHead tab="Done for today ✓" line={wrapReply(data)} />
+          </section>
+        )} {/* the morning plan and evening wrap-up appear when it is time; once done, only a quiet line is left */}
 
       <div className="grid gap-6 lg:grid-cols-12">
         <section className="lg:col-span-6" aria-label="Your tasks">
           <div className="flex items-center justify-between">
-            <h2>Your tasks <span className="text-xs text-slate-700">{open.length}</span></h2>
+            <h2>Your tasks <span className="text-xs text-slate-700">{ordered.length}</span></h2>
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
@@ -327,7 +338,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </form>
           <ul className="mt-3">
             {todays.map((t, i) => <Row key={t.id} t={t} rhythm={rhythm} reorder={reorderOf(t, i)} update={update} move={move} onStart={startTask} onEdit={() => goTab('Tasks')} onDelete={() => deleteTask(t)} />)}
-            {!todays.length && <li className="text-slate-700">{tasks.length ? 'Nothing due today. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
+            {!todays.length && <li className="text-slate-700">{open.length ? 'Everything else is done. The open one is in Right now.' : tasks.length ? 'Nothing open. Add a task or ask your kodama to plan tomorrow.' : 'No tasks yet. Type one above and press Add task.'}</li>}
           </ul>
           {hint && (
             <div role="note" className={`px-rule ${ROW} mt-3 pb-3`}>

@@ -102,3 +102,41 @@ test('the naming question is asked once, of people who never chose a name', () =
   assert.equal(nameOf(fresh), 'Kodama')
   assert.equal(nameOf(startFrom({ tasks: [], deadlines: [] }, { kodama: 'Moss' })), 'Moss')
 })
+
+import { wrapHour, wrapReply, wrappedToday, followUpDue } from '../src/kodama.js'
+test('the evening wrap-up opens at 18:00 or the hour the student chose, and is not due once done', () => {
+  const data = (k = {}) => ({ tasks: [{ id: 1, title: 'a', hours: 1, when: DAY }], kodama: k })
+  assert.equal(wrapHour(data()), 18)
+  assert.equal(ritualDue(data(), at(DAY, 17, 30)), null)
+  assert.equal(ritualDue(data(), at(DAY, 18)), 'evening')
+  assert.equal(ritualDue(data({ wrapAt: 21 }), at(DAY, 20)), null)
+  assert.equal(ritualDue(data({ wrapAt: 21 }), at(DAY, 21)), 'evening')
+  assert.equal(wrapHour(data({ wrapAt: 3 })), 18, 'a silly value falls back')
+  const done = data({ rituals: { evening: [DAY] }, feel: { [DAY]: 'Tough' } })
+  assert.equal(ritualDue(done, at(DAY, 19)), null)
+  assert.equal(wrappedToday(done, DAY), true)
+  assert.match(wrapReply(done, DAY), /tough/)
+  assert.match(wrapReply({}, DAY), /wrap/)
+})
+
+test('the line under the kodama says something true, never just "Ready when you are"', () => {
+  const noon = at(DAY, 15) // after the morning plan, before the wrap-up
+  const lines = [
+    { tasks: [{ id: 1, title: 'Read', hours: 1, when: DAY }] },
+    { tasks: [], deadlines: [{ id: 1, title: 'Static quiz', date: '2026-11-02' }] },
+    { tasks: [{ id: 1, title: 'Read', hours: 2 }, { id: 2, title: 'Write', hours: 1 }] },
+  ].map((d) => lineFor(d, { now: noon }))
+  assert.match(lines[0], /1 thing is planned today, about/)
+  assert.match(lines[1], /Static quiz is due in 2 days/)
+  assert.match(lines[2], /2 things open, about/)
+  for (const l of lines) assert.doesNotMatch(l, /Ready when you are/)
+})
+
+test('a deadline that passed in the last week is asked about once', () => {
+  const d = (date, extra) => ({ id: date, title: 'Quiz', date, ...extra })
+  assert.equal(followUpDue({ deadlines: [d('2026-10-30')] }, DAY).date, '2026-10-30')
+  assert.equal(followUpDue({ deadlines: [d(DAY)] }, DAY), null, 'not before it has passed')
+  assert.equal(followUpDue({ deadlines: [d('2026-10-20')] }, DAY), null, 'not weeks later')
+  assert.equal(followUpDue({ deadlines: [d('2026-10-30', { followed: true })] }, DAY), null)
+  assert.equal(followUpDue({ deadlines: [d('2026-10-28'), d('2026-10-30')] }, DAY).date, '2026-10-30', 'the newest first')
+})

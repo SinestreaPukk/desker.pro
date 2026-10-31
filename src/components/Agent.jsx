@@ -3,6 +3,7 @@ import { post } from '../api.js'
 import { BLUE, btn, ghost, input, LEVELS } from '../ui.js'
 import { Kodama } from '../px.jsx'
 import { nameOf } from '../kodama.js'
+import { notesForAI } from '../memory.js'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
 import { summaryForAI, timeProfile } from '../rhythm.js'
@@ -10,19 +11,23 @@ import { withPlanned } from '../taskTime.js'
 import { track } from '../analytics.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
+const Face = () => <span style={{ '--px': '1px' }} className="flex shrink-0"><Kodama /></span> // 44px: the sprite at one screen pixel per art pixel
+
 export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
   const name = nameOf(data)
-  const Face = () => <span style={{ '--px': '1px' }} className="shrink-0"><Kodama /></span> // 44px: the sprite at one screen pixel per art pixel
-  const [msgs, setMsgs] = useState([])
+  const saved = data.chat || [] // the last 50 messages live in the account, so the conversation is still here tomorrow and on the phone
+  const [pending, setPending] = useState(null) // the message being answered right now; saved together with the answer
+  const msgs = pending ? [...saved, pending] : saved
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const end = useRef(null)
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [msgs, busy])
   const send = async (content, label) => {
-    const next = [...msgs, { role: 'user', content, label }]
+    const mine = { at: Date.now(), role: 'user', content: (label ?? content).slice(0, 1000) } // attached files and pages are read once, not kept
+    const next = [...saved.slice(-29), { ...mine, content }]
     track('agent_message_sent')
-    setMsgs(next); setText(''); setBusy(true); setError('')
+    setPending(mine); setText(''); setBusy(true); setError('')
     try {
       const out = await post('/api/chat', {
         goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
@@ -30,16 +35,18 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
         pattern: patternOf(data), ratio: ratioOf(data.tasks), rhythm: summaryForAI(data), companion: name,
         projects: (data.projects || []).map(({ id, title, kind, date }) => ({ id, title, kind, date })),
         deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
-        hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
+        hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, notes: notesForAI(data), messages: next.map(({ role, content }) => ({ role, content })),
       })
       if (typeof out.reply !== 'string') throw new Error('The AI gave an unreadable answer. Please try again.')
       const checked = applyPlanChecked(data, out) // times the AI set are verified in code; anything that cannot fit is said out loud below
-      setData((d) => applyPlan(d, out))
+      const reply = { at: Date.now() + 1, role: 'assistant', content: out.reply.slice(0, 1000) }
       const goals = (Array.isArray(out.goals) ? out.goals : []).filter((g) => g?.title && LEVELS.some((l) => l.name === g.level)).slice(0, 8)
         .map((g) => ({ title: String(g.title).slice(0, 120), level: LEVELS.findIndex((l) => l.name === g.level), happiness: !!g.happiness }))
-      setMsgs([...next, { role: 'assistant', content: out.reply, goals, notes: checked.problems }])
-    } catch (err) { setError(err.message) }
-    setBusy(false)
+      if (goals.length) reply.goals = goals
+      if (checked.problems?.length) reply.notes = checked.problems
+      setData((d) => ({ ...applyPlan(d, out), chat: [...(d.chat || []), mine, reply].slice(-50) }))
+    } catch (err) { setError(err.message); if (!label) setText(content) }
+    setPending(null); setBusy(false)
   }
   // Attach a file/photo, or auto-read a pasted link, then send the notes with the message.
   const attachFile = async (file) => {
@@ -68,15 +75,18 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
   const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
   const addGoals = (mi, ks) => {
     const picked = ks.map((k) => msgs[mi].goals[k])
-    setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
-    setMsgs(msgs.map((m, i) => (i === mi ? { ...m, goals: m.goals.map((g, k) => (ks.includes(k) ? { ...g, added: true } : g)) } : m)))
+    setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))],
+      chat: (d.chat || []).map((m) => (m.at === msgs[mi].at && m.role === 'assistant' ? { ...m, goals: m.goals.map((g, k) => (ks.includes(k) ? { ...g, added: true } : g)) } : m)) }))
   }
   const bubble = 'max-w-[80%] break-words px-3 py-2'
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-line px-3 py-2">
         <span className="flex items-center gap-2"><Face /><span className="text-base">{name}</span></span>
-        {onClose && <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>}
+        <span className="flex items-center gap-2">
+          {saved.length > 0 && !busy && <button className={`${btn} ${ghost}`} onClick={() => setData((d) => ({ ...d, chat: [] }))}>Clear chat</button>}
+          {onClose && <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>}
+        </span>
       </header>
       <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
         <div className="mr-auto flex items-start gap-2">

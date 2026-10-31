@@ -4,6 +4,7 @@
 import { cleanName } from './persona.js'
 import { dayStr, kodamaMood } from './milestones.js'
 import { realityCheck, plannerOf, profile } from './rhythm.js'
+import { getTaskTime, fmtMin } from './taskTime.js'
 
 export const nameOf = (data) => cleanName(data?.kodama?.name)
 // People who started before the kodama could be named are asked once (components/NamePrompt.jsx). Saving a name or keeping the default both end it; people who chose at sign-up are never asked.
@@ -50,13 +51,28 @@ export const sceneChoice = (data) => {
 const doneToday = (data, kind, today) => (data?.kodama?.rituals?.[kind] || []).includes(today)
 const skippedToday = (data, kind, today) => data?.kodama?.skip?.[kind] === today
 // 'morning' (05:00-13:00, there is something to plan) or 'evening' (from 17:00, something was planned or done today); null otherwise.
+export const WRAP_HOURS = [17, 18, 19, 20, 21, 22]
+export const wrapHour = (data) => (WRAP_HOURS.includes(data?.kodama?.wrapAt) ? data.kodama.wrapAt : 18) // the evening wrap-up opens from here, 18:00 unless they chose another time
 export function ritualDue(data, now = new Date()) {
   const today = dayStr(now), h = now.getHours(), tasks = (data?.tasks || []).filter((t) => !t.fun)
   const open = tasks.some((t) => !t.done)
   const mine = tasks.some((t) => t.when === today || (t.done && t.doneAt && dayStr(new Date(t.doneAt)) === today))
   if (h >= 5 && h < 13 && open && !doneToday(data, 'morning', today) && !skippedToday(data, 'morning', today)) return 'morning'
-  if (h >= 17 && h < 24 && mine && !doneToday(data, 'evening', today) && !skippedToday(data, 'evening', today)) return 'evening'
+  if (h >= wrapHour(data) && h < 24 && mine && !doneToday(data, 'evening', today) && !skippedToday(data, 'evening', today)) return 'evening'
   return null
+}
+// The one line the kodama says after the wrap-up, from how the day felt (they chose it; nothing else is read). Shown next to "Done for today".
+export const wrapReply = (data, day = dayStr()) => ({
+  Good: 'Glad it went well. Rest now.',
+  Okay: 'Okay is fine. Tomorrow is a fresh page.',
+  Tough: 'That sounds like a tough one. Be gentle with yourself. I am here if you want to talk.',
+}[data?.kodama?.feel?.[day]] || 'That is a wrap. Be kind to yourself.')
+export const wrappedToday = (data, day = dayStr()) => (data?.kodama?.rituals?.evening || []).includes(day)
+
+// A deadline that passed in the last week and has not been asked about yet: "How did it go?". The answer is kept as a note the user can read, edit and delete.
+export const followUpDue = (data, today = dayStr()) => {
+  const from = dayStr(new Date(new Date(`${today}T12:00`).getTime() - 7 * 864e5))
+  return (data?.deadlines || []).filter((d) => d.date && d.date < today && d.date >= from && !d.followed).sort((a, b) => b.date.localeCompare(a.date))[0] || null
 }
 const cap = (list, x) => [...list, x].slice(-120)
 export const finishRitual = (data, kind, day = dayStr()) => ({ ...data, kodama: { ...data.kodama, rituals: { ...data.kodama?.rituals, [kind]: cap((data.kodama?.rituals?.[kind] || []).filter((d) => d !== day), day) } } })
@@ -77,6 +93,7 @@ export function stateOf(data, { focusing = false, now = new Date(), heavy = fals
   return heavy ? 'calm' : 'idle'
 }
 
+const fmtDayWord = (n) => (n === 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`)
 export function lineFor(data, { now = new Date(), focusing = false } = {}) {
   const name = nameOf(data), h = now.getHours(), today = dayStr(now)
   const tasks = (data?.tasks || []).filter((t) => !t.fun), open = tasks.filter((t) => !t.done)
@@ -90,7 +107,10 @@ export function lineFor(data, { now = new Date(), focusing = false } = {}) {
   if (due === 'morning') return 'Good morning. Shall we look at today together?'
   if (due === 'evening') return 'How did today go? Tell me what got done, and what can wait.'
   if (!tasks.length && !(data?.deadlines || []).length) return `Hi, I am ${name}. Tell me what is due and I will find the time.`
-  if (!open.length) return 'Everything is done. Enjoy the quiet.'
+  const next = [...(data?.deadlines || []).filter((d) => !d.done).map((d) => ({ title: d.title, date: d.date })), ...open.filter((t) => t.due).map((t) => ({ title: t.title, date: t.due }))]
+    .filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0]
+  const days = next && Math.round((new Date(`${next.date}T12:00`) - new Date(`${today}T12:00`)) / 864e5)
+  if (!open.length && !next) return 'Everything is done. Enjoy the quiet.'
   if (!p.off && p.energy.confident) {
     const lvl = p.energy.levelAt(today, h * 60 + now.getMinutes())
     if (lvl === 'high') return 'You usually have good energy around now. A good time for something that needs thinking.'
@@ -98,6 +118,12 @@ export function lineFor(data, { now = new Date(), focusing = false } = {}) {
   }
   const m = kodamaMood(data?.goals || [], today)
   if (m.happy) return 'A milestone. That took real work.'
-  if (doneToday(data, 'evening', today)) return 'That is a wrap for today. Be kind to yourself.'
-  return 'Ready when you are.'
+  if (doneToday(data, 'evening', today)) return wrapReply(data, today)
+  // Something true about today instead of a greeting: what is planned, what is coming, or how much is open.
+  const planned = open.filter((t) => t.when === today)
+  if (planned.length) { const min = planned.reduce((n, t) => n + getTaskTime(t, p).plannedMinutes, 0); return `${planned.length} thing${planned.length === 1 ? ' is' : 's are'} planned today, about ${fmtMin(Math.round(min / 15) * 15)} at your pace.` }
+  if (next && days <= 3) return `${next.title} is due ${fmtDayWord(days)}. Want to start on it?`
+  if (!open.length) return `Nothing open. ${next.title} is due ${fmtDayWord(days)}.`
+  const min = open.filter((t) => t.hours > 0).reduce((n, t) => n + getTaskTime(t, p).plannedMinutes, 0)
+  return min ? `${open.length} thing${open.length === 1 ? '' : 's'} open, about ${fmtMin(Math.round(min / 15) * 15)} of work. Pick one small start.` : `${open.length} thing${open.length === 1 ? '' : 's'} open. Pick one small start.`
 }
