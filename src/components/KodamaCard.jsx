@@ -2,8 +2,10 @@ import { Kodama } from '../px.jsx'
 import { kodamaMood, msOf } from '../milestones.js'
 
 // Today's kodama: happy after a milestone, a lucky day after that, otherwise unchanged.
-export default function KodamaCard({ goals, className = '' }) {
+// onlyNews: render nothing unless there is news (a milestone or a lucky day), so the 'add a goal / milestone' tips live on Goals only.
+export default function KodamaCard({ goals, className = '', onlyNews }) {
   const { mood, happy, lucky } = kodamaMood(goals)
+  if (onlyNews && !happy && !lucky) return null
   const any = goals.some((g) => msOf(g).length)
   const [title, sub] = !goals.length ? ['No goals yet.', 'Add a first goal on Goals (or take the 10-minute guide), and the kodama cheers for each milestone.'] : happy ? ['Milestone reached.', lucky ? 'Tomorrow is lucky again.' : 'Tomorrow is a lucky day.']
     : lucky ? ['A lucky day.', "Yesterday's milestone brought luck."]

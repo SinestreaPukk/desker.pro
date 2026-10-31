@@ -132,7 +132,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
-          {goals.length > 0 && <KodamaCard goals={goals} className="mt-3 hidden sm:flex" />} {/* the milestone prompt waits until there is a goal: a new user needs a first task, not this */}
+          <KodamaCard goals={goals} onlyNews className="mt-3 hidden sm:flex" />
           {(missed.length > 0 || clashes > 0) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
@@ -250,7 +250,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </details></>}
         </section>
 
-        {goals.length > 0 && <KodamaCard goals={goals} className="sm:hidden lg:col-span-12" />}
+        <KodamaCard goals={goals} onlyNews className="sm:hidden lg:col-span-12" />
         <section className="lg:col-span-3" aria-label="Coming up">
           <div className="flex items-center justify-between">
             <h2>Coming up <span className="text-xs text-slate-700">{soon.length}</span></h2>
