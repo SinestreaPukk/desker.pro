@@ -18,11 +18,11 @@ import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fm
 
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
 
-const Tile = ({ label, caption, children }) => (
-  <div className="px-rule min-w-0 pb-2">
-    <div className="flex min-h-11 items-center text-2xl">{children}</div>
+const Tile = ({ label, caption, children, keep }) => (
+  <div className="px-rule pb-2 lg:col-span-3">
     <p className="text-slate-700">{label}</p>
-    <p className="hidden break-words text-xs text-slate-700 sm:block">{caption}</p>
+    <div className="text-2xl">{children}</div>
+    <p className={`text-xs text-slate-700 ${keep ? '' : 'hidden lg:block'}`}>{caption}</p>
   </div>
 )
 
@@ -152,11 +152,18 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </section>
         </div>
       )}
-      <section aria-label="This week at a glance" className="mb-4 grid grid-cols-3 gap-3 lg:mb-6 lg:gap-6">
+      <details className="mb-4 lg:mb-6">
+        <summary className="underline">This week at a glance</summary>
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-12 lg:gap-x-6">
         <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
         <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
         <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
-      </section>
+        <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
+          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+            onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
+        </Tile>
+        </div>
+      </details>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
