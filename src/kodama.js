@@ -6,6 +6,8 @@ import { dayStr, kodamaMood } from './milestones.js'
 import { realityCheck, plannerOf, profile } from './rhythm.js'
 
 export const nameOf = (data) => cleanName(data?.kodama?.name)
+// People who started before the kodama could be named are asked once (components/NamePrompt.jsx). Saving a name or keeping the default both end it; people who chose at sign-up are never asked.
+export const needsName = (data) => !data?.kodama?.name && !data?.kodama?.nameAsked
 
 // ---- growth -------------------------------------------------------------------------------------------------
 export const STAGES = [

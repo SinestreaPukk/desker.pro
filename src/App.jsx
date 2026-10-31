@@ -12,6 +12,7 @@ import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, 
 import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile, mayAsk } from './rhythm.js'
 import { logEnergy } from './energy.js'
 import EnergyAsk from './components/EnergyAsk.jsx'
+import NamePrompt from './components/NamePrompt.jsx'
 import TimeAsk from './components/TimeAsk.jsx'
 import { track } from './analytics.js'
 import Today from './screens/Today.jsx'
@@ -29,7 +30,7 @@ import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
 import { useSync } from './useSync.js'
-import { nameOf, growthOf, legacyGrowth, legacyXp, STAGES } from './kodama.js'
+import { nameOf, needsName, growthOf, legacyGrowth, legacyXp, STAGES } from './kodama.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar', Rhythm: '/rhythm' }
@@ -192,6 +193,7 @@ export default function App() {
 
   return (
     <div className="min-h-dvh">
+      {needsName(data) && data.kodama?.legacy !== undefined && <NamePrompt setData={setData} />}
       <header className="sticky top-0 z-10 hidden border-b border-line bg-white md:block">
         <div className={`mx-auto px-8 pt-3 ${WRAP}`}>
         <div className="flex items-center justify-between">

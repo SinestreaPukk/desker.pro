@@ -90,3 +90,15 @@ test('wellbeing guardrail: no line ever shames, counts missed days, or pushes', 
   for (const s of new Set(samples)) assert.ok(!BAD.test(s), `"${s}" reads as pressure`)
   assert.ok(new Set(samples).size >= 6)
 })
+
+import { needsName } from '../src/kodama.js'
+import { startFrom } from '../src/onboarding.js'
+test('the naming question is asked once, of people who never chose a name', () => {
+  assert.equal(needsName({}), true)
+  assert.equal(needsName({ kodama: { name: 'Moss' } }), false)
+  assert.equal(needsName({ kodama: { nameAsked: true } }), false, 'keeping the default also ends it')
+  const fresh = startFrom({ tasks: [], deadlines: [] }, { skipped: true })
+  assert.equal(needsName(fresh), false, 'people who just signed up were asked in the welcome')
+  assert.equal(nameOf(fresh), 'Kodama')
+  assert.equal(nameOf(startFrom({ tasks: [], deadlines: [] }, { kodama: 'Moss' })), 'Moss')
+})

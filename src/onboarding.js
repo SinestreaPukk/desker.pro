@@ -14,5 +14,5 @@ export function startFrom(d, answers, first, now = new Date()) {
     tasks = repair({ tasks, changed: [id], busy: d.busy || [], deadlines, freeHours: d.freeHours ?? 4, now, ...(plannerOf({ ...d, onboarding: answers }) || {}) }).tasks
   }
   const { kodama: name, ...rest } = answers // the companion's name lives with the companion, not with the first-run answers
-  return { ...d, onboarding: rest, tasks, deadlines, ...(name && { kodama: { ...d.kodama, name } }) }
+  return { ...d, onboarding: rest, tasks, deadlines, kodama: { ...d.kodama, ...(name && { name }), nameAsked: true } } // new people were asked at sign-up, so the one-time naming question is for people who started before
 }
