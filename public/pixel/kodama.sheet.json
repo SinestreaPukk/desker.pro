@@ -1,6 +1,6 @@
 {
-  "frameWidth": 44,
-  "frameHeight": 44,
+  "frameWidth": 26,
+  "frameHeight": 26,
   "frames": [
     "idle-a",
     "idle-b",
