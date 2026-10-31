@@ -1,6 +1,27 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
+Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migrations as files only, retune Yuki), then "Fix pass 2: closed beta" sections 1 to 8 (below, newest first in the TODO list at the end).**
+
+## Fix pass 2: ready for the closed beta
+One commit per section. Nothing was run against the real database; migration 003 is a file only.
+1. **Sync** (`ef0aa6c`, `src/sync.js`, `src/useSync.js`, `api/_store.js`): the app sends only what changed since the last server copy (PATCH) and the server lays it on top of what is stored, with a retry loop. Tasks, deadlines, goals, projects and hobbies merge one field at a time; energy check-ins, timings, sessions, signals, wrap-up days, kodama notes and chat merge by identity so nothing another tab or device added is dropped. A failed save is kept in the app and in this browser's storage and retried; "offline" shows only after repeated failures. Tests: `test/sync.test.mjs` (two devices, same field, deletes, caps, chat).
+2. **Privacy and Terms** (`edf461a`, `src/Legal.jsx`, `src/config.js`): plain-English pages written from what the code does (what is stored, what goes to the AI provider, analytics, deletion). Linked from sign-up, Settings and the landing footer. Contact email and "updated" date live in `src/config.js`. Updated again in section 5 for the stored chat and notes.
+3. **Phone navigation and layout** (`9a72e1c`): bottom nav is Today, Tasks, Calendar, Rhythm and More; slim Today header with the kodama's line inside the scene; one page width for header and every page; task titles wrap to two lines.
+4. **One duration function** (`04e8ca6`, `src/taskTime.js`): `getTaskTime` says the guess, the planned time and why; Today, Right now, Coming up, lists, calendar, deadline and project headers, wrap-up, the AI context and replanning all use it. Day-one Rhythm guesses; one-tap energy after a focus session with a switch for the questions. Tests: `test/tasktime.test.mjs`.
+5. **Kodama**
+   - 5.1 (`f576ce1`) Growth is the only progression. XP, levels, daily quest and the task-count streak are gone (old XP becomes a one-time growth start so nobody goes backwards). Badges reward honest habits (a real time, a wrap-up, energy taps, focus hours) and the next one is shown. Optional forgiving habit streak (off by default). "What the kodama remembers" notes can be edited and deleted.
+   - 5.2 (`a6e88d1`) People who started before the kodama could be named are asked once; keeping "Kodama" ends the question.
+   - 5.3 (`645b97a`) Chat is saved per account (last 50 messages, "Clear chat"); attached files and pages are read once and not kept. Notes are sent to the AI with the rhythm summary. After a deadline passes: "How did the Statics quiz go?" (Went well / Okay / Rough + optional words), kept as a note. The kodama sprite shows in the chat header and beside its messages (it was invisible before: fixed).
+   - 5.4 (`645b97a`) The kodama's line says something true (what is planned today, what is due soon, how much is open) instead of "Ready when you are." The task in Right now is not repeated in Coming up or Your tasks. "This week , 0%" comma fixed; the colour legend lists only colours that are in the bars. The evening wrap-up opens at 18:00 (change it in the kodama window, Settings) and, once done, becomes "Done for today ✓" with the kodama's reply.
+6. **One message** (`40d67fd`): "study planner that learns how you study, for university students" in the landing page, sign-up, onboarding, page title, meta, share card and manifest.
+7. **/dsb locked down** (`5923981`): only signed-in accounts whose verified email is in `ADMIN_EMAILS`; everyone else gets a 404; no shared password; rate limited; counts leave out test accounts, old profiles and deleted accounts. Accounts can be marked as test accounts (`db/migrations/003_test_accounts.sql`, not applied).
+8. **Final check**: tests, lint and build pass; every page was walked at 1440x900 and 390x844 with a mock server; two tabs ticking different tasks and tapping different energy levels lost nothing and showed no banner; the built bundle has no TODO text, env var values or internal notes (the only matches are React internals, the legal copy, and the placeholder contact address below).
+
+### Things you should know
+- Commit `40d67fd` accidentally included 12 duplicate image files (`public/pixel/scene-* 2.png`); they were deleted again in `f576ce1`. Nothing else is affected.
+- Phone: the drag grip is hidden, and deadline and project inner rows have no Start button.
+- `/dsb` shows no task durations. Its SQL was checked only against an in-memory Postgres.
+- The same task edited in two tabs at the same moment: the later save wins for that field (documented in `src/sync.js`, tested); other fields of the task keep both edits.
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -107,14 +128,18 @@ Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migra
 - **Privacy placeholder** now describes the event log (tied to the account, no free text, deleted with the account, off by default). You still have to write the real policy.
 
 ## TODO for you (collected)
-- **Apply migrations on a branch database first**: `db/migrations/001_rhythm.sql` (nothing reads it yet) and `002_events.sql` (needed for analytics and the notification rate). I did not run either against the Neon database in `.env.local`.
-- **Env vars to set when you want the features**: `ANALYTICS=on`, `VITE_ANALYTICS=on`; for notifications `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` and an hourly caller of `/api/state?push=1`; `VITE_CONTACT_EMAIL` for the landing footer Contact link. Nothing was invented; each is blank in `.env.example`.
-- **Legal text**: replace the TODO placeholders in `src/Legal.jsx` (privacy, terms).
+- **Apply migrations on a branch database first**: `001_rhythm.sql` (nothing reads it yet), `002_events.sql` (analytics and the notification rate) and `003_test_accounts.sql` (marks test accounts for /dsb). None was run against the Neon database in `.env.local`.
+- **New env var**: `ADMIN_EMAILS` (comma separated verified emails that may open /dsb). Without it nobody can.
+- **Set the contact email**: `PRIVACY_CONTACT_EMAIL` in `src/config.js` is a placeholder (`hello@desker.example`); also the "updated" date there.
+- **Read the Privacy and Terms text** (`src/Legal.jsx`) and have someone qualified check it before real people sign up. It is written from what the code does, not legal advice.
+- **Mark your own and friends' accounts as test accounts** so /dsb does not count them (see migration 003).
+- **Other env vars when you want the features**: `ANALYTICS=on`, `VITE_ANALYTICS=on`; for notifications `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` and an hourly caller of `/api/state?push=1`; `VITE_CONTACT_EMAIL` for the landing footer Contact link. Nothing was invented; each is blank in `.env.example`.
 - **OAuth**: sign-in with Google/Apple is still not set up (needs your client IDs).
 - **Art to commission**: kodama poses (focusing, sleepy, cozy, calm) and Young tree / Elder accessories, a dusk sky that is not peach.
 - **Test push notifications end to end** with real keys and a real browser; it is not tested.
+- The commits are local; nothing has been pushed.
 
 ## Tests
-`npm test` (106 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (136 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.
