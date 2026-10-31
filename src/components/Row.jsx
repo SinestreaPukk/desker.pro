@@ -33,7 +33,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
     <li className={`${cover ? 'px-sunk p-2 text-ink' : `${rowCard} py-2`}`}>
       {cover && <Cover q={q} className="mb-2" />}
       <div className="flex items-center gap-2">
-        <span className="hidden shrink-0 cursor-grab text-slate-400 md:block" draggable title="Drag to another box" aria-hidden="true"
+        <span className="hidden shrink-0 cursor-grab text-slate-600 md:block" draggable title="Drag to another box" aria-hidden="true"
           onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(t.id)); e.dataTransfer.setDragImage(e.currentTarget.closest('li'), 0, 0) }}>
           <Icon name="Grip" />
         </span>

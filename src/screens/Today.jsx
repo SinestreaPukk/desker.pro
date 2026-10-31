@@ -163,9 +163,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             </div>
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
 
-          <details className="mt-4">
-            <summary className="underline">Tune this pick</summary>
-          <div className="mt-3 flex flex-wrap items-end gap-4">
+          <div className="mt-4 flex flex-wrap items-end gap-4">
             <label className="flex flex-col gap-1">Minutes free right now
               <input type="number" min="5" step="5" className={`${input} w-28`} value={minutes} onChange={(e) => setMinutes(+e.target.value)} />
             </label>
@@ -179,10 +177,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               </div>
             </div>
           </div>
-          </details>
 
           <details className="mt-4">
-            <summary className="underline">More ways to choose</summary>
+            <summary className="underline">Other ways to choose</summary>
             <div className="mt-3 space-y-4">
               <ul className="grid gap-3 sm:grid-cols-2">
                 {picks.map(({ m, r }) => (
@@ -251,7 +248,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <button className={link} onClick={() => goTab('Tasks')}>View all</button>
           </div>
           <form className="mt-3 flex gap-2" onSubmit={addQuick}>
-            <input className={`${input} min-w-0 flex-1`} placeholder="Add a task" aria-label="Task" value={quick} onChange={(e) => setQuick(e.target.value)} />
+            <input className={`${input} min-w-0 flex-1`} placeholder="Add a task (press N)" aria-label="Task" value={quick} onChange={(e) => setQuick(e.target.value)} />
             <button className={`${btn} ${BLUE}`}>Add task</button>
           </form>
           <ul className="mt-3">

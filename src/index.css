@@ -110,7 +110,11 @@ input[type='checkbox']:focus-visible { outline-offset: -12px; }
 input[type='range'] { appearance: none; height: calc(2 * var(--px)); background: var(--color-yuki-3); cursor: pointer; }
 input[type='range']::-webkit-slider-thumb { appearance: none; width: 16px; height: 24px; background: var(--color-yuki-0); border: var(--px) solid var(--ink); }
 input[type='range']::-moz-range-thumb { width: 12px; height: 20px; border: var(--px) solid var(--ink); border-radius: 0; background: var(--color-yuki-0); }
-details > summary { cursor: pointer; }
+details > summary { cursor: pointer; list-style: none; }
+details > summary::-webkit-details-marker { display: none; }
+/* Disclosure chevron: a stepped pixel triangle, right when closed, down when open */
+details > summary::before { content: ''; display: inline-block; width: calc(4 * var(--px)); height: calc(4 * var(--px)); margin-right: calc(2 * var(--px)); background: currentColor; clip-path: polygon(0 0, 50% 0, 50% 25%, 75% 25%, 75% 50%, 100% 50%, 100% 50%, 75% 50%, 75% 75%, 50% 75%, 50% 100%, 0 100%); }
+details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 50%, 75% 75%, 25% 75%, 25% 50%, 0 50%); }
 
 /* Avatars: 24x24 sprite, 2 frames (idle, blink), drawn at 2x = 48px */
 .px-avatar { width: calc(24 * var(--px)); height: calc(24 * var(--px)); flex: none; background-size: calc(48 * var(--px)) calc(24 * var(--px)); background-repeat: no-repeat; image-rendering: pixelated; animation: blink 4s steps(1) infinite; }

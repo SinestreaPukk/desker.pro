@@ -40,6 +40,16 @@ export default function App() {
   }, [tab])
 
   const [agentOpen, setAgentOpen] = useState(false)
+  // N: jump to a task box and start typing (ignored while typing somewhere or with a modifier held)
+  useEffect(() => {
+    const f = (e) => {
+      if (e.key.toLowerCase() !== 'n' || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable], [role="dialog"]')) return
+      e.preventDefault()
+      setTabState((t) => (t === 'Today' || t === 'Tasks' ? t : 'Today'))
+      setTimeout(() => document.querySelector('input[aria-label="Task"], input[aria-label="What needs doing"]')?.focus(), 0)
+    }
+    addEventListener('keydown', f); return () => removeEventListener('keydown', f)
+  }, [])
   const [replanOpen, setReplanOpen] = useState(false)
   const [focusOpen, setFocusOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -160,7 +170,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo()}<span className="text-base font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
-            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />AI agent</button>
+            <button className={`${btn} flex items-center gap-2 hover:bg-panel`} aria-label="Ask the AI agent" onClick={() => setAgentOpen(true)}><Icon name="Agent" /></button>
             <Settings data={data} setData={setData} />
           </div>
         </header>
@@ -191,11 +201,11 @@ export default function App() {
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
       )}
       {toast && (
-        <div role="alert" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
+        <div role="status" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
           {toast.stamp && <Hanko key={toast.text} />}
           <span className="min-w-0 flex-1 break-words">{toast.text}</span>
           <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>
-          <button className="min-h-11 shrink-0 px-3" aria-label="Dismiss" onClick={() => setToast(null)}>x</button>
+          <button className="min-h-11 shrink-0 px-3" onClick={() => setToast(null)}>Dismiss</button>
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Sections">
