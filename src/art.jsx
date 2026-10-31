@@ -4,7 +4,6 @@ export function Hero({ name, className = '' }) {
   return <div className={`px-strip ${className}`} aria-hidden="true"><img src={`/pixel/strip-${name}.png`} alt="" width="192" height="24" className="px-art" /></div>
 }
 
-const STRIP = { Rhythm: 'calendar' } // no Rhythm stripe drawn yet: borrows the calendar one (listed in CHANGES.md)
 const BANNERS = {
   Tasks: ['Tasks', 'A task is one thing to do. A deadline is an exam or assignment date that holds the tasks leading up to it.'],
   Goals: ['Goals', 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.'],
@@ -30,5 +29,5 @@ export function PageHead({ title, sub, icon, strip, children }) {
 export function Banner({ tab }) {
   const b = BANNERS[tab]
   if (!b) return null
-  return <PageHead title={b[0]} sub={b[1]} icon={<Icon name={tab} />} strip={STRIP[tab] || tab.toLowerCase()} />
+  return <PageHead title={b[0]} sub={b[1]} icon={<Icon name={tab} />} strip={tab.toLowerCase()} />
 }

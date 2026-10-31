@@ -63,7 +63,7 @@ Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migra
   per-type sums so nothing learned is lost. `db/migrations/001_rhythm.sql` creates `focus_sessions`, `energy_logs`, `task_outcomes`, `rhythm_profile`. **It is not applied and nothing reads it yet.**
   Run it on a branch database when you are ready; switching the app to the tables is a follow-up.
 - **Not done**: splitting a long task into several blocks (one task = one slot in the data model; the timer length and break-friendly blocks are the substitute, say if you want real splitting);
-  a separate AI call to classify old tasks (no new function: the Hobby plan caps at 12); a Rhythm stripe for the page banner (borrows the calendar stripe).
+  a separate AI call to classify old tasks (no new function: the Hobby plan caps at 12). The Rhythm page now has its own stripe (`art/authoring/gen_stripes.py`, `rhythm()`).
 
 ## Phase 5: the kodama companion
 - **One character.** The AI agent is the kodama: "Talk to {name}" opens the chat, which now speaks in its voice (`src/persona.js` feeds the system prompt in `api/chat.js`; edit that file to retune it). You name it on the first-run screen
@@ -93,7 +93,7 @@ Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migra
 - Focus rings were already a 2px ink outline with offset on every control (works on both themes); motion was already off under `prefers-reduced-motion` (kodama states included).
 - Fixed: the Calendar toolbar clipped its "Today" button on phones.
 - **Decided not to change: the body font.** VT323 at 24px (20px small) is already well above 14px and is the pixel identity; swapping paragraphs to a system font would reflow every screen and mix two voices. Say if you want it anyway: it is one variable (`--font-sans`) plus `p`/`li` rules.
-- **Art still needed**: a Rhythm page stripe (it borrows the calendar one), a dusk sky that is not peach (the landing hero uses winter dusk; `hada` in `art/scene_build.py` roles), and the kodama poses listed under Phase 5.
+- **Art still needed**: a dusk sky that is not peach (the landing hero uses winter dusk; `hada` in `art/scene_build.py` roles), and the kodama poses listed under Phase 5.
 
 ## Phase 8: measure it
 - **Events** (`src/analytics.js`): an allow-list of 18 event names (`signed_up` ... `notification_opened`, including `notification_sent`, which the server logs). `sanitize()` keeps only numbers, booleans and a fixed set of short words from a whitelist of property names, so a task title cannot get in even by mistake (tested). Sources are `manual`, `ai`, `import` for `task_created`; durations are `timer` or `chip`.
@@ -109,7 +109,7 @@ Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migra
 - **Env vars to set when you want the features**: `ANALYTICS=on`, `VITE_ANALYTICS=on`; for notifications `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` and an hourly caller of `/api/state?push=1`; `VITE_CONTACT_EMAIL` for the landing footer Contact link. Nothing was invented; each is blank in `.env.example`.
 - **Legal text**: replace the TODO placeholders in `src/Legal.jsx` (privacy, terms).
 - **OAuth**: sign-in with Google/Apple is still not set up (needs your client IDs).
-- **Art to commission**: a Rhythm page stripe (borrows the calendar one), kodama poses (focusing, sleepy, cozy, calm) and Young tree / Elder accessories, a dusk sky that is not peach.
+- **Art to commission**: kodama poses (focusing, sleepy, cozy, calm) and Young tree / Elder accessories, a dusk sky that is not peach.
 - **Test push notifications end to end** with real keys and a real browser; it is not tested.
 
 ## Tests

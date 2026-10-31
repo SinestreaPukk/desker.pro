@@ -187,4 +187,50 @@ def tasks():
     c.rect(168, 12, 3, 3, 'matsu-1'); c.rect(169, 13, 1, 2, 'matsu-0')
     c.save('strip-tasks')
 
-goals(); projects(); calendar(); tasks()
+def rhythm():
+    """Rhythm = a day seen from left to right: dawn, daylight, night, over snowy hills that rise and fall like an energy curve.
+    A lantern burns on each peak (when you have most energy). Amber is used only for the sun and the two lanterns."""
+    import math
+    c = Cv()
+    ZONES = ((0, 'ando-0', 'hada-0'), (58, 'kori-1', 'yuki-1'), (122, 'yoru-1', 'yoru-0'))  # (starts at x, top, bottom of the sky)
+    def zone(x):
+        k = max(i for i, z in enumerate(ZONES) if x >= z[0] - (0 if i == 0 else 4))
+        return ZONES[k]
+    for x in range(W):
+        for y in range(H):
+            _, top, bot = zone(x)
+            c.px(x, y, top if y < 8 else bot)
+    for bx in (58, 122):  # a checkerboard seam where one part of the day turns into the next
+        for x in range(bx - 4, bx + 2):
+            for y in range(H):
+                _, t1, b1 = zone(bx - 5); _, t2, b2 = zone(bx + 2)
+                c.px(x, y, (t1 if y < 8 else b1) if (x + y) % 2 == 0 else (t2 if y < 8 else b2))
+    # rising sun, half hidden behind the hills
+    for r, col in ((7, 'ando-0'), (5, 'ando-1')):
+        for y in range(-r, r + 1):
+            for x in range(-r, r + 1):
+                if x * x + y * y <= r * r + r // 2: c.px(16 + x, 14 + y, col)
+    for dx, dy in ((-10, -6), (10, -6), (0, -11), (-12, 0), (12, 0)): c.px(16 + dx, 14 + dy, 'ando-0')
+    # moon and stars in the night
+    for dx, dy in ((0, 0), (1, 0), (2, 0), (-1, 1), (0, 1), (-2, 2), (-2, 3), (-2, 4), (-1, 5), (0, 6), (1, 6), (2, 6)): c.px(172 + dx, 3 + dy, 'yuki-0')
+    for x, y in ((136, 3), (148, 8), (158, 2), (186, 9), (142, 12), (180, 14), (164, 10)): c.px(x, y, 'yuki-1' if (x // 2) % 2 else 'yuki-2')
+    sparkle(c, 154, 5, 'yuki-0')
+    for x in range(40, 112, 18): cloud(c, x + 6, 4 + (x // 18) % 3, 0)
+    # the energy hills: high in the morning, a dip after lunch, a second smaller rise in the evening
+    ridge = lambda x: round(15 - 3.4 * math.sin(2 * math.pi * x / 96 - 0.8) - 1.2 * math.sin(2 * math.pi * x / 31))
+    for x in range(W):
+        top = ridge(x)
+        for y in range(top, H):
+            d = y - top
+            c.px(x, y, 'yuki-0' if d == 0 else 'yuki-1' if d < 3 else 'yuki-2' if d < 6 else ('yuki-3' if (x + y) % 2 == 0 else 'yuki-2'))
+    # a few pines on the slopes, and a lantern on each peak
+    for x in (6, 52, 72, 96, 110, 150, 168, 184):
+        t = ridge(x)
+        c.rect(x + 1, t - 1, 1, 1, 'matsu-0'); c.rect(x, t, 3, 1, 'matsu-1'); c.rect(x - 1, t + 1, 5, 1, 'matsu-1'); c.rect(x + 1, t + 2, 1, 1, 'kuri')
+    for x in (36, 132):
+        t = ridge(x)
+        c.rect(x + 1, t - 7, 1, 7, 'kuri'); c.rect(x - 1, t - 6, 5, 4, 'ando-1'); c.rect(x, t - 5, 3, 2, 'ando-0'); c.rect(x - 1, t - 7, 5, 1, 'yoru-2'); c.rect(x - 1, t - 2, 5, 1, 'yoru-2')
+        for dx, dy in ((-3, -4), (5, -4), (1, -9)): c.px(x + dx, t + dy, 'ando-0')
+    c.save('strip-rhythm')
+
+goals(); projects(); calendar(); tasks(); rhythm()
