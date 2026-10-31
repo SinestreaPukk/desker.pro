@@ -84,7 +84,6 @@ def goals():
         c.rect(x, 15, 3, 2, 'matsu-1'); c.rect(x - 1, 17, 5, 2, 'matsu-1'); c.rect(x - 2, 19, 7, 3, 'matsu-2'); c.px(x + 1, 15, 'matsu-0'); c.rect(x + 1, 22, 1, 2, 'kuri')
     for x, col in ((30, 'hada-0'), (66, 'daidai-0'), (84, 'hada-0'), (108, 'daidai-0'), (160, 'hada-0')):
         c.px(x, 21, col); c.px(x, 22, 'matsu-2')
-    put_deskie(c, 10, 21)
     sparkle(c, 18, 4, 'daidai-0')
     c.save('strip-goals')
 
@@ -121,7 +120,6 @@ def projects():
     for x in (84, 112, 162): c.px(x, 19, 'beni'); c.px(x, 20, 'matsu-1')
     for x, y, col in ((30, 17, 'daidai-0'), (30, 18, 'daidai-0'), (33, 18, 'daidai-0'), (33, 19, 'daidai-0'), (30, 19, 'daidai-2')): c.rect(x, y, 3, 1, col)
     c.rect(36, 19, 3, 1, 'kuri'); c.rect(4, 16, 1, 5, 'kuri'); c.rect(1, 14, 7, 4, 'hada-0'); c.rect(1, 17, 7, 1, 'hada-1'); c.rect(2, 15, 5, 1, 'daidai-2')
-    put_deskie(c, 10, 21, hat=True)
     c.save('strip-projects')
 
 def calendar():
@@ -154,7 +152,6 @@ def calendar():
         c.rect(x + 1, 19 + (i % 2), 3, 1, col); c.rect(x + 2, 21 + (i % 2), 1, 1, col)
     c.rect(0, 20, 52, 4, 'matsu-1'); c.dither(0, 20, 52, 1, 'matsu-1', 'matsu-2'); c.rect(0, 22, 52, 2, 'matsu-2')
     for x in range(52, 58): c.rect(x, 20 + (x - 52) // 2, 1, 4 - (x - 52) // 2, 'matsu-2')
-    put_deskie(c, 8, 21)
     for x in (3, 36): c.rect(x, 18, 1, 2, 'matsu-0'); c.px(x - 1, 18, 'matsu-0'); c.px(x + 1, 17, 'matsu-0')
     c.save('strip-calendar')
 

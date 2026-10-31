@@ -5,6 +5,7 @@ import { logEnergy, energyProfile, ranges } from '../energy.js'
 import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
 import KodamaCard from '../components/KodamaCard.jsx'
+import PlayerCard from '../components/PlayerCard.jsx'
 import Review from '../Review.jsx'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
@@ -256,7 +257,10 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             {!todays.length && <li className="text-slate-700">Nothing due today. Add a task or ask the AI agent to plan tomorrow.</li>}
           </ul>
         </section>
-        <div className="lg:col-span-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>
+        <div className="flex flex-col gap-6 lg:col-span-6">
+          <Review tasks={tasks} goals={goals} onAgent={onReview} />
+          <PlayerCard data={data} className={`${panel} !p-3 lg:!p-4`} />
+        </div>
       </div>
     </>
   )

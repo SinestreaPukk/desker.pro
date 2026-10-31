@@ -84,18 +84,29 @@ def icon(name, rows, legend):
     write(name, 16, 16, {'K': 'yoru-2', **legend}, [('rest', rows)], f'Icon: {name}.')
 
 A = {'a': 'kori-1', 'w': 'yuki-0'}
-icon('i-today', ['.......K........', '...K...K...K....', '....K.....K.....', '.....KKKKK......', '....KaaaaaK.....', '.KK.KaaaaaK.KK..', '....KaaaaaK.....', '.....KKKKK......', '....K.....K.....', '...K...K...K....', '.......K........'], A)
-icon('i-tasks', ['KKKKKKK..KKKKKKK'] + ['KbbbbbK..KaaaaaK'] * 5 + ['KKKKKKK..KKKKKKK', '................', '................', 'KKKKKKK..KKKKKKK'] + ['KaaaaaK..KwwwwwK'] * 5 + ['KKKKKKK..KKKKKKK'], {'b': 'beni', 'a': 'kori-1', 'w': 'yuki-1'})
-icon('i-goals', ['.......KK.......', '......KaaK......', '.....KaaaaK.....', '....KKKKKKKK....', '...KwwwwwwwwK...', '..KwwwwwwwwwwK..', '.KKKKKKKKKKKKKK.', 'KaaaaaaaaaaaaaaK', 'KKKKKKKKKKKKKKKK'], A)
-icon('i-projects', ['..KKKKKK........', '.KaaaaaaK.......', '.KaaaaaaKKKKKKK.', '.KaaaaaaaaaaaaK.', '.KKKKKKKKKKKKKK.', '.KwwwwwwwwwwwwK.', '.KwwwwwwwwwwwwK.', '.KwwwwwwwwwwwwK.', '.KwwwwwwwwwwwwK.', '.KKKKKKKKKKKKKK.'], A)
-icon('i-calendar', ['....K......K....', '....K......K....', '.KKKKKKKKKKKKKK.', '.KaaaaaaaaaaaaK.', '.KKKKKKKKKKKKKK.', '.KwwwwwwwwwwwwK.', '.KwKKwwKKwwKKwK.', '.KwKKwwKKwwKKwK.', '.KwwwwwwwwwwwwK.', '.KwKKwwKKwwwwwK.', '.KwKKwwKKwwwwwK.', '.KwwwwwwwwwwwwK.', '.KKKKKKKKKKKKKK.'], A)
-icon('i-coach', ['.....KKKKKK.....', '...KKwwwwwwKK...', '..KwwwwwwwwwwK..', '.KwwwwwwwwwwwwK.', '.KwwKwwwwwwKwwK.', '.KwwKwwwwwwKwwK.', '.KwhhwwBBwwhhwK.', '.KwwwwwBBwwwwwK.', '..KwwwwwwwwwwK..', '...KKwwwwwwKK...', '.....KKKKKK.....'], {'w': 'yuki-0', 'h': 'hada-1', 'B': 'kuri'})
-icon('i-add', ['......KKKK......', '......KaaK......', '......KaaK......', '..KKKKKaaKKKKK..', '..KaaaaaaaaaaK..', '..KaaaaaaaaaaK..', '..KKKKKaaKKKKK..', '......KaaK......', '......KaaK......', '......KKKK......'], {'a': 'kori-1'})
-icon('i-check', ['.............KK.', '............KggK', '...........KggK.', '..KK......KggK..', '.KggK....KggK...', '.KgggK..KggK....', '..KgggKKggK.....', '...KgggggK......', '....KgggK.......', '.....KgK........', '......K.........'], {'g': 'matsu-0'})
-icon('i-clock', ['.....KKKKKK.....', '...KKwwwwwwKK...', '..KwwwwwwwwwwK..', '.KwwwwwKwwwwwwK.', '.KwwwwwKwwwwwwK.', '.KwwwwwKwwwwwwK.', '.KwwwwwKKKKwwwK.', '.KwwwwwwwwwwwwK.', '..KwwwwwwwwwwK..', '...KKwwwwwwKK...', '.....KKKKKK.....'], {'w': 'yuki-0'})
-icon('i-flag', ['.KKKKKKKKKKKKK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KKKKKKKKKKKKK..'] + ['.K..............'] * 8 + ['.KKKK...........'], {'a': 'kori-1'})
-icon('i-settings', ['................', '........KKKK....', 'KKKKKKKKKaaKKKKK'[:16], '........KKKK....', '................', '................', '..KKKK..........', 'KKKaaKKKKKKKKKKK', '..KKKK..........', '................', '................', '..........KKKK..', 'KKKKKKKKKKKaaKKK', '..........KKKK..'], {'a': 'kori-1'})
-icon('i-close', ['..KK........KK..', '.KaaK......KaaK.', '..KaaK....KaaK..', '...KaaK..KaaK...', '....KaaKKaaK....', '.....KaaaaK.....', '.....KaaaaK.....', '....KaaKKaaK....', '...KaaK..KaaK...', '..KaaK....KaaK..', '.KaaK......KaaK.', '..KK........KK..'], {'a': 'kori-1'})
+# Nav icons share one grammar: a 1px yoru-2 outline, flat fills, nothing smaller than a 2px detail, drawn on a 12x12 live area.
+def mirror(q): return [r + r[::-1] for r in q] + [r + r[::-1] for r in reversed(q)]  # q is the top-left 8x8
+def stroke(pts, ch='K', grid=None):
+    g = grid or [['.'] * 16 for _ in range(16)]
+    for x, y in pts:
+        for dx in (0, 1): g[y][x + dx] = ch  # 2px wide
+    return g
+def line(x0, y0, x1, y1):
+    n = max(abs(x1 - x0), abs(y1 - y0)); return [(round(x0 + (x1 - x0) * i / n), round(y0 + (y1 - y0) * i / n)) for i in range(n + 1)]
+join = lambda g: [''.join(r) for r in g]
+
+icon('i-today', mirror(['........', '.......K', '.......K', '..K.....', '.....KKK', '....Kaaa', '....Kaaa', '.KK.Kaaa']), A)
+icon('i-tasks', ['..KKK...........', '..KaK..KKKKKKK..', '..KKK...........', '................', '................', '..KKK...........', '..KaK..KKKKKKK..', '..KKK...........', '................', '................', '..KKK...........', '..KwK..KKKKKKK..', '..KKK...........'], A)
+icon('i-goals', ['......KKKK......', '......KaaK......', '......KaaK......', '....KKKKKKKK....', '....KwwwwwwK....', '....KwwwwwwK....', '..KKKKKKKKKKKK..', '..KwwwwwwwwwwK..', '..KwwwwwwwwwwK..', '..KKKKKKKKKKKK..'], A)
+icon('i-projects', ['.KKKKKK.........', '.KaaaaK.........', '.KKKKKKKKKKKKK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KaaaaaaaaaaaK..', '.KKKKKKKKKKKKK..'], A)
+icon('i-calendar', ['..KK......KK....', '..KK......KK....', '.KKKKKKKKKKKKKK.', '.KaaaaaaaaaaaaK.', '.KaaaaaaaaaaaaK.', '.KKKKKKKKKKKKKK.', '.KwwwwwwwwwwwwK.', '.KwKKwwKKwwKKwK.', '.KwKKwwKKwwKKwK.', '.KwwwwwwwwwwwwK.', '.KwKKwwKKwwwwwK.', '.KwKKwwKKwwwwwK.', '.KKKKKKKKKKKKKK.'], A)
+icon('i-coach', ['..KKKKKKKKKKKK..', '.KwwwwwwwwwwwwK.', '.KwwwwwwwwwwwwK.', '.KwKKwwKKwwKKwK.', '.KwKKwwKKwwKKwK.', '.KwwwwwwwwwwwwK.', '.KwwwwwwwwwwwwK.', '..KKKKKKKKKKKK..', '...KKwK.........', '...KwK..........', '...KK...........'], {'w': 'yuki-0'})
+icon('i-add', mirror(['........', '........', '.......K', '.......K', '.......K', '.......K', '.......K', '..KKKKKK']), {})
+icon('i-check', join(stroke(line(2, 8, 5, 11) + line(5, 11, 12, 3), 'g')), {'g': 'matsu-1'})
+icon('i-clock', ['.....KKKKKK.....', '...KKwwwwwwKK...', '..KwwwwwwwwwwK..', '.KwwwwwKKwwwwwK.', '.KwwwwwKKwwwwwK.', '.KwwwwwKKwwwwwK.', '.KwwwwwKKKKKwwK.', '.KwwwwwKKKKKwwK.', '.KwwwwwwwwwwwwK.', '..KwwwwwwwwwwK..', '...KKwwwwwwKK...', '.....KKKKKK.....'], {'w': 'yuki-0'})
+icon('i-flag', ['..KK............', '..KKKKKKKKKK....', '..KKaaaaaaaaK...', '..KKaaaaaaaK....', '..KKaaaaaaK.....', '..KKaaaaaaaK....', '..KKaaaaaaaaK...', '..KKKKKKKKKK....'] + ['..KK............'] * 6, {'a': 'kori-1'})
+icon('i-settings', ['....KKK.........', '.KKKKaKKKKKKKKK.', '....KKK.........', '................', '................', '.........KKK....', '.KKKKKKKKKaKKKK.', '.........KKK....', '................', '................', '......KKK.......', '.KKKKKKaKKKKKKK.', '......KKK.......'], {'a': 'kori-1'})
+icon('i-close', join(stroke(line(12, 3, 3, 12), 'K', stroke(line(3, 3, 12, 12)))), {})
 icon('i-send', ['.KK.............', '.KaKK...........', '.KaaaKK.........', '.KaaaaaKK.......', '.KaaaaaaaKK.....', '.KaaaaaaaaaKK...', '.KaaaaaaaaaaaKK.', '.KaaaaaaaaaKK...', '.KaaaaaaaKK.....', '.KaaaaaKK.......', '.KaaaKK.........', '.KaKK...........', '.KK.............'], {'a': 'kori-1'})
 icon('i-more', ['.KKK..KKK..KKK..'] * 3, {})
 icon('i-grip', ['................', '................', '................', '.....KK..KK.....', '.....KK..KK.....', '................', '.....KK..KK.....', '.....KK..KK.....', '................', '.....KK..KK.....', '.....KK..KK.....'], {})

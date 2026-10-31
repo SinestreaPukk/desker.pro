@@ -23,6 +23,7 @@ import { btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
+import { xpOf, levelOf } from './game.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -87,6 +88,16 @@ export default function App() {
     }, 500)
     return () => clearTimeout(id)
   }, [data])
+  // Level up: cheer when the level passes the one last seen on this device (the first visit just records it).
+  const level = data ? levelOf(xpOf(data)).level : 0
+  useEffect(() => {
+    if (!level) return
+    try {
+      const seen = +localStorage.seenLevel || 0
+      if (seen && level > seen) setToast({ stamp: true, text: `Level up! You are level ${level}.` })
+      localStorage.seenLevel = Math.max(seen, level)
+    } catch { /* storage blocked: no cheer */ }
+  }, [level])
   if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
   if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding) => setData((d) => ({ ...d, onboarding }))} />
 
@@ -207,7 +218,7 @@ export default function App() {
         <div role="status" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
           {toast.stamp && <Hanko key={toast.text} />}
           <span className="min-w-0 flex-1 break-words">{toast.text}</span>
-          <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>
+          {toast.undo && <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>}
           <button className="min-h-11 shrink-0 px-3" onClick={() => setToast(null)}>Dismiss</button>
         </div>
       )}
