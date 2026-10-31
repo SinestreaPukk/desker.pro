@@ -1,8 +1,14 @@
 {
   "name": "kodama",
-  "note": "The one exception to yuki16: colours sampled from the Kodama character sheet (lime head, teal legs, orange blush, dark brown line). Used only by the kodama sprite.",
+  "note": "The one exception to yuki16: colours read off the kodama pose sheet. Used only by the kodama sprite.",
   "colors": {
-    "line": "#26180A", "lime": "#BFDC58", "lime-hi": "#D2E67E", "lime-lo": "#A8CC3E",
-    "leg": "#40B068", "leg-lo": "#2F9A62", "blush": "#E6794B", "eye": "#F6F4D2"
+    "lime": "#BDD759",
+    "lime-hi": "#D1E281",
+    "line": "#3F2919",
+    "leg": "#3D925F",
+    "moss": "#708C3A",
+    "blush": "#E07F4C",
+    "eye": "#F5F2CE",
+    "lime-lo": "#9FBF42"
   }
 }

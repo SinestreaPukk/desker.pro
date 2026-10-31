@@ -1,66 +1,49 @@
 #!/usr/bin/env python3
-"""Kodama (tree spirit) sprite, 32x32, six frames: idle, blink, happy-a, happy-b (a hop), lucky-a, lucky-b (a leaf sprout and sparkles).
-The silhouette comes from kodama_head.txt, traced from the character sheet by kodama_trace.py; this adds light, face, legs and moods.
-Palette: art/palette/kodama.json (colours sampled from the sheet). Light from upper-left."""
-import pathlib
-ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-N = 32
-HEAD = {(x, y) for y, row in enumerate((ROOT / 'art/authoring/kodama_head.txt').read_text().splitlines()) for x, ch in enumerate(row) if ch != '.'}
-INNER = {p for p in HEAD if all((p[0] + dx, p[1] + dy) in HEAD for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
+"""Kodama sprite sheet, 44x44, six frames, from the pose sheet (traced by kodama_read.py, cut and quantised by kodama_poses.py).
+idle-a / idle-b  the leaf-play pose (the default) and a blink
+happy-a / happy-b  the jump pose, then a 2px hop
+lucky-a / lucky-b  the waving pose with sparkles that swap places
+Palette: art/palette/kodama.json, written here from the colours found on the sheet."""
+import json, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import kodama_poses as kp
+ROOT = kp.ROOT
+POSES = {k: [r.translate(str.maketrans('Bbh', 'KKK')) for r in v] for k, v in kp.POSES.items()}   # the sheet's log colours only leak in as stray cells
+N = 44; BOTTOM = 43   # all poses stand on the same baseline
 
-def frame(mood, dy=0, spark=0, sprout=False):
-    c = {}
-    def put(x, y, ch):
-        if 0 <= x < N and 0 <= y + dy < N: c[(x, y + dy)] = ch
-    for x in range(10, 22):                                                         # body peeking under the head
-        for y in range(21, 25): put(x, y, 'L')
-    for x0, x1 in ((10, 14), (18, 22)):                                             # two stubby legs
-        for x in range(x0, x1 - 1):
-            for y in range(24, 29): put(x, y, 'L')
-    for x in range(8, 14): put(x, 28, 'L'); put(x, 29, 'L') if x < 13 else None     # left foot points left
-    for x in range(18, 24): put(x, 28, 'L'); put(x, 29, 'L') if x > 18 else None    # right foot points right
-    leg = dict(c)
-    for (x, y), ch in list(leg.items()):                                            # leg outline and a darker lower-right
-        if any((x + a, y + b) not in leg and (x + a, y + b - dy) not in HEAD for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1))): c[(x, y)] = 'K'
-        elif x >= 19 and y > 25 or y >= 27: c[(x, y)] = 'l'
-    for (x, y) in HEAD:
-        ch = 'G'
-        if (x - 9) ** 2 + (y - 7) ** 2 <= 11: ch = 'H'
-        elif (x - 13) + (y - 9) > 17 and (x, y) in INNER: ch = 'g'
-        if (x, y) not in INNER: ch = 'K'
-        put(x, y, ch)
-    # face: big eyes looking up, the right one a little higher, as on the sheet
-    for ex, ey in ((9, 10), (17, 9)):
-        if mood in ('idle', 'lucky'):
-            for r, row in enumerate(('.KKK.', 'KKKKK', 'KKKKK', 'KWWWK', 'KWWWK', '.KKK.')):
-                for k, ch in enumerate(row):
-                    if ch != '.': put(ex + k, ey + r, ch)
-        elif mood == 'blink':
-            for k in range(5): put(ex + k, ey + 3, 'K')
-        else:
-            for k, r in ((0, 3), (1, 2), (2, 2), (3, 2), (4, 3)): put(ex + k, ey + r, 'K')
-    for bx, by in ((6, 17), (21, 15)):                                              # blush: wide flat ovals, the right one higher
-        for r, row in enumerate(('.PPP.', 'PPPPP')):
-            for k, ch in enumerate(row):
-                if ch != '.': put(bx + k, by + r, ch)
-    if mood == 'happy':
-        for x in (14, 17): put(x, 18, 'K')
-        for x in (15, 16): put(x, 19, 'K')
-    if sprout:                                                                      # a little leaf growing from the crown
-        for p in ((16, 2), (16, 1), (17, 0), (18, 0), (19, 1), (18, 1)): c[(p[0], p[1] + dy)] = 'G'
-        for p in ((15, 2), (16, 0), (15, 1), (17, -1), (18, -1), (19, 0), (20, 1), (20, 2) if False else (19, 2), (18, 2), (17, 2)):
-            if 0 <= p[1] + dy < N and c.get((p[0], p[1] + dy)) != 'G': c[(p[0], p[1] + dy)] = 'K'
-    if mood == 'lucky':
-        (px, py), (qx, qy) = ((3, 4), (29, 13)) if spark == 0 else ((28, 3), (2, 12))
-        for ax, ay in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)): put(px + ax, py + ay, 'P')
-        put(qx, qy, 'P')
-    return [''.join(c.get((x, y), '.') for x in range(N)) for y in range(N)]
+def canvas(): return [['.'] * N for _ in range(N)]
+def place(c, rows, dy=0):
+    h, w = len(rows), len(rows[0]); x0, y0 = (N - w) // 2, BOTTOM - h + dy
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch != '.' and 0 <= y0 + y < N: c[y0 + y][x0 + x] = ch
+    return x0, y0
 
-FRAMES = [('idle', 'idle', 0, 0, False), ('blink', 'blink', 0, 0, False), ('happy-a', 'happy', 0, 0, False), ('happy-b', 'happy', -2, 0, False),
-          ('lucky-a', 'lucky', 0, 0, True), ('lucky-b', 'lucky', 0, 1, True)]
-head = ['# kodama: tree spirit mascot, traced from the character sheet. Generated by art/authoring/gen_kodama.py.', 'size 32 32', 'palette kodama', '. transparent',
-        'K line', 'G lime', 'H lime-hi', 'g lime-lo', 'L leg', 'l leg-lo', 'P blush', 'W eye']
+def idle(blink):
+    c = canvas(); x0, y0 = place(c, POSES['leaf'])
+    if blink:                                                                        # eyes shut: lid lines where the eyes were
+        for ex in (8, 19):
+            for y in range(11, 19):
+                for x in range(ex, ex + 7): c[y0 + y][x0 + x] = 'G'
+            for x in range(ex, ex + 7): c[y0 + 15][x0 + x] = 'K'
+            c[y0 + 14][x0 + ex] = 'K'; c[y0 + 14][x0 + ex + 6] = 'K'
+    return c
+def happy(dy):
+    c = canvas(); place(c, POSES['jump'], dy); return c
+def lucky(spark):
+    c = canvas(); place(c, POSES['wave'])
+    plus, dot = ((4, 9), (41, 20)) if spark == 0 else ((40, 5), (2, 18))
+    for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)): c[plus[1] + dy][plus[0] + dx] = 'P'
+    c[dot[1]][dot[0]] = 'P'
+    return c
+
+FRAMES = [('idle-a', idle(False)), ('idle-b', idle(True)), ('happy-a', happy(0)), ('happy-b', happy(-2)), ('lucky-a', lucky(0)), ('lucky-b', lucky(1))]
+used = sorted({ch for _, c in FRAMES for row in c for ch in row if ch != '.'})
+inv = {v: k for k, v in kp.LETTER.items()}
+(ROOT / 'art/palette/kodama.json').write_text(json.dumps({'name': 'kodama', 'note': 'The one exception to yuki16: colours read off the kodama pose sheet. Used only by the kodama sprite.',
+    'colors': {inv[ch]: '#%02X%02X%02X' % kp.PAL[inv[ch]] for ch in used}}, indent=2) + '\n')
+head = ['# kodama: tree spirit mascot from the pose sheet. Generated by art/authoring/gen_kodama.py.', f'size {N} {N}', 'palette kodama', '. transparent'] + [f'{ch} {inv[ch]}' for ch in used]
 body = []
-for name, mood, dy, spark, sprout in FRAMES: body += [f'frame {name}'] + frame(mood, dy, spark, sprout)
+for name, c in FRAMES: body += [f'frame {name}'] + [''.join(r) for r in c]
 (ROOT / 'art/sprites/kodama.sprite.txt').write_text('\n'.join(head + body) + '\n')
-print('wrote kodama')
+print('wrote kodama', used)

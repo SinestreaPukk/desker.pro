@@ -161,3 +161,7 @@ Goals carry `milestones: [{ id, title, at? }]` (`at` is the local day it was rea
 ### Seasons (as built)
 
 The banner now follows the calendar as well as the clock: `scene-{winter,spring,summer,autumn}-{morning,dusk,night}.png` (12 images, 192x80). The pixels are the same; each season is a role-to-colour table in `art/scene_build.py` (`SEASONS`), plus how far the snow reaches down the peaks (`SNOWLINE_AT`). Roof, shrine/post/rock caps, pine clumps and the top-right bough have their own roles so they can turn into straw, moss, leaves and blossom. Seasons are the northern meteorological ones (Dec-Feb winter, Mar-May spring, Jun-Aug summer, Sep-Nov autumn); `?season=summer` overrides it for previews. What falls changes with the season: snow, blossom petals, autumn leaves, nothing in summer. Winter and the covers keep the snow look.
+
+### Kodama redesign (as built)
+
+The kodama now comes from the four-pose pixel sheet (`kodama_read.py` reads the 8px grid, `kodama_poses.py` quantises and cuts the poses, `gen_kodama.py` builds `kodama.sheet.png`: 44x44, six frames, drawn at `--px`, palette `art/palette/kodama.json`). Default (idle) is the leaf-play pose with a blink; happy is the jumping pose with a 2px hop; lucky is the waving pose with sparkles. The log pose is cut from the sheet but not used yet. The sparkles and the blink are the only parts not on the sheet.
