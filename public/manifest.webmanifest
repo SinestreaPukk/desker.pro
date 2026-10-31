@@ -1,7 +1,7 @@
 {
   "name": "Desker",
   "short_name": "Desker",
-  "description": "Goals, projects, deadlines and tasks with an AI planner.",
+  "description": "A study planner for university students: deadlines, tasks and a calendar, planned around how you work.",
   "start_url": "/today",
   "scope": "/",
   "display": "standalone",

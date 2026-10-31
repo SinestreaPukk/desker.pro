@@ -63,6 +63,7 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
 
 export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbies, tasks, onReview, guide, onGuide, fresh, onMakeTasks, onDismissOffer }) {
   const [area, setArea] = useState('')
+  const [pyramid, setPyramid] = useState(() => goals.some((g) => g.level < 3)) // a new student starts with this term's goals; the rest unfolds on request
   const areas = [...new Set(goals.map((g) => g.area).filter(Boolean))]
   const shown = area && areas.includes(area) ? goals.filter((g) => g.area === area) : goals
   const blank = { title: '', level: 3, happiness: false }
@@ -73,6 +74,7 @@ export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbie
   const submit = (e) => {
     e.preventDefault()
     if (!d.title.trim()) return
+    if (d.level < 3) setPyramid(true) // never hide a goal the student just added
     setGoals(d.id ? goals.map((g) => (g.id === d.id ? { ...d, milestones: g.milestones } : g)) : [...goals, { ...d, id: Date.now() }])
     setD(blank)
   }
@@ -108,7 +110,7 @@ export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbie
         </div>
       )}
       <div className="flex flex-col items-center gap-2">
-        {LEVELS.map((l, i) => (
+        {LEVELS.map((l, i) => (!pyramid && i < 3 ? null : (
           <section key={l.name} className={`w-full ${l.w} ${l.cls} p-5`}>
             <h2 className="text-center text-base font-semibold">{l.name} <span className="text-base font-normal text-slate-800">{l.hint}</span></h2>
             <ul className="mt-3 space-y-2">
@@ -142,7 +144,8 @@ export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbie
               ))}
             </ul>
           </section>
-        ))}
+        )))}
+        <button className={`${btn} ${ghost}`} aria-expanded={pyramid} onClick={() => setPyramid(!pyramid)}>{pyramid ? 'Show this term only' : 'Expand your pyramid: mid-term, long-term, vision'}</button>
       </div>
       <div className="mt-6"><Review tasks={tasks} goals={goals} onAgent={onReview} /></div>
       <Hobbies hobbies={hobbies} setHobbies={setHobbies} />

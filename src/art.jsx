@@ -5,9 +5,9 @@ export function Hero({ name, className = '' }) {
 }
 
 const BANNERS = {
-  Tasks: ['Tasks', 'Tasks are single things to do. A deadline is a date you cannot miss and can hold several tasks. Tick tasks off when they are done.'],
+  Tasks: ['Tasks', 'A task is one thing to do. A deadline is an exam or assignment date that holds the tasks leading up to it.'],
   Goals: ['Goals', 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.'],
-  Projects: ['Projects', 'Something bigger than a task: an exam, an investment plan, a launch. A project groups its tasks and deadlines and shows how far along you are.'],
+  Projects: ['Projects', 'A course or group project that lasts weeks. It holds several deadlines and their tasks, and shows how far along you are.'],
   Calendar: ['Calendar', 'Planned tasks, deadlines and your calendar events in one place.'],
 }
 

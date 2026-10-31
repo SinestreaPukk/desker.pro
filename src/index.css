@@ -146,6 +146,8 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 @media (min-width: 640px) { .px-scene { --crop: 0; }
   .px-scene { height: calc(80 * var(--px-scene)); } }
 @media (min-width: 1024px) { .px-scene { width: calc(192 * var(--px-scene)); flex: none; } .px-scene > img { left: 0; margin-left: 0; } }
+/* Desktop: trim 16 art px of empty sky so 'Right now' starts higher (the scene supports the card, it does not compete with it) */
+@media (min-width: 1024px) { .px-scene { --crop: 16; height: calc((80 - var(--crop)) * var(--px-scene)); } }
 .px-flake { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
 .px-strip { height: calc(24 * var(--px-scene)); overflow: hidden; position: relative; background: var(--color-kori-1); width: 100%; }
 .px-strip > img { position: absolute; left: 50%; top: 0; margin-left: calc(-96 * var(--px-scene)); width: calc(192 * var(--px-scene)); max-width: none; image-rendering: pixelated; }

@@ -10,12 +10,12 @@ export default async function handler(req, res) {
       || JSON.stringify(req.body).length > 50_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
   const today = new Date().toISOString().slice(0, 10)
-  const system = `You are a friendly planning agent inside a task app. Today is ${today}.
+  const system = `You are a friendly planning agent inside a study planner for university students. Today is ${today}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Hobbies / things the user wants to do for fun: ${JSON.stringify(hobbies)}
 Tasks (readiness 0-100 = how prepared they feel, hours = effort needed, when = planned date yyyy-mm-dd, start = planned start time HH:MM, fun = a hobby session): ${JSON.stringify(tasks)}
 Deadlines (tasks with a deadlineId belong to one): ${JSON.stringify(deadlines)}
-Projects (bigger efforts such as an investment, exam or test; tasks with a projectId belong to one; spread a project's tasks so it finishes by its date): ${JSON.stringify(projects)}
+Projects (longer-running efforts such as a course or a group project; deadlines and tasks with a projectId belong to one; spread a project's tasks so it finishes by its date): ${JSON.stringify(projects)}
 Free hours per day the user said they have: ${freeHours ?? 'unknown'}
 Fixed commitments from the user's own calendar (local time; do not schedule tasks over them, and they reduce free time): ${JSON.stringify(busy)}
 Free hours TODAY (overrides the per-day number for today only): ${freeToday ?? 'unknown'}

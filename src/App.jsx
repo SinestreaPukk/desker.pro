@@ -8,6 +8,7 @@ import Settings from './Settings.jsx'
 import { migrate } from './storage.js'
 import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
+import { startFrom } from './onboarding.js'
 import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
 import Today from './screens/Today.jsx'
@@ -101,7 +102,7 @@ export default function App() {
     } catch { /* storage blocked: no cheer */ }
   }, [level])
   if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
-  if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => setData((d) => ({ ...d, onboarding, ...(first?.deadline && { deadlines: [...(d.deadlines || []), first.deadline] }), ...(first?.task && { tasks: addTasks(d.tasks, [first.task]) }) }))} />
+  if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => setData((d) => startFrom(d, onboarding, first))} />
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere

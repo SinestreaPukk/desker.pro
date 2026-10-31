@@ -10,7 +10,3 @@ export function checkSignUp({ name = '', username = '', email = '', password = '
   if (!e.password && confirm !== password) e.confirm = 'The two passwords do not match.'
   return e
 }
-
-// Welcome questions (src/Welcome.jsx). Stored on the account as data.onboarding.
-export const WHO = ['School or studies', 'Work', 'My own projects', 'A bit of everything']
-export const WANTS = ['Never miss a deadline', 'Plan my week', 'Break big goals into steps', 'Stay focused', 'Balance work and rest', 'Know what to do next']

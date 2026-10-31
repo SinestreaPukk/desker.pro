@@ -1,6 +1,6 @@
 # Desker
 
-Goals, deadlines, tasks and a calendar, with an AI agent.
+A study planner for university students: deadlines, tasks and a calendar, planned around how long things really take you and when you focus best.
 
     npm install
     npx vercel dev   # runs the app and /api locally (load .env.local first: set -a; . ./.env.local; set +a)

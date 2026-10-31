@@ -27,5 +27,5 @@ export const LEVELS = [
   { name: 'Vision', hint: 'Life purpose / who you want to be', w: 'md:w-1/3', cls: 'bg-yuki-1' },
   { name: 'Long-term', hint: '5+ years', w: 'md:w-1/2', cls: 'bg-yuki-2' },
   { name: 'Mid-term', hint: '1-3 years', w: 'md:w-3/4', cls: 'bg-kori-1' },
-  { name: 'Short-term', hint: 'This quarter', w: 'md:w-full', cls: 'bg-matsu-0' },
+  { name: 'Short-term', hint: 'This term', w: 'md:w-full', cls: 'bg-matsu-0' },
 ]

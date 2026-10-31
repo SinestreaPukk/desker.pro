@@ -11,8 +11,8 @@ export const WorkHelp = ({ className = '' }) => (
     <summary className="underline">Task, deadline or project?</summary>
     <ul className="mt-2 space-y-1 text-base text-slate-700">
       <li><b className="font-semibold">Task:</b> one thing to do. Give it a date if it has to be done by then.</li>
-      <li><b className="font-semibold">Deadline:</b> a date you cannot miss, like an exam. It can hold several tasks that lead up to it.</li>
-      <li><b className="font-semibold">Project:</b> something bigger, like a final exam or a launch. It groups tasks and deadlines and shows your progress. Create one on the Projects page.</li>
+      <li><b className="font-semibold">Deadline:</b> an exam, quiz or assignment date. It holds the tasks that lead up to it.</li>
+      <li><b className="font-semibold">Project:</b> a course or group project that holds several deadlines and shows your progress. Create one on the Projects page.</li>
     </ul>
   </details>
 )

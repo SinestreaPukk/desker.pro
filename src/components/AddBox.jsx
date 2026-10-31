@@ -76,7 +76,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
       <div role="group" aria-label="Add a" className="mb-3 flex w-fit gap-1 bg-white p-1">
         {['Deadline', 'Task'].map((m) => <button key={m} type="button" aria-pressed={kind === m} className={`${btn} !py-1 ${kind === m ? 'bg-primary text-yuki-0' : 'text-slate-600'}`} onClick={() => setKind(m)}>{m}</button>)}
       </div>
-      <p className="mb-1 text-base text-slate-700">{isDl ? 'A date you cannot miss. Use Estimate to split it into tasks.' : 'One thing to do. Add a date if it has to be done by then.'}</p>
+      <p className="mb-1 text-base text-slate-700">{isDl ? 'An exam, quiz or assignment date. Use Estimate to split it into tasks.' : 'One thing to do. Add a date if it has to be done by then.'}</p>
       <WorkHelp className="mb-3" />
       <div className="flex gap-2">
         <input ref={inputRef} className={`${input} min-w-0 flex-1`} placeholder={isDl ? 'Deadline, e.g. "Statics midterm Monday 3pm"' : 'What needs doing? e.g. "Call dentist tomorrow 3pm"'} aria-label="What needs doing" value={text} onChange={(e) => { setText(e.target.value); setEst(null) }} />

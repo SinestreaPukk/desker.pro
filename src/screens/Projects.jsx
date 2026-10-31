@@ -6,7 +6,7 @@ import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
 import DateField from '../components/DateField.jsx'
 
-const KINDS = ['Investment', 'Exam', 'Test', 'Study', 'Work', 'Trip', 'Personal']
+const KINDS = ['Exam', 'Assignment', 'Group project', 'Course', 'Personal']
 
 function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, ratio }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
@@ -149,9 +149,9 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
   )
 }
 
-// Projects: bigger than a task. A project (investment, exam, test...) owns tasks and shows how far along it is.
+// Projects: a longer-running container (a course, a group project) that holds several deadlines and their tasks, and shows how far along it is.
 export default function Projects({ goals, projects, setProjects, tasks, setTasks, deadlines = [] }) {
-  const blank = { title: '', kind: 'Investment', date: '', context: '' }
+  const blank = { title: '', kind: 'Exam', date: '', context: '' }
   const [d, setD] = useState(blank)
   const submit = (e) => {
     e.preventDefault()
@@ -163,16 +163,16 @@ export default function Projects({ goals, projects, setProjects, tasks, setTasks
   return (
     <>
       <form className="mb-4 flex flex-wrap items-start gap-3 bg-panel p-4" onSubmit={submit}>
-        <p className="w-full text-base text-slate-700">Name the big thing first, then add its tasks: type them yourself or use Break down with AI.</p>
-        <input className={`${input} min-w-48 flex-1`} aria-label="Project name" placeholder="Project, e.g. Build an index-fund portfolio" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
+        <p className="w-full text-base text-slate-700">A project is a course or group project that lasts weeks and holds several deadlines. Name it here, then add its deadlines and tasks on the Tasks page and pick this project under "Belongs to".</p>
+        <input className={`${input} min-w-48 flex-1`} aria-label="Project name" placeholder="e.g. Group project: market analysis" value={d.title} onChange={(e) => setD({ ...d, title: e.target.value })} />
         <input className={`${input} w-36`} list="project-kinds" aria-label="Kind" placeholder="Kind" value={d.kind} onChange={(e) => setD({ ...d, kind: e.target.value })} />
         <datalist id="project-kinds">{KINDS.map((k) => <option key={k} value={k} />)}</datalist>
         <DateField aria-label="End date (optional)" title="End date (optional)" className={input} value={d.date} onChange={(e) => setD({ ...d, date: e.target.value })} />
-        <textarea className={`${input} w-full`} rows={2} aria-label="Context" placeholder="What is it about? Scope, budget, topics, how ready you feel (optional)"
+        <textarea className={`${input} w-full`} rows={2} aria-label="Context" placeholder="What is it about? Topics, who is in the group, how ready you feel (optional)"
           value={d.context} onChange={(e) => setD({ ...d, context: e.target.value })} />
         <button className={`${btn} ${BLUE}`}>Add project</button>
       </form>
-      {!projects.length && <p className="text-base text-slate-600">No projects yet. Try a name like "Final exam" or "Launch my site" above. Tasks you add on the Tasks page can join a project too, under "Belongs to".</p>}
+      {!projects.length && <p className="text-base text-slate-600">No projects yet. A single exam or assignment is just a deadline: add it on the Tasks page. Make a project when a course or group project has several of them.</p>}
       <ul className="space-y-3">
         {projects.map((p) => (
           <ProjectCard key={p.id} p={p} goals={goals} deadlines={deadlines.filter((d) => d.projectId === p.id)} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)} patch={patch(p.id)}

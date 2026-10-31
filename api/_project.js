@@ -1,4 +1,4 @@
-// Breaks a project (investment, exam, test, trip, anything) into pickable task options. Served by api/deadline.js (Hobby plan allows 12 functions).
+// Breaks a project (course, group project, thesis, exam preparation) into pickable task options. Served by api/deadline.js (Hobby plan allows 12 functions).
 import { guard, askJSON } from './_ai.js'
 
 export default async function handler(req, res) {
@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (!Array.isArray(goals) || goals.length > 50 || !Array.isArray(tasks) || tasks.length > 50 || !project?.title
       || (project.date && !/^\d{4}-\d\d-\d\d$/.test(project.date)) || JSON.stringify(req.body).length > 30_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
-  const prompt = `You help a user run a project of any kind (investment plan, exam, test, thesis, launch, trip, application...). A project is bigger than a task: it is made of tasks.
+  const prompt = `You help a university student run a project (a course, a group project, a thesis, exam preparation, a presentation...). A project is bigger than a task: it is made of tasks.
 Today is ${new Date().toISOString().slice(0, 10)}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Project: ${JSON.stringify({ title: project.title, kind: project.kind, endDate: project.date ?? null })}

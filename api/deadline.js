@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (!Array.isArray(goals) || goals.length > 50 || !deadline?.title || (deadline.date != null && !/^\d{4}-\d\d-\d\d$/.test(deadline.date))
       || JSON.stringify(req.body).length > 30_000)
     return res.status(400).json({ error: 'Invalid or too large request' })
-  const prompt = `You help a user prepare for a deadline of any kind (exam, quiz, project, report, trip, application...).
+  const prompt = `You help a university student prepare for a deadline (exam, quiz, assignment, lab report, presentation, group project milestone...).
 Today is ${new Date().toISOString().slice(0, 10)}.
 Goals (kind "happiness" = wellbeing goals): ${JSON.stringify(goals)}
 Deadline: ${JSON.stringify({ title: deadline.title, date: deadline.date ?? null })}${deadline.date ? '' : ' (no date: it is open-ended, so set each option\'s due to null)'}

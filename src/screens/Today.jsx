@@ -5,7 +5,6 @@ import { logEnergy, energyProfile, ranges } from '../energy.js'
 import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
 import KodamaCard from '../components/KodamaCard.jsx'
-import PlayerCard from '../components/PlayerCard.jsx'
 import Insights from '../components/Insights.jsx'
 import { sceneChoice } from '../game.js'
 import Review from '../Review.jsx'
@@ -121,7 +120,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const hint = [
     ['goals', open.length >= 3 && !goals.length, 'Goals tell Desker what matters most, so it can rank your tasks.', 'Add a goal', () => goTab('Goals')],
     ['ai', open.length >= 3, 'The AI agent can plan your week around your deadlines and free time.', 'Ask the AI agent', openAgent],
-    ['projects', open.length >= 5 && !(data.projects || []).length, 'Working towards something bigger, like an exam or a launch? A project keeps its tasks and deadlines together.', 'Start a project', () => goTab('Projects')],
+    ['projects', deadlines.length >= 2 && !(data.projects || []).length, 'Juggling a course or group project with several deadlines? A project keeps them together.', 'Start a project', () => goTab('Projects')],
   ].find(([k, ok]) => ok && !seen.split(' ').includes(k))
   const card = 'px-rule pb-3'
   const link = 'min-h-11 underline hover:text-yoru-0'
@@ -170,7 +169,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           <h2 className="px-tab px-tab-beni inline-block">Right now</h2>
           {cur ? (
             <div className={`${card} mt-3`}>
-              <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Try'}</p>
+              <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
               <p className="mt-1 break-words text-2xl">{cur.title}</p>
               <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -187,6 +186,12 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                 <button className={`${btn} ${BLUE}`} onClick={addFirst}>Add a task</button>
                 <button className={`${btn} ${ghost}`} onClick={() => goTab('Tasks')}>Add a deadline</button>
               </div>
+            </div>
+          ) : !tasks.length && deadlines.length ? (
+            <div className={`${card} mt-3`}>
+              <p className="text-2xl">{soon[0] ? `${soon[0].title} is next` : 'Your deadlines are set'}</p>
+              <p className="mt-1 text-slate-700">Break it into tasks and Desker can tell you what to do first.</p>
+              <div className="mt-4 flex flex-wrap gap-2"><button className={`${btn} ${BLUE}`} onClick={() => goTab('Tasks')}>Break it into tasks</button><button className={`${btn} ${ghost}`} onClick={addFirst}>Add a task</button></div>
             </div>
           ) : <p className="mt-3 text-slate-700">Nothing pending. Add a task below, or ask the AI agent to plan your day.</p>}
 
@@ -295,7 +300,6 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         </section>
         <div className="flex flex-col gap-6 lg:col-span-6">
           <Review tasks={tasks} goals={goals} onAgent={onReview} />
-          <PlayerCard data={data} setData={setData} className={`${panel} !p-3 lg:!p-4`} />
         </div>
       </div>
     </>
