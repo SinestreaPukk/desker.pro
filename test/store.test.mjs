@@ -44,5 +44,5 @@ test('goal milestones round-trip through the extra column', () => {
   const g = { id: 5, title: 'Graduate', level: 2, milestones: [{ id: 1, title: 'Outline', at: '2026-10-31' }, { id: 2, title: 'Draft' }] }
   const row = toRows({ goals: [g] }).goals[0]
   assert.deepEqual(row.extra, { milestones: g.milestones })
-  assert.deepEqual(fromRow('goals', row), g)
+  assert.deepEqual(fromRow('goals', row), { ...g, happiness: false }) // the store defaults happiness
 })
