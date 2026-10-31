@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BLUE, btn, input, panel } from './ui.js'
+import { btn, panel } from './ui.js'
 
 const NAMES = { chat: 'AI agent chat', deadline: 'Split a task / deadline', project: 'Project breakdown', prioritise: 'Prioritise tasks', now: 'Right now pick', syllabus: 'Syllabus import', replan: 'Replan week', read: 'Read file, photo or link' }
 const n = (v) => Math.round(v).toLocaleString()
@@ -76,40 +76,45 @@ function Beta({ b, th, td }) {
   )
 }
 
-// Owner dashboard at /dsb. The password is checked on the server; it is only kept for this tab.
+// Owner dashboard at /dsb. Only admins (the ADMIN_EMAILS list) get any data: the server answers everyone else with a 404, and this page then looks like any page that does not exist.
+const NotFound = () => (
+  <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-6">
+    <h1 className="text-4xl">Page not found</h1>
+    <p className="text-slate-700">There is nothing at this address.</p>
+    <a className="underline" href="/">Back to Desker</a>
+  </main>
+)
+
 export default function Dsb() {
-  const [pw, setPw] = useState('')
   const [data, setData] = useState(null)
+  const [gone, setGone] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = async (e, quiet) => {
-    e?.preventDefault?.()
+  const send = async (body) => {
+    const r = await fetch('/api/dsb', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    const out = await r.json().catch(() => ({}))
+    if (r.status === 404 && !body.action) { setGone(true); return null }
+    if (!r.ok) throw new Error(r.status === 429 ? 'Too many requests. Wait a little.' : out.error || 'Something went wrong')
+    return out
+  }
+  const load = async () => {
     setBusy(true); setError('')
-    try {
-      const r = await fetch('/api/dsb', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: pw }) })
-      const out = await r.json().catch(() => ({}))
-      if (!r.ok && quiet) return setBusy(false) // not the owner: show the password form
-      if (!r.ok) throw new Error(r.status === 429 ? 'Too many tries. Wait an hour.' : out.error || 'Something went wrong')
-      setData(out)
-    } catch (err) { setError(err.message) }
+    try { const out = await send({}); if (out) setData(out) } catch (err) { setError(err.message) }
+    setBusy(false)
+  }
+  const markTest = async (id, value) => {
+    setBusy(true); setError('')
+    try { await send({ action: 'test', id, value }); const out = await send({}); if (out) setData(out) } catch (err) { setError(err.message) }
     setBusy(false)
   }
 
-  useEffect(() => { load(null, true) }, []) // the signed-in owner skips the password
+  useEffect(() => { load() }, [])
 
-  if (!data) return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-4 p-6">
-      <h1 className="greeting text-4xl">Dashboard</h1>
-      <form className="flex flex-col gap-3" onSubmit={load}>
-        <input type="password" autoFocus className={input} aria-label="Password" placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
-        <button className={`${btn} ${BLUE}`} disabled={busy || !pw}>{busy ? 'Checking…' : 'Open'}</button>
-        {error && <p role="alert" className="text-base text-danger">{error}</p>}
-      </form>
-    </main>
-  )
+  if (gone) return <NotFound />
+  if (!data) return <main className="mx-auto max-w-sm p-6"><p role={error ? 'alert' : 'status'} className="text-slate-700">{error || 'Loading…'}</p></main>
 
-  const { counts: c, ai, kinds, daily, habit: h, active, funnel: f, beta } = data
+  const { counts: c, ai, kinds, daily, habit: h, active, funnel: f, beta, accounts = [] } = data
   const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'n/a')
   const tokens = ai.input + ai.output
   const max = Math.max(1, ...daily.map((d) => d.tokens))
@@ -161,7 +166,7 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">People and content</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile label="Users" value={n(c.users)} sub={`${c.verified} verified, ${c.with_data} with data, ${c.active7} active in 7 days`} />
+        <Tile label="Users" value={n(c.users)} sub={`${c.verified} verified, ${c.with_data} with data, ${c.active7} active in 7 days. Left out: ${c.tests} test account${c.tests === 1 ? '' : 's'}, ${c.legacy} old profile${c.legacy === 1 ? '' : 's'} from before sign-in.`} />
         <Tile label="Tasks" value={n(c.tasks)} sub={`${n(c.doneTasks)} done`} />
         <Tile label="Projects" value={n(c.projects)} />
         <Tile label="Deadlines" value={n(c.deadlines)} />
@@ -169,12 +174,30 @@ export default function Dsb() {
         <Tile label="Hobbies" value={n(c.hobbies)} />
       </div>
 
+      {error && <p role="alert" className="mb-4 text-danger">{error}</p>}
+      <h2 className="mb-2 font-semibold">Accounts</h2>
+      <p className="mb-2 text-base text-slate-600">Only counts, never what people wrote. Mark your own and your friends' practice accounts as test accounts to leave them out of every number on this page.</p>
+      <div className={`${panel} mb-8 overflow-x-auto !p-0`}>
+        <table className="w-full min-w-[640px] text-base">
+          <thead className="text-slate-600"><tr><th className={th}>Email</th><th className={th}>Joined</th><th className={th}>Verified</th><th className={th}>Tasks</th><th className={th}>AI calls</th><th className={th}>Test account</th></tr></thead>
+          <tbody>
+            {accounts.map((a) => (
+              <tr key={a.id} className="border-t border-line">
+                <td className={`${td} break-all`}>{a.email}</td><td className={td}>{String(a.created).slice(0, 10)}</td><td className={td}>{a.verified ? 'yes' : 'no'}</td><td className={td}>{a.tasks}</td><td className={td}>{a.ai_calls}</td>
+                <td className={td}><label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={!!a.test} disabled={busy} onChange={(e) => markTest(a.id, e.target.checked)} />{a.test ? 'test' : ''}</label></td>
+              </tr>
+            ))}
+            {!accounts.length && <tr><td className={`${td} text-slate-600`} colSpan={6}>No accounts yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
       <h2 className="mb-2 font-semibold">AI usage so far</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Tokens used" value={n(tokens)} sub={`${n(ai.input)} in, ${n(ai.output)} out`} />
-        <Tile label="Estimated cost" value={usd(ai.cost)} sub="At list price, no discounts" />
+        <Tile label="Estimated cost" value={usd(ai.cost)} sub="At list price, no discounts. Counts every call, test accounts included." />
         <Tile label="AI calls" value={n(ai.calls)} sub={`${n(per(tokens, ai.calls))} tokens per call, ${usd(per(ai.cost, ai.calls))} per call`} />
-        <Tile label="Users of AI" value={n(ai.users)} sub={`${usd(per(ai.cost, ai.users))} per user`} />
+        <Tile label="Users of AI" value={n(ai.users)} sub={`Real accounts only (${n(ai.testCalls)} calls came from test accounts). ${usd(per(ai.cost, ai.users))} per user`} />
       </div>
 
       <h2 className="mb-2 font-semibold">All AI usage divided by</h2>

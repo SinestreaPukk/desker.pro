@@ -1,47 +1,57 @@
-// Owner dashboard data: users, content counts and AI token usage / estimated cost. Password lives in the DSB_PASSWORD env var.
-import { createHash, timingSafeEqual } from 'node:crypto'
+// Owner dashboard data: users, content counts and AI token usage / estimated cost. Admins only (ADMIN_EMAILS, see _admin.js); everyone else gets a 404.
 import { neon } from '@neondatabase/serverless'
 import { limit } from './_rate.js'
 import { auth } from './_auth.js'
 import beta from './_beta.js'
+import { isAdmin } from './_admin.js'
 
 const sql = neon(process.env.DATABASE_URL)
 // $ per million tokens [input, output]. claude-haiku-5-5 list price for prompts up to 100K tokens.
 const PRICES = { 'claude-haiku-5-5': [0.1, 0.5] }
 const cost = (model, i, o) => { const [pi, po] = PRICES[model] || [0, 0]; return (i * pi + o * po) / 1e6 }
-const digest = (s) => createHash('sha256').update(String(s)).digest()
 
 export default async function handler(req, res) {
+  // Admins only, checked on the server for every request. Anyone else gets the same 404 as a page that does not exist: no login prompt, no hint.
+  const me = (await auth.api.getSession({ headers: new Headers(req.headers) }).catch(() => null))?.user
+  if (!isAdmin(me)) return res.status(404).json({ error: 'Not found' })
   if (req.method !== 'POST') return res.status(405).end()
-  // The owner signed in with DSB_ADMIN_EMAIL (verified) gets in with no password; anyone else needs DSB_PASSWORD.
-  const me = (await auth.api.getSession({ headers: new Headers(req.headers) }))?.user
-  const owner = me?.emailVerified && process.env.DSB_ADMIN_EMAIL && me.email.toLowerCase() === process.env.DSB_ADMIN_EMAIL.trim().toLowerCase()
-  if (!owner) {
-    if (!process.env.DSB_PASSWORD) return res.status(503).json({ error: 'Dashboard is not configured' })
-    const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()
-    if (!(await limit(req, res, { scope: 'dsb', max: 30, id: ip }))) return // per visitor; 30 guesses an hour is nothing against 9 digits
-    if (!timingSafeEqual(digest(req.body?.password ?? ''), digest(process.env.DSB_PASSWORD))) return res.status(401).json({ error: 'Wrong password' })
+  if (!(await limit(req, res, { scope: 'dsb', max: 240, id: me.id }))) return
+
+  // Mark or unmark a test account.
+  if (req.body?.action === 'test') {
+    const id = String(req.body.id || ''), value = !!req.body.value
+    try {
+      const r = await sql`update users set is_test = ${value} where id = ${id} and exists (select 1 from "user" where id = ${id}) returning id`
+      return r.length ? res.json({ ok: true }) : res.status(404).json({ error: 'No such account' })
+    } catch (e) {
+      return res.status(503).json({ error: /is_test/.test(String(e.message)) ? 'Apply db/migrations/003_test_accounts.sql first.' : 'Could not save that' })
+    }
   }
 
-  const [[u], [c], byKind, daily, [ai], active, [fun], [r]] = await Promise.all([
+  // Test accounts are left out of every number below. Before migration 003 there is no such column: nobody is a test account yet.
+  const T = await sql`select id from users where is_test`.then((r) => r.map((x) => x.id)).catch(() => [])
+  const [[u], [c], byKind, daily, [ai], active, [fun], [r], [legacy], accounts] = await Promise.all([
     sql`select count(*)::int users, count(*) filter (where "emailVerified")::int verified,
       count(*) filter (where last_seen_at > now() - interval '7 days')::int active7,
       count(*) filter (where exists (select 1 from tasks t where t.user_id = u.id) or exists (select 1 from goals g where g.user_id = u.id)
         or exists (select 1 from projects p where p.user_id = u.id) or exists (select 1 from deadlines d where d.user_id = u.id))::int with_data
-      from "user" a left join users u on u.id = a.id`,
-    sql`select (select count(*) from tasks)::int tasks, (select count(*) from tasks where done)::int "doneTasks", (select count(*) from projects)::int projects,
-      (select count(*) from deadlines)::int deadlines, (select count(*) from goals)::int goals, (select count(*) from hobbies)::int hobbies`,
+      from "user" a left join users u on u.id = a.id where a.id <> all(${T}::text[])`,
+    sql`select (select count(*) from tasks where user_id <> all(${T}::text[]))::int tasks, (select count(*) from tasks where done and user_id <> all(${T}::text[]))::int "doneTasks",
+      (select count(*) from projects where user_id <> all(${T}::text[]))::int projects, (select count(*) from deadlines where user_id <> all(${T}::text[]))::int deadlines,
+      (select count(*) from goals where user_id <> all(${T}::text[]))::int goals, (select count(*) from hobbies where user_id <> all(${T}::text[]))::int hobbies`,
     sql`select kind, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls group by kind, model`,
     sql`select created_at::date::text as day, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls where created_at > now() - interval '14 days' group by 1, 2 order by 1`,
-    sql`select count(*)::int calls, count(distinct user_id)::int users from ai_calls`,
-    sql`select day::text as day, count(*)::int users from user_day where day > current_date - 14 group by 1 order by 1`,
+    // People who used the AI = real accounts only: not test accounts, not old profiles from before sign-in existed, not deleted accounts (their calls are deleted with them).
+    sql`select count(*)::int calls, count(distinct user_id) filter (where user_id <> all(${T}::text[]) and exists (select 1 from "user" a where a.id = ai_calls.user_id))::int users,
+      count(*) filter (where user_id = any(${T}::text[]))::int "testCalls" from ai_calls`,
+    sql`select day::text as day, count(*)::int users from user_day where day > current_date - 14 and user_id <> all(${T}::text[]) group by 1 order by 1`,
     // Activation funnel, accounts only: how far each one got.
     sql`select count(*)::int signed,
       count(*) filter (where exists (select 1 from tasks t where t.user_id = a.id))::int added,
       count(*) filter (where exists (select 1 from tasks t where t.user_id = a.id and t.done))::int finished,
       count(*) filter (where (select count(*) from tasks t where t.user_id = a.id and t.done) >= 3)::int finished3,
       count(*) filter (where u.settings #>> '{guide,done}' = 'true')::int guide
-      from "user" a left join users u on u.id = a.id`,
+      from "user" a left join users u on u.id = a.id where a.id <> all(${T}::text[])`,
     // Accounts only. A person counts for a return once they are old enough to have had the chance: day 1 needs a full day since sign-up, day 7 a full week.
     // "Next day" = opened the app the UTC day after signing up; "a week later" = opened it 7 or more days after. Opens are logged in user_day from when it was deployed.
     sql`select count(*) filter (where a."createdAt"::date < current_date)::int eligible1,
@@ -50,7 +60,14 @@ export default async function handler(req, res) {
       count(*) filter (where a."createdAt"::date <= current_date - 7 and exists (select 1 from user_day d where d.user_id = a.id and d.day >= a."createdAt"::date + 7))::int back7,
       count(*) filter (where u.settings ? 'guide')::int guide_started,
       count(*) filter (where u.settings #>> '{guide,done}' = 'true')::int guide_done
-      from "user" a left join users u on u.id = a.id`,
+      from "user" a left join users u on u.id = a.id where a.id <> all(${T}::text[])`,
+    // Not counted anywhere else: profiles from before sign-in existed, and the accounts list (no task text, only counts) for marking test accounts.
+    sql`select count(*)::int n from users u where not exists (select 1 from "user" a where a.id = u.id)`,
+    sql`select a.id, a.email, a."createdAt" as created, a."emailVerified" as verified, coalesce(u.is_test, false) as test,
+      (select count(*)::int from tasks t where t.user_id = a.id) as tasks, (select count(*)::int from ai_calls c where c.user_id = a.id) as ai_calls, u.last_seen_at as seen
+      from "user" a left join users u on u.id = a.id order by a."createdAt" desc limit 300`.catch(() => sql`select a.id, a.email, a."createdAt" as created, a."emailVerified" as verified, false as test,
+      (select count(*)::int from tasks t where t.user_id = a.id) as tasks, (select count(*)::int from ai_calls c where c.user_id = a.id) as ai_calls, u.last_seen_at as seen
+      from "user" a left join users u on u.id = a.id order by a."createdAt" desc limit 300`),
   ])
   const kinds = {}
   for (const r of byKind) {
@@ -64,14 +81,15 @@ export default async function handler(req, res) {
   }
   const total = Object.values(kinds).reduce((t, k) => ({ calls: t.calls + k.calls, input: t.input + k.input, output: t.output + k.output, cost: t.cost + k.cost }), { calls: 0, input: 0, output: 0, cost: 0 })
   res.json({
-    counts: { ...u, ...c },
+    counts: { ...u, ...c, tests: T.length, legacy: legacy.n },
+    accounts,
     habit: r,
     funnel: fun,
     active,
-    ai: { ...total, users: ai.users },
+    ai: { ...total, users: ai.users, testCalls: ai.testCalls },
     kinds: Object.values(kinds).sort((a, b) => b.cost - a.cost),
     daily: Object.values(days),
     prices: PRICES,
-    beta: await beta(sql),
+    beta: await beta(sql, T),
   })
 }

@@ -8,7 +8,8 @@ create table if not exists users (
   auth_id      text unique,                      -- id from the auth provider, null until then
   settings     jsonb not null default '{}',      -- calendar busy events, energy log, free hours, mood, focus/pick state
   created_at   timestamptz not null default now(),
-  last_seen_at timestamptz not null default now()
+  last_seen_at timestamptz not null default now(),
+  is_test      boolean not null default false   -- owner-marked test account: left out of the /dsb numbers (db/migrations/003)
 );
 
 create table if not exists goals (
