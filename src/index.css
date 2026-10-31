@@ -180,22 +180,24 @@ details > summary { cursor: pointer; }
   position: absolute; left: 50%; bottom: 0; translate: -50% 0; aspect-ratio: 160 / 200;
   width: max(100cqw, 80cqh); width: round(up, max(100cqw, 80cqh), 160px);
 }
-@media (max-width: 767px) { .wp-stage { translate: -50% 36%; } }  /* the short phone banner shows the skyline, not the street */
-.wp-l, .wp-clouds, .wp-fall { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: none; user-select: none; }
+@media (max-width: 767px) { .wp-stage { translate: -50% 40%; } }  /* the short phone banner shows the rooftops, not the ledge */
+.wp-l, .wp-wide, .wp-fall { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: none; user-select: none; }
 .wp-l { width: 100%; height: 100%; }
-.wp-clouds { width: 200%; height: 100%; animation: wp-drift 260s steps(160) infinite; }
+.wp-wide { width: 200%; height: 100%; animation: wp-drift linear infinite; }
 .wp-mover { position: absolute; left: 0; animation: wp-cross linear infinite; }
 .wp-mover img { display: block; width: 100%; image-rendering: pixelated; }
 .wp-fall { width: 100%; height: 200%; background-size: 100% 50%; background-repeat: repeat-y; }
-.wp-rain.wp-f1 { animation: wp-down .9s steps(50) infinite; }
-.wp-rain.wp-f2 { animation: wp-down 1.5s steps(50) infinite; translate: 6% 0; }
-.wp-snow.wp-f1 { animation: wp-down 16s steps(100) infinite; }
-.wp-snow.wp-f2 { animation: wp-down 26s steps(100) infinite; translate: 9% 0; }
+.wp-rain.wp-f1 { animation: wp-down 1.6s steps(50) infinite; }
+.wp-rain.wp-f2 { animation: wp-down 2.6s steps(50) infinite; translate: 6% 0; }
+.wp-snow.wp-f1 { animation: wp-down 18s steps(100) infinite; }
+.wp-snow.wp-f2 { animation: wp-down 28s steps(100) infinite; translate: 9% 0; }
 .wp-blink { opacity: 0; }
 .wp-a { animation: wp-blink 19s steps(1) infinite; }
 .wp-b { animation: wp-blink 29s steps(1) -11s infinite; }
+.wp-frame { opacity: 0; animation: wp-frame steps(1) infinite; }
 @keyframes wp-drift { to { transform: translateX(-50%); } }
 @keyframes wp-cross { from { transform: translateX(-100%); } to { transform: translateX(var(--to)); } }
 @keyframes wp-down { to { transform: translateY(-50%); } }
 @keyframes wp-blink { 0%, 55% { opacity: 0; } 55.1%, 78% { opacity: 1; } 78.1%, 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .wp * { animation: none !important; } }
+@keyframes wp-frame { 0%, 33.3% { opacity: 1; } 33.4%, 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .wp * { animation: none !important; } .wp-frame:first-of-type { opacity: 1; } }

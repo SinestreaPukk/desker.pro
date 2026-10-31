@@ -14,9 +14,9 @@ export default function Welcome({ name, onDone }) {
   const first = String(name || '').trim().split(/\s+/)[0]
   return (
     <div className="min-h-screen md:grid md:grid-cols-2">
-      <aside className="relative h-36 md:h-auto md:min-h-screen">
+      <aside className="relative h-36 md:sticky md:top-0 md:h-screen">
         <Wallpaper scene="afternoon" label="A sunny afternoon in the city, a little boat on the canal" />
-        <p className="px-panel absolute bottom-3 left-3 right-3 hidden max-w-sm p-3 text-base md:block">Make yourself at home.</p>
+        <p className="px-panel absolute left-3 right-3 top-3 hidden max-w-sm p-3 text-base md:block">Make yourself at home.</p>
       </aside>
       <main className="flex items-center justify-center p-5 md:p-10">
         <div className="w-full max-w-md space-y-4">

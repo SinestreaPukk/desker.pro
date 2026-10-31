@@ -23,9 +23,9 @@ export function Shell({ kind, children }) {
   const [scene, label, caption] = SCENE[kind]
   return (
     <div className="min-h-screen md:grid md:grid-cols-2">
-      <aside className="relative h-36 md:h-auto md:min-h-screen">
+      <aside className="relative h-36 md:sticky md:top-0 md:h-screen">
         <Wallpaper scene={scene} label={label} />
-        <p className="px-panel absolute bottom-3 left-3 right-3 hidden max-w-sm p-3 text-base md:block">{caption}</p>
+        <p className="px-panel absolute left-3 right-3 top-3 hidden max-w-sm p-3 text-base md:block">{caption}</p>
       </aside>
       <main className="flex min-h-[calc(100vh-9rem)] items-center justify-center p-5 md:min-h-screen md:p-10">
         <div className="w-full max-w-sm space-y-4">
