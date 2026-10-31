@@ -27,6 +27,8 @@ Also: **Replan my week** (Calendar, the AI agent, or the banner when planned tas
 
 **Public API** (`/api/v1/tasks`): `Authorization: Bearer <API key>` (Settings > API key). `GET` lists, `POST {title, important, urgent, due, when, start, hours, readiness}` creates, `PATCH|DELETE ?id=<id>` edits or removes. 300 requests/hour per key. Reload an open tab to see API changes.
 
+**Account API** (for scripts and other clients; the app itself uses `/api/auth/*`): `POST /api/signup`, `POST /api/login` (`{identifier, password}`, email or username), `POST /api/logout`, `GET /api/me`, `POST /api/forgot-password`, `POST /api/reset-password`, `DELETE /api/account`. They are aliases for the Better Auth routes (`api/auth/[...all].js`), so the same checks and rate limits apply. Other methods get `405`.
+
 **Rate limits** (`api/_rate.js`, per id per hour, 4x per IP): AI 60, state 600, API 300. Over the limit: `429` with `Retry-After`; `X-RateLimit-Limit/Remaining` on every response. If the counter is down the request is refused (`503`).
 
 **Deadlines live in Tasks.** A dated task is a deadline. "Check with AI" in a task's panel decides if it is one task (kept as is) or several (you choose to split; it then becomes a deadline card that owns the new tasks, and you can add your own tasks to it). Syllabus import is on the Tasks page. `/deadlines` opens Tasks.

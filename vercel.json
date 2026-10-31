@@ -5,6 +5,10 @@
       "destination": "/api/state?feed=1"
     },
     {
+      "source": "/api/(signup|login|logout|me|forgot-password|reset-password|account)",
+      "destination": "/api/auth/x"
+    },
+    {
       "source": "/api/auth/:a/:b*",
       "destination": "/api/auth/x"
     },
