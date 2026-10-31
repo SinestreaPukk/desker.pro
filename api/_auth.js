@@ -25,7 +25,7 @@ async function send(to, subject, text) {
     body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Desker <onboarding@resend.dev>', to, subject, text }),
     signal: AbortSignal.timeout(10_000),
   })
-  if (!r.ok) throw new Error(`mail provider answered ${r.status}`)
+  if (!r.ok) throw new Error(`mail to ${to} failed: Resend ${r.status} ${await r.text().catch(() => '')}`)
 }
 
 // Per IP: 5 sign-in tries a minute, 5 sign-ups an hour, 3 reset / verification mails an hour. Everything else: 100 a minute.
