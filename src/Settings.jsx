@@ -107,7 +107,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
             </>
           )}
           <hr />
-          <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device.</p>
+          <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device. <a className="underline" href="/privacy">Privacy</a> · <a className="underline" href="/terms">Terms</a></p>
           <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => location.assign('/today'))}>Sign out</button>
           <div className="flex flex-wrap gap-2">
             <button className={`${btn} ${ghost}`} onClick={exportData}>Export JSON</button>

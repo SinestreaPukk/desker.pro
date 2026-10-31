@@ -24,7 +24,7 @@ function Beta({ b, th, td }) {
   const ret = row(b.ret), pa = row(b.perActive), du = row(b.durations), ri = row(b.rituals), rr = row(b.ritualRet), ev = row(b.events)
   const bad = Object.entries(b).filter(([, q]) => !q.ok).map(([k, q]) => `${k}: ${q.error}`)
   const acc = val(b.accuracy) || []
-  const evNote = ev ? null : 'needs the events table (db/migrations/002_events.sql) and ANALYTICS=on'
+  const evNote = ev ? null : 'Analytics is switched off, so there are no events yet.'
   return (
     <>
       <h2 className="mb-2 font-semibold">Beta health: growth and retention</h2>

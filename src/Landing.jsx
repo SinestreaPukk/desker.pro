@@ -1,9 +1,9 @@
 import { btn, BLUE, ghost, panel } from './ui.js'
 import { Avatar, Kodama, Scene } from './px.jsx'
+import { PRIVACY_CONTACT_EMAIL } from './config.js'
 
 // The public page at "/" for signed-out visitors. The same words sit, visually hidden, in index.html so crawlers that do not run scripts still read them: keep both in step.
 // The three pictures are drawn examples (marked as such), not real accounts.
-const CONTACT = import.meta.env.VITE_CONTACT_EMAIL // shown in the footer only when set
 
 const cell = ['bg-yuki-1', 'bg-kori-1', 'bg-kori-2', 'bg-yoru-1']
 const HEAT = [ // weekday x hour, 0 to 3: an invented student who focuses best in the morning and after dinner
@@ -87,7 +87,7 @@ export default function Landing() {
           <span>Desker</span>
           <a className="underline" href="/privacy">Privacy</a>
           <a className="underline" href="/terms">Terms</a>
-          {CONTACT && <a className="underline" href={`mailto:${CONTACT}`}>Contact</a>}
+          <a className="underline" href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>Contact</a>
         </nav>
       </footer>
     </div>

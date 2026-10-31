@@ -137,6 +137,7 @@ export default function AuthScreen() {
         {mode === 'reset' && <Field label="Confirm password" name="confirm" secret required autoComplete="new-password" error={errors.confirm} />}
         {mode === 'in' && <button type="button" className="text-xs underline" onClick={() => go('forgot')}>Forgot password?</button>}
         <button className={`${btn} ${BLUE} w-full`} disabled={busy}>{busy ? 'One moment…' : GO[mode]}</button>
+        {mode === 'up' && <p className="text-xs text-slate-700">By creating an account you agree to the <a className="underline" href="/terms">Terms</a> and the <a className="underline" href="/privacy">Privacy policy</a>.</p>}
         {msg && <p role="status" className="text-base">{msg}</p>}
       </form>
       {mode !== 'in' && mode !== 'up' && <p className="text-base"><button className="underline" onClick={() => go('in')}>Back to sign in</button></p>}
