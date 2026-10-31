@@ -15,8 +15,8 @@ export default function Welcome({ name, onDone }) {
   return (
     <div className="min-h-screen md:grid md:grid-cols-2">
       <aside className="relative h-36 md:sticky md:top-0 md:h-screen">
-        <Wallpaper scene="afternoon" label="A sunny afternoon in the city, a little boat on the canal" />
-        <p className="px-panel absolute left-3 right-3 top-3 hidden max-w-sm p-3 text-base md:block">Make yourself at home.</p>
+        <Wallpaper scene="dusk" label="A quiet night in the city" />
+        <p className="px-panel absolute right-3 top-3 text-right hidden max-w-sm p-3 text-base md:block">Make yourself at home.</p>
       </aside>
       <main className="flex items-center justify-center p-5 md:p-10">
         <div className="w-full max-w-md space-y-4">

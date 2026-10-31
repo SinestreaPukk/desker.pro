@@ -9,12 +9,13 @@ import Wallpaper from './Wallpaper.jsx'
 // A reset link opens in 'reset' with its token. Modes: in, up, forgot, reset; then the check-your-inbox step after sign-up.
 const params = new URLSearchParams(location.search)
 const token = params.get('token')
+const NIGHT = 'A quiet night in the city'
 const SCENE = {
-  in: ['dusk', 'Evening lights are on', 'Welcome back. Your desk is just as you left it.'],
-  up: ['dawn', 'A fresh morning', 'Let us set up your desk. It takes a minute.'],
-  forgot: ['rain', 'A rainy day in the city', 'It happens to everyone. We will get you back in.'],
-  reset: ['rain', 'A rainy day in the city', 'Pick a new password and you are good to go.'],
-  sent: ['snow', 'Snow is falling', 'Your confirmation email is on its way.'],
+  in: ['dusk', NIGHT, 'Welcome back. Your desk is just as you left it.'],
+  up: ['dusk', NIGHT, 'Let us set up your desk. It takes a minute.'],
+  forgot: ['dusk', NIGHT, 'It happens to everyone. We will get you back in.'],
+  reset: ['dusk', NIGHT, 'Pick a new password and you are good to go.'],
+  sent: ['dusk', NIGHT, 'Your confirmation email is on its way.'],
 }
 const TITLE = { in: 'Welcome back', up: 'Create your account', forgot: 'Forgot your password?', reset: 'Choose a new password' }
 const GO = { in: 'Sign in', up: 'Create account', forgot: 'Email me a reset link', reset: 'Save new password' }
@@ -25,7 +26,7 @@ export function Shell({ kind, children }) {
     <div className="min-h-screen md:grid md:grid-cols-2">
       <aside className="relative h-36 md:sticky md:top-0 md:h-screen">
         <Wallpaper scene={scene} label={label} />
-        <p className="px-panel absolute left-3 right-3 top-3 hidden max-w-sm p-3 text-base md:block">{caption}</p>
+        <p className="px-panel absolute right-3 top-3 text-right hidden max-w-sm p-3 text-base md:block">{caption}</p>
       </aside>
       <main className="flex min-h-[calc(100vh-9rem)] items-center justify-center p-5 md:min-h-screen md:p-10">
         <div className="w-full max-w-sm space-y-4">

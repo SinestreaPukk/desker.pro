@@ -250,20 +250,6 @@ SCENES = {
     'dusk': dict(BASE, night=True, sky=['#0a1030', '#0f1a42', '#15255a', '#1d3070', '#2a3f82', '#43508e', '#7a5a8e', '#d98a78'], stars=30,
         haze='#3a4a86', cloud=['#2a3a72', '#1d2a5c'], clouds=3, tw=dict(far='#27386a', mid='#17214a', near='#0d1330'),
         win=dict(lit=WARM, cool=COOL, cool_p=.14, dim='#1c2850'), road='#0d1330', walk='#3a3a70', mover=('birds', 'sky', 30, 85)),
-    'dawn': dict(BASE, sky=['#8fb8de', '#aec6e6', '#cfcae6', '#eec9d6', '#f8d2c4', '#fbe0b4', '#fdecc2', '#fff0cf'],
-        sun=(100, 86, 10), sun_c='#fff8dc', sun_halo='#fff0c4', haze='#fde6c8', cloud=['#ffffff', '#f3d5dc'], clouds=4,
-        tw=dict(far='#d0b8cb', mid='#b09ab8', near='#8a7a9e'), win=dict(lit=['#ffe39a', '#ffd479'], cool=['#ffffff'], cool_p=.2, dim='#c4d0e8'),
-        road='#8a7a96', walk='#c8b8c8', cars=['#e8704f', '#f2b84b', '#ffffff', '#6aa0c8', '#9ac07a'], mover=('balloon', 'sky', 40, 90), mover2=('birds', 'sky', 20, 110)),
-    'rain': dict(BASE, night=True, sky=['#1a2240', '#222c50', '#2c3860', '#38466e', '#485880', '#5f7090'],
-        haze='#566684', cloud=['#3a4868', '#2c3a5c'], clouds=8, tw=dict(far='#36456a', mid='#232e56', near='#141b38'),
-        win=dict(lit=WARM, cool=['#8fd0d8'], cool_p=.1, dim='#1c2646'), road='#141b38', walk='#3a4a6e', fall='rain'),
-    'snow': dict(BASE, night=True, snow=True, sky=['#1a1844', '#272260', '#392e78', '#4d3c8a', '#654a92', '#8a5a9a'], stars=42,
-        haze='#6a528e', cloud=['#5a4a8c', '#403676'], clouds=3, tw=dict(far='#443f80', mid='#2c2862', near='#1c1946'),
-        win=dict(lit=WARM, cool=COOL, cool_p=.1, dim='#2a2658'), road='#1c1946', walk='#6a64a0', fall='snow', mover=('blimp', 'sky', 30, 80)),
-    'afternoon': dict(BASE, sky=['#5fb0e8', '#7cc2ee', '#9ad2f2', '#b6e0f6', '#d2eef8', '#eaf6ee'],
-        sun=(120, 26, 8), sun_c='#fff3b0', sun_halo='#fff8d0', haze='#e0f0f2', cloud=['#ffffff', '#d8e8f4'], clouds=5,
-        tw=dict(far='#b4cce0', mid='#8fb0cc', near='#6a8aab'), win=dict(lit=['#fff3b0', '#ffe28a'], cool=['#ffffff'], cool_p=.3, dim='#bcdcf0'),
-        road='#6a6a7a', walk='#d8d0c0', cars=['#e05a4b', '#f2b84b', '#ffffff', '#5b8fb9', '#7a9a6a'], mover=('birds', 'sky', 36, 100)),
 }
 MOV = dict(balloon=sprite_balloon, blimp=sprite_blimp, birds=sprite_birds)
 
@@ -282,7 +268,6 @@ def build(name, P, seed):
     for i, y in enumerate((159, 164)):                                                              # traffic on the street below
         n = f'lane{i}'; files[n] = beams(P, rng, y, not i) if P['night'] else lane(P, rng, y, .85, 'car')
         layers.append(dict(k='strip', n=n, dur=9 + i * 6, rev=bool(i)))
-    ledge, anchor = make_ledge(P, lights)
     rng.shuffle(lights)                                                                             # lights that go off now and then
     A, B = canvas(), canvas(); cut = len(lights) // 6
     for im, group in ((A, lights[:cut]), (B, lights[cut:cut * 2])):
@@ -292,9 +277,6 @@ def build(name, P, seed):
     if P.get('fall'):
         files['fall1'] = fall(P['fall'], rng, 50 if P['fall'] == 'rain' else 55, False); files['fall2'] = fall(P['fall'], rng, 34 if P['fall'] == 'rain' else 35, True)
         layers += [dict(k='fall', n='fall1', kind=P['fall'], cls='wp-f1'), dict(k='fall', n='fall2', kind=P['fall'], cls='wp-f2')]
-    files['ledge'] = ledge; layers.append(dict(k='img', n='ledge'))
-    for i, f in enumerate(make_steam(anchor)): files[f'steam{i}'] = f
-    layers.append(dict(k='frames', n='steam', count=3, dur=4.5))
     for k, im in files.items(): im.save(OUT / f'{name}-{k}.png')
     comp = sky
     for k in ('far', 'haze', 'mid', 'near', 'ground'): comp = Image.alpha_composite(comp, files[k])
