@@ -1,0 +1,69 @@
+{
+ "dusk": {
+  "bg": "#fde4ac",
+  "top": "#3f3a72",
+  "fall": null,
+  "mover": {
+   "w": 60,
+   "h": 12,
+   "y": 118,
+   "layer": "front",
+   "dur": 70
+  }
+ },
+ "dawn": {
+  "bg": "#fff6d9",
+  "top": "#8fb8de",
+  "fall": null,
+  "mover": {
+   "w": 18,
+   "h": 28,
+   "y": 56,
+   "layer": "sky",
+   "dur": 90
+  },
+  "mover2": {
+   "w": 26,
+   "h": 10,
+   "y": 34,
+   "layer": "sky",
+   "dur": 95
+  }
+ },
+ "rain": {
+  "bg": "#4c6d8a",
+  "top": "#1d2a46",
+  "fall": "rain",
+  "mover": {
+   "w": 34,
+   "h": 14,
+   "y": 178,
+   "layer": "front",
+   "dur": 46
+  }
+ },
+ "snow": {
+  "bg": "#84599a",
+  "top": "#1e1b46",
+  "fall": "snow",
+  "mover": {
+   "w": 40,
+   "h": 18,
+   "y": 30,
+   "layer": "sky",
+   "dur": 80
+  }
+ },
+ "afternoon": {
+  "bg": "#f4f7e8",
+  "top": "#6fb6e8",
+  "fall": null,
+  "mover": {
+   "w": 24,
+   "h": 20,
+   "y": 164,
+   "layer": "front",
+   "dur": 60
+  }
+ }
+}

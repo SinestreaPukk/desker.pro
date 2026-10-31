@@ -77,7 +77,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
           </label>
           <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
           <hr />
-          <p className="text-xs text-slate-700">Signed in as {user.email}. Your data is saved to your account and follows you to any device.</p>
+          <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device.</p>
           <div className="text-xs text-slate-700">
             <p>API key (see README). Keep it private.</p>
             <input readOnly className={`${input} mt-1 w-full font-mono text-xs`} aria-label="Your API key" value={user.id} onFocus={(e) => e.target.select()} />

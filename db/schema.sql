@@ -176,3 +176,8 @@ create table if not exists auth_hit (
   at  timestamptz not null default now()
 );
 create index if not exists auth_hit_key on auth_hit (key, at);
+
+-- Usernames (Better Auth username plugin): `username` is lower-cased for sign-in and uniqueness, `displayUsername` keeps what the user typed.
+alter table "user" add column if not exists username text;
+alter table "user" add column if not exists "displayUsername" text;
+create unique index if not exists user_username on "user" (username);

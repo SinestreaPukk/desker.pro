@@ -6,6 +6,8 @@ import Replan from './Replan.jsx'
 import Focus from './Focus.jsx'
 import Settings from './Settings.jsx'
 import { migrate } from './storage.js'
+import { useSession } from './auth.js'
+import Welcome from './Welcome.jsx'
 import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
 import { isMissed } from './tasks.js'
@@ -29,6 +31,7 @@ const TABS = Object.keys(PATHS)
 const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
 
 export default function App() {
+  const user = useSession().data?.user
   const [tab, setTabState] = useState(tabOf)
   const setTab = (t) => { if (t !== tab) history.pushState(null, '', PATHS[t]); setTabState(t); window.scrollTo({ top: 0 }) }
   useEffect(() => { const f = () => setTabState(tabOf()); addEventListener('popstate', f); return () => removeEventListener('popstate', f) }, [])
@@ -72,6 +75,7 @@ export default function App() {
     return () => clearTimeout(id)
   }, [data])
   if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
+  if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding) => setData((d) => ({ ...d, onboarding }))} />
 
   const { goals, tasks } = data
   // drop a focus or pick whose task was deleted or finished elsewhere
