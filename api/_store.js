@@ -18,7 +18,7 @@ export const SPEC = {
 }
 const ORDER = ['goals', 'hobbies', 'projects', 'deadlines', 'tasks'] // parents before children
 const SQLTYPE = { id: 'bigint', int: 'bigint', num: 'numeric', bool: 'boolean', text: 'text', date: 'date', json: 'jsonb' }
-export const SETTINGS = ['onboarding', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'kodama', 'push', 'guide', 'xp', 'scene']
+export const SETTINGS = ['onboarding', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'kodama', 'push', 'guide', 'xp', 'scene', 'chat']
 
 const coerce = {
   id: (v) => (Number.isSafeInteger(v) ? v : null),

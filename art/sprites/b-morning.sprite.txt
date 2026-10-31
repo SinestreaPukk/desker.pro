@@ -1,4 +1,4 @@
-# Badge: Fifty down (gold).
+# Badge: First plan (gold).
 size 16 16
 palette yuki16
 . transparent
@@ -12,14 +12,14 @@ frame rest
 ....WWKKKKWW....
 ...WKKKghKKKW...
 ..WKKgghhhhKKW..
-.WKKKKKKKKKKKKW.
-.WKgKhKKKKhKiKW.
-WKKgKhKKKKhKiKKW
-WKghhKKKKKKiiiKW
-WKhhhhKKKKiiiiKW
-WKKhhhhKKiiiiKKW
-.WKhhhKKKKiiiKW.
-.WKKhKKKKKKiKKW.
+.WKKKghKKhhKKKW.
+.WKggKhKKhKhiKW.
+WKKghhKKKKhiiKKW
+WKghKKKhhKKKiiKW
+WKhhKKKhhKKKiiKW
+WKKhhhKKKKiiiKKW
+.WKhhKhKKiKiiKW.
+.WKKKhiKKiiKKKW.
 ..WKKiiiiiiKKW..
 ...WKKKiiKKKW...
 ....WWKKKKWW....

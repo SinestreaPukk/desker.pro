@@ -21,6 +21,8 @@ const LISTS = {
   'rhythm.outcomes': { key: (o) => `${o?.task}|${o?.src}|${o?.at}`, cap: 300 },
   'rhythm.sessions': { key: (s) => JSON.stringify([s?.start ?? s?.at ?? s?.id, s?.task]), cap: 150 },
   'rhythm.signals': { key: (s) => `${s?.k}|${s?.at}|${s?.task}`, cap: 150 },
+  'kodama.notes': { key: (n) => n?.id, cap: 60 },
+  chat: { key: (m) => `${m?.at}|${m?.role}`, cap: 50 },
   'kodama.rituals.morning': { key: String, cap: 120 },
   'kodama.rituals.evening': { key: String, cap: 120 },
 }

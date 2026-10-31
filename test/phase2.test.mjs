@@ -27,7 +27,7 @@ test('settle stamps doneAt, spawns repeats, and reopening clears doneAt', () => 
   assert.equal(back.tasks.length, 3)
 })
 
-test('doneStats counts this week and the streak', () => {
+test('doneStats counts this week', () => {
   const now = new Date('2026-10-25T10:00:00').getTime() // a Sunday
   const d = (s) => new Date(s).getTime()
   const tasks = [
@@ -35,8 +35,8 @@ test('doneStats counts this week and the streak', () => {
     { done: true, doneAt: d('2026-10-23T08:00:00') }, { done: true, doneAt: d('2026-10-19T08:00:00') },
     { done: true, doneAt: d('2026-10-18T08:00:00') }, { done: false, doneAt: d('2026-10-25T08:00:00') },
   ]
-  assert.deepEqual(doneStats(tasks, now), { week: 4, streak: 3 })
-  assert.deepEqual(doneStats([], now), { week: 0, streak: 0 })
+  assert.deepEqual(doneStats(tasks, now), { week: 4 })
+  assert.deepEqual(doneStats([], now), { week: 0 })
 })
 
 test('reminders fire at start, and 1 day / 1 hour before a deadline, once in window', () => {

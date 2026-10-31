@@ -9,7 +9,7 @@ import { pushSupported, subscribe, unsubscribe } from './push.js'
 import { nameOf } from './kodama.js'
 import { QUIET } from './pushPlan.js'
 
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'kodama', 'xp', 'scene']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'rhythm', 'kodama', 'xp', 'scene', 'chat']
 const store = {
   get: (k) => { try { return localStorage[k] } catch { return undefined } },
   set: (k, v) => { try { localStorage[k] = v } catch { /* storage blocked: the toggle just will not persist */ } },

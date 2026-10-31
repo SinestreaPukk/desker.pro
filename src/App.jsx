@@ -28,9 +28,8 @@ import { btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
-import { totalXp } from './game.js'
 import { useSync } from './useSync.js'
-import { nameOf, growthOf, legacyGrowth, STAGES } from './kodama.js'
+import { nameOf, growthOf, legacyGrowth, legacyXp, STAGES } from './kodama.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar', Rhythm: '/rhythm' }
@@ -95,7 +94,7 @@ export default function App() {
     if (q.get('from') === 'push') { track('notification_opened', { kind: q.get('k') }); history.replaceState(null, '', location.pathname) }
     setData((d) => {
       const k = d.kodama || {}
-      return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(totalXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
+      return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(legacyXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
     })
   }, [loaded])
   // Growing into the next stage is announced once per device, quietly.

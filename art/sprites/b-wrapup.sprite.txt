@@ -1,0 +1,27 @@
+# Badge: Wrapped up (navy).
+size 16 16
+palette yuki16
+. transparent
+K yoru-2
+W yuki-0
+g ando-0
+o yuki-3
+p yoru-0
+q yoru-1
+frame rest
+......WWWW......
+....WWKKKKWW....
+...WKKKopKKKW...
+..WKKooppppKKW..
+.WKKooggggppKKW.
+.WKooggpppppqKW.
+WKKoggpppppqqKKW
+WKopggppppqqqqKW
+WKppggpppqqqqqKW
+WKKppggpqqqqqKKW
+.WKpppggggqqqKW.
+.WKKppqqqqqqKKW.
+..WKKqqqqqqKKW..
+...WKKKqqKKKW...
+....WWKKKKWW....
+......WWWW......

@@ -1,4 +1,4 @@
-# Badge: Milestone maker (green).
+# Badge: Sharper plan (green).
 size 16 16
 palette yuki16
 . transparent
@@ -12,14 +12,14 @@ frame rest
 ....WWKKKKWW....
 ...WKKKdaKKKW...
 ..WKKddaaaaKKW..
-.WKKdWaaaaaaKKW.
-.WKddWWWWaaabKW.
-WKKdaWWWWWabbKKW
-WKdaaWWWWabbbbKW
-WKaaaWaaabbbbbKW
-WKKaaWaabbbbbKKW
-.WKaaWabbbbbbKW.
-.WKKWWWbbbbbKKW.
+.WKKddWWWWaaKKW.
+.WKddWaaaaWabKW.
+WKKdWaaWWaaWbKKW
+WKdaWaWaaWbWbbKW
+WKaaWaWaaWbWbbKW
+WKKaWaaWWbbWbKKW
+.WKaaWabbbWbbKW.
+.WKKaaWWWWbbKKW.
 ..WKKbbbbbbKKW..
 ...WKKKbbKKKW...
 ....WWKKKKWW....

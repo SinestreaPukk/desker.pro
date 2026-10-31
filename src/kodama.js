@@ -29,8 +29,14 @@ export function growthOf(data) {
   const next = STAGES[index + 1]
   return { points, index, stage: STAGES[index], next, toNext: next ? next.from - points : 0, pct: next ? Math.round(((points - STAGES[index].from) / (next.from - STAGES[index].from)) * 100) : 100 }
 }
-// What the old XP total becomes the first time this runs: kept as a one-time gift so nobody starts over.
+// The old XP/level system is gone. What someone had is converted ONCE into growth points (kodama.legacy, set in App.jsx): 8 XP = 1 growth point,
+// so the stage they reach is a stage they had already earned (level 4, 225 XP, becomes 28 points: a Sprout). Growth never goes down and data.xp is left untouched.
+// legacyXp is the old formula, kept only for this conversion: 10 XP per finished task (+5 important, +5 urgent, up to +10 for long ones), 5 per fun session,
+// 25 per goal milestone, 50 for the goals guide; data.xp holds the highest total ever reached, so deleting tasks never lowered it.
 export const legacyGrowth = (xp) => Math.round((Number.isFinite(xp) ? xp : 0) / 8)
+export const legacyXp = (data = {}) => Math.max(Number.isFinite(data.xp) ? data.xp : 0,
+  (data.tasks || []).filter((t) => t.done).reduce((n, t) => n + (t.fun ? 5 : 10 + (t.important ? 5 : 0) + (t.urgent ? 5 : 0) + Math.min(10, Math.round((t.hours || 0) * 2))), 0)
+  + (data.goals || []).reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length * 25, 0) + (data.guide?.done ? 50 : 0))
 
 // The window view on Today: time of day unlocks at Sprout, the season at Sapling; below that it follows the clock and the calendar.
 export const sceneChoice = (data) => {

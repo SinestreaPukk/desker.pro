@@ -305,7 +305,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-12 lg:gap-x-6">
         <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
         <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
-        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
+        <Tile label="Done this week" caption={stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
         <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
           <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
             onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />

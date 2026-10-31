@@ -1,4 +1,4 @@
-# Badge: Pathfinder (blue).
+# Badge: Real time (blue).
 size 16 16
 palette yuki16
 . transparent
@@ -7,20 +7,19 @@ W yuki-0
 d kori-1
 e kori-2
 f kori-3
-g ando-0
 frame rest
 ......WWWW......
 ....WWKKKKWW....
 ...WKKKdeKKKW...
 ..WKKddeeeeKKW..
-.WKKddeggeeeKKW.
-.WKddeggggeefKW.
-WKKdeggeeggffKKW
-WKdeggeggeggffKW
-WKeeggeggfggffKW
-WKKeeggefggffKKW
-.WKeeeggggfffKW.
-.WKKeefggfffKKW.
+.WKKddWWWWeeKKW.
+.WKddWeeeeWefKW.
+WKKdWeeWeeeWfKKW
+WKdeWeeWeefWffKW
+WKeeWeeWWWfWffKW
+WKKeWeeefffWfKKW
+.WKeeWefffWffKW.
+.WKKeeWWWWffKKW.
 ..WKKffffffKKW..
 ...WKKKffKKKW...
 ....WWKKKKWW....

@@ -1,4 +1,4 @@
-# Badge: On a roll (red).
+# Badge: Energy aware (red).
 size 16 16
 palette yuki16
 . transparent
@@ -13,14 +13,14 @@ frame rest
 ....WWKKKKWW....
 ...WKKKljKKKW...
 ..WKKlljjjjKKW..
-.WKKlljjgjjjKKW.
+.WKKlljjggjjKKW.
 .WKlljjggjjjmKW.
-WKKljjgggjjmmKKW
-WKljjggggjmmmmKW
-WKjjjgggggmmmmKW
-WKKjjgggggmmmKKW
-.WKjjgggggmmmKW.
-.WKKjjgggmmmKKW.
+WKKljjggjjjmmKKW
+WKljjggggggmmmKW
+WKjjjjjjggmmmmKW
+WKKjjjjggmmmmKKW
+.WKjjjggmmmmmKW.
+.WKKjjgmmmmmKKW.
 ..WKKmmmmmmKKW..
 ...WKKKmmKKKW...
 ....WWKKKKWW....

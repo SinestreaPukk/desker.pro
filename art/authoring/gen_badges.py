@@ -25,6 +25,9 @@ GLYPH = {
  'hourglass': ['########', '.#....#.', '..#..#..', '...##...', '...##...', '..#..#..', '.######.', '########'],
  'lock': ['..####..', '.#....#.', '.#....#.', '########', '########', '###..###', '########', '########'],
  'bolt': ['....##..', '...##...', '..##....', '.######.', '....##..', '...##...', '..##....', '..#.....'],
+ 'clock': ['..####..', '.#....#.', '#..#...#', '#..#...#', '#..###.#', '#......#', '.#....#.', '..####..'],
+ 'sun': ['#..##..#', '.#.##.#.', '..####..', '###..###', '###..###', '..####..', '.#.##.#.', '#..##..#'],
+ 'target': ['..####..', '.#....#.', '#..##..#', '#.#..#.#', '#.#..#.#', '#..##..#', '.#....#.', '..####..'],
  'moon': ['..####..', '.##.....', '##......', '##......', '##......', '.##.....', '..####..', '........'],
 }
 
@@ -45,13 +48,11 @@ def medal(name, fill, glyph, gcol, note, rim='W'):
     write(name, [''.join(r) for r in g], note)
 
 # name, (mid, shade, hi), glyph, glyph colour
-medal('b-first', ('l', 'm', 'k'), 'check', 'K', 'Badge: First step (bronze).')
-medal('b-ten', ('e', 'f', 'd'), 'star', 'W', 'Badge: Ten down (blue).')
-medal('b-fifty', ('h', 'i', 'g'), 'trophy', 'K', 'Badge: Fifty down (gold).')
-medal('b-streak3', ('j', 'm', 'l'), 'flame', 'g', 'Badge: On a roll (red).')
-medal('b-streak7', ('j', 'm', 'l'), 'flames', 'g', 'Badge: Week warrior (red).')
-medal('b-milestone', ('a', 'b', 'd'), 'flag', 'W', 'Badge: Milestone maker (green).')
-medal('b-guide', ('e', 'f', 'd'), 'compass', 'g', 'Badge: Pathfinder (blue).')
+medal('b-timed', ('e', 'f', 'd'), 'clock', 'W', 'Badge: Real time (blue).')
+medal('b-morning', ('h', 'i', 'g'), 'sun', 'K', 'Badge: First plan (gold).')
+medal('b-wrapup', ('p', 'q', 'o'), 'moon', 'g', 'Badge: Wrapped up (navy).')
+medal('b-energy8', ('j', 'm', 'l'), 'bolt', 'g', 'Badge: Energy aware (red).')
+medal('b-closer', ('a', 'b', 'd'), 'target', 'W', 'Badge: Sharper plan (green).')
 medal('b-focus', ('p', 'q', 'o'), 'hourglass', 'g', 'Badge: Deep focus (navy).')
 medal('b-locked', ('n', 'o', 'W'), 'lock', 'p', 'A badge you have not earned yet.')
 

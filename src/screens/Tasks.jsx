@@ -240,7 +240,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
         </>}
         {error && <span className="text-base text-danger">{error}</span>}
       </div>
-      {stats.week > 0 && <p className="mb-3 text-base text-slate-600">{stats.week} task{stats.week === 1 ? '' : 's'} done this week{stats.streak > 1 ? `, ${stats.streak}-day streak` : ''}</p>}
+      {stats.week > 0 && <p className="mb-3 text-base text-slate-600">{stats.week} task{stats.week === 1 ? '' : 's'} done this week</p>}
 
       {view === 'Matrix' ? (
         <div className="grid items-start gap-4 sm:grid-cols-2 2xl:grid-cols-4">

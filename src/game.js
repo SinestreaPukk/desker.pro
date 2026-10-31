@@ -1,41 +1,61 @@
-// The XP game layer: XP, level, daily quest and badges. They are shown in the kodama's dialog on Today (components/KodamaHome.jsx) next to its growth stage (src/kodama.js).
-// The saved XP total also became the kodama's starting growth, once (App.jsx).
-import { doneStats } from './tasks.js'
+// Badges and the habit streak. Growth (src/kodama.js) is the only progression: there is no XP, no level and no daily quest.
+// Badges reward honest habits, the things that make Desker's plans better (real times, wrap-ups, energy taps), never how many tasks were ticked.
+// They are shown in the kodama's window on Today (components/KodamaHome.jsx), earned ones plus the next one to go for.
 import { dayStr } from './milestones.js'
-
-export const taskXp = (t) => 10 + (t.important ? 5 : 0) + (t.urgent ? 5 : 0) + Math.min(10, Math.round((t.hours || 0) * 2)) // bigger, harder tasks pay more
-export const MILESTONE_XP = 25, GUIDE_XP = 50, QUEST_GOAL = 3
-
-export const xpOf = ({ tasks = [], goals = [], guide }) =>
-  tasks.filter((t) => t.done).reduce((n, t) => n + (t.fun ? 5 : taskXp(t)), 0)
-  + goals.reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length * MILESTONE_XP, 0) + (guide?.done ? GUIDE_XP : 0)
-
-// The score never goes down: data.xp is the highest total reached (App.jsx raises it), so deleting or un-ticking tasks cannot cost a level.
-export const totalXp = (data) => Math.max(Number.isFinite(data.xp) ? data.xp : 0, xpOf(data))
-
-// Level n starts at 25 * (n-1)^2 XP: 0, 25, 100, 225, 400... quick early wins, slower later.
-export const levelOf = (xp) => {
-  const level = Math.floor(Math.sqrt(xp / 25)) + 1, from = 25 * (level - 1) ** 2, to = 25 * level ** 2
-  return { level, xp, from, to, pct: Math.round(((xp - from) / (to - from)) * 100) }
-}
-
-export const questOf = (tasks, today = dayStr()) => {
-  const done = tasks.filter((t) => t.done && t.doneAt && !t.fun && dayStr(new Date(t.doneAt)) === today).length
-  return { done: Math.min(done, QUEST_GOAL), goal: QUEST_GOAL, complete: done >= QUEST_GOAL }
-}
+import { accuracyByWeek } from './rhythm.js'
 
 const BADGES = [
-  ['first', 'First step', 'Finish a task', (s) => s.tasksDone >= 1],
-  ['ten', 'Ten down', 'Finish 10 tasks', (s) => s.tasksDone >= 10],
-  ['fifty', 'Fifty down', 'Finish 50 tasks', (s) => s.tasksDone >= 50],
-  ['streak3', 'On a roll', 'A 3-day streak', (s) => s.streak >= 3],
-  ['streak7', 'Week warrior', 'A 7-day streak', (s) => s.streak >= 7],
-  ['milestone', 'Milestone maker', 'Reach a goal milestone', (s) => s.milestones >= 1],
-  ['guide', 'Pathfinder', 'Finish the goals guide', (s) => s.guide],
-  ['focus', 'Deep focus', 'Log 5 hours with the timer', (s) => s.hours >= 5],
+  ['timed', 'Real time', 'Time a task with the timer, or tell Desker how long it took', 1],
+  ['morning', 'First plan', 'Do a morning plan', 1],
+  ['wrapup', 'Wrapped up', 'Do an evening wrap-up', 1],
+  ['energy8', 'Energy aware', 'Tap your energy 8 times', 8],
+  ['closer', 'Sharper plan', 'Have a week where Desker\'s plan was closer than your own guess', 1],
+  ['focus', 'Deep focus', 'Focus for 5 hours with the timer', 5],
 ]
-export function badgesOf({ tasks = [], goals = [], guide }) {
-  const s = { tasksDone: tasks.filter((t) => t.done).length, streak: doneStats(tasks).streak, guide: !!guide?.done,
-    milestones: goals.reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length, 0), hours: tasks.reduce((n, t) => n + (t.spent || 0), 0) }
-  return BADGES.map(([id, name, how, test]) => ({ id, name, how, got: test(s) }))
+
+export function badgeStats(data = {}) {
+  const r = data.rhythm || {}, k = data.kodama || {}
+  const timed = (r.outcomes || []).length + Object.values(r.archive || {}).reduce((n, a) => n + (a.n || 0), 0)
+  const closer = accuracyByWeek(r.outcomes || []).filter((w) => w.n >= 3 && w.planErr != null && w.planErr < w.estErr).length
+  const timer = (data.tasks || []).reduce((n, t) => n + (t.spent || 0), 0)
+  const sessions = (r.sessions || []).reduce((n, s) => n + (s.active || 0), 0) / 60
+  return { timed, morning: (k.rituals?.morning || []).length, wrapup: (k.rituals?.evening || []).length, energy8: (data.energyLog || []).length, closer, focus: Math.round(Math.max(timer, sessions) * 10) / 10 }
+}
+
+// [{ id, name, how, got, now, goal }]
+export function badgesOf(data) {
+  const s = badgeStats(data)
+  return BADGES.map(([id, name, how, goal]) => ({ id, name, how, goal, now: Math.min(s[id], goal), got: s[id] >= goal }))
+}
+// The one to go for: the unearned badge you are furthest along on.
+export const nextBadge = (badges) => badges.filter((b) => !b.got).sort((a, b) => b.now / b.goal - a.now / a.goal)[0]
+
+// Days on which you did any honest habit: a focus session, a time told, an energy tap, a morning plan or wrap-up, a task finished with the timer.
+export function habitDays(data = {}) {
+  const r = data.rhythm || {}, k = data.kodama || {}, out = new Set()
+  const add = (ms) => { if (Number.isFinite(ms)) out.add(dayStr(new Date(ms))) }
+  for (const s of r.sessions || []) add(s.start ?? s.end)
+  for (const o of r.outcomes || []) add(o.at)
+  for (const e of data.energyLog || []) add(e.at)
+  for (const t of data.tasks || []) if (t.done && t.spent > 0) add(t.doneAt)
+  for (const d of [...(k.rituals?.morning || []), ...(k.rituals?.evening || [])]) out.add(d)
+  return out
+}
+// Consecutive days with a habit, forgiving: up to two rest days in any week do not end it (and are not counted). Today does not count against you until it is over.
+export function habitStreak(data, now = Date.now()) {
+  const days = habitDays(data)
+  if (!days.size) return 0
+  const first = [...days].sort()[0]
+  const d = new Date(now); d.setHours(12, 0, 0, 0)
+  if (!days.has(dayStr(d))) d.setDate(d.getDate() - 1)
+  const rests = [] // recent days walking back: true = rest day
+  let streak = 0
+  while (dayStr(d) >= first) {
+    const active = days.has(dayStr(d))
+    rests.unshift(!active); rests.length = Math.min(rests.length, 7)
+    if (active) streak++
+    else if (rests.filter(Boolean).length > 2) break
+    d.setDate(d.getDate() - 1)
+  }
+  return streak
 }

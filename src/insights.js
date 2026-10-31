@@ -1,7 +1,6 @@
 // What Desker has learned about you, in plain sentences, and a recap of the week. Pure functions over tasks, goals and the energy log.
 import { energyProfile, ranges } from './energy.js'
 import { timeRatio } from './tasks.js'
-import { taskXp } from './game.js'
 
 const day = (d) => d.toLocaleDateString('sv')
 const mondayOf = (now) => { const n = new Date(now); return new Date(n.getFullYear(), n.getMonth(), n.getDate() - ((n.getDay() + 6) % 7)) }
@@ -33,7 +32,7 @@ export function recap({ tasks = [], goals = [] }, now = Date.now()) {
   for (const t of thisWeek) { const d = new Date(t.doneAt).toLocaleDateString([], { weekday: 'long' }); byDay[d] = (byDay[d] || 0) + 1 }
   const best = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0]
   return {
-    done: thisWeek.length, last: lastWeek.length, xp: thisWeek.reduce((n, t) => n + (t.fun ? 5 : taskXp(t)), 0), milestones,
+    done: thisWeek.length, last: lastWeek.length, milestones,
     hours: Math.round(thisWeek.reduce((n, t) => n + (t.spent || 0), 0) * 10) / 10, best: best && best[0],
   }
 }
