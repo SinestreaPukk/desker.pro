@@ -7,7 +7,7 @@ import { METHODS } from '../methods.js'
 import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
 import { track } from '../analytics.js'
-import { nameOf, lineFor, ritualDue, sceneChoice } from '../kodama.js'
+import { lineFor, ritualDue, sceneChoice } from '../kodama.js'
 import BoxHead from '../components/BoxHead.jsx'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
@@ -142,15 +142,18 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     <>
       <header className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:gap-8">
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
-          <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
-          <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
-          <div className="px-sunk mt-3 flex max-w-md flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
-            <p className="min-w-0 flex-1 basis-40 break-words" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
-            <KodamaSettings data={data} setData={setData} focusing={!!focus} />
-          </div>
+          <h1 className="text-2xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
+          <p className="mt-1 text-slate-700 md:mt-2">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}.<span className="hidden sm:inline"> {finding}</span></p>
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
-        <div className="order-1 lg:order-2"><Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)} /></div>
+        <div className="order-1 lg:order-2">
+          <Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)}>
+            <div className="px-sunk flex max-h-full w-full flex-col items-start px-2 py-1 sm:max-w-md sm:gap-2 sm:px-3 sm:py-2">
+              <p className="line-clamp-2 min-w-0 shrink-0 break-words text-xs sm:line-clamp-3 sm:text-base" role="status" title={lineFor(data, { focusing: !!focus })}>{lineFor(data, { focusing: !!focus })}</p>
+              <KodamaSettings data={data} setData={setData} focusing={!!focus} />
+            </div>
+          </Home>
+        </div>
       </header>
 
       {guide && !goals.length && !tasks.length && !deadlines.length && (
@@ -167,18 +170,6 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </section>
         </div>
       )}
-      <details className="mb-4 lg:mb-6">
-        <summary className="underline">This week at a glance</summary>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-12 lg:gap-x-6">
-        <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
-        <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
-        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
-        <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
-          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
-            onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
-        </Tile>
-        </div>
-      </details>
 
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
@@ -301,6 +292,19 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           </ul>
         </section>
       </div>
+
+      <details className="mb-4 lg:mb-6">
+        <summary className="underline">This week at a glance</summary>
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 lg:grid-cols-12 lg:gap-x-6">
+        <Tile label="Do first" caption={doFirst.length ? 'Due soon, high impact' : 'Nothing urgent'}><button className="min-h-11 hover:text-yoru-0" onClick={() => goTab('Tasks')} aria-label={`${doFirst.length} to do first. Open Tasks`}>{doFirst.length}</button></Tile>
+        <Tile label="Due this week" caption={thisWeek[0] ? `Next: ${thisWeek[0].title}` : 'Nothing due'}><span>{thisWeek.length}</span></Tile>
+        <Tile label="Done this week" caption={stats.streak > 1 ? `${stats.streak}-day streak` : stats.week ? 'Nice and steady' : 'Tick one off'}><span>{stats.week}</span></Tile>
+        <Tile label="Free time today" caption={`hours. Blank uses your ${data.freeHours ?? 4} h a day`}>
+          <input type="number" min="0" max="24" step="0.5" aria-label="Free time today in hours" className={`${input} w-24 text-base`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
+            onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
+        </Tile>
+        </div>
+      </details>
 
       <Ritual key={ritualDue(data) || 'evening'} kind={ritualDue(data) || 'evening'} due={!!ritualDue(data)} data={data} setData={setData} onReplan={onReplan} /> {/* the wrap-up is always here; it can be retracted */}
 

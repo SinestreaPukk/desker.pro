@@ -33,11 +33,15 @@ import { nameOf, growthOf, legacyGrowth, STAGES } from './kodama.js'
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar', Rhythm: '/rhythm' }
 const TABS = Object.keys(PATHS)
+const WRAP = 'max-w-[1164px]' // one width for the header, the tabs and every page, so the logo and tabs never move between pages
+const PHONE_TABS = ['Today', 'Tasks', 'Calendar', 'Rhythm'] // the rest live under "More" on a phone
+const MORE = ['Goals', 'Projects']
 const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
 
 export default function App() {
   const user = useSession().data?.user
   const [tab, setTabState] = useState(tabOf)
+  const [moreOpen, setMoreOpen] = useState(false)
   const setTab = (t) => { if (t !== tab) history.pushState(null, '', PATHS[t]); setTabState(t); window.scrollTo({ top: 0 }) }
   useEffect(() => { const f = () => setTabState(tabOf()); addEventListener('popstate', f); return () => removeEventListener('popstate', f) }, [])
   useEffect(() => {
@@ -187,7 +191,7 @@ export default function App() {
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-10 hidden border-b border-line bg-white md:block">
-        <div className={`mx-auto px-8 pt-3 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
+        <div className={`mx-auto px-8 pt-3 ${WRAP}`}>
         <div className="flex items-center justify-between">
           <button className="flex items-center gap-3 py-1 pr-3 text-left" onClick={() => setTab('Today')} aria-label="Desker, go to Today">
             {logo()}
@@ -217,11 +221,11 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`mx-auto w-full px-4 pb-32 pt-4 md:px-8 md:pt-8 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
+        <main className={`mx-auto w-full px-4 pb-44 pt-4 md:px-8 md:pb-32 md:pt-8 ${WRAP}`}>
           {saveStatus === 'offline' && <p role="alert" className="px-panel mb-4 p-3 text-danger">Desker cannot reach the server right now. Your changes are kept on this device and will save as soon as it is back.</p>}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan), { auto: true }); setReplanOpen(false) }} />}
           <Banner tab={tab} />
-          <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
+          <div key={tab} className="enter">
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
@@ -257,13 +261,27 @@ export default function App() {
           <button className="min-h-11 shrink-0 px-3" onClick={() => setToast(null)}>Dismiss</button>
         </div>
       )}
+      {moreOpen && <div className="fixed inset-0 z-20 md:hidden" onClick={() => setMoreOpen(false)} aria-hidden="true" />}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Sections">
-        {TABS.filter((t) => t !== 'Rhythm').map((t) => (
+        {PHONE_TABS.map((t) => (
           <button key={t} className={`flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 text-xs ${tab === t ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`}
-            aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
+            aria-current={tab === t ? 'page' : undefined} onClick={() => { setMoreOpen(false); setTab(t) }}>
             <Icon name={t} />{t}
           </button>
         ))}
+        <div className="relative flex min-w-0 flex-1">
+          <button className={`flex min-h-16 w-full min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-xs ${MORE.includes(tab) ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`}
+            aria-haspopup="menu" aria-expanded={moreOpen} onClick={() => setMoreOpen((o) => !o)}>
+            <Icon name="More" />More
+          </button>
+          {moreOpen && (
+            <ul role="menu" className="px-panel absolute bottom-full right-1 mb-1 w-40 bg-white p-1">
+              {MORE.map((t) => (
+                <li key={t} role="none"><button role="menuitem" className={`${btn} w-full !justify-start gap-2 ${tab === t ? 'bg-pale' : ''}`} aria-current={tab === t ? 'page' : undefined} onClick={() => { setMoreOpen(false); setTab(t) }}><Icon name={t} />{t}</button></li>
+              ))}
+            </ul>
+          )}
+        </div>
       </nav>
     </div>
   )

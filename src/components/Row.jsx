@@ -42,7 +42,7 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} aria-label={`Mark ${t.title} done`} />
           <button className="min-h-11 min-w-0 flex-1 text-left" onClick={onEdit} aria-label={`Open ${t.title}`}>
-            <span className={`block break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}{isMissed(t) && <span className="ml-2 bg-beni px-1 text-xs text-yuki-0">missed</span>}</span>
+            <span title={t.title} className={`line-clamp-2 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}{isMissed(t) && <span className="ml-2 bg-beni px-1 text-xs text-yuki-0">missed</span>}</span>
           </button>
         </div>
         <span className="relative flex shrink-0 items-center gap-1">

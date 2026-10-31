@@ -10,11 +10,13 @@ import { Icon } from '../icons.jsx'
 import { track } from '../analytics.js'
 
 // The kodama's home: the window view with the kodama sitting in it. The speech line goes next to it (Today passes it in).
-export function Home({ data, focusing, heavy, view }) {
+// `children` is the kodama's speech bubble: it sits inside the scene, to the right of the sprite.
+export function Home({ data, focusing, heavy, view, children }) {
   return (
     <div className="relative">
       <Scene {...view} />
       <div className="pointer-events-none absolute bottom-1 left-3 flex sm:left-6" style={{ '--px': 'var(--px-scene)' }}><Kodama mood={stateOf(data, { focusing, heavy })} /></div>
+      {children && <div className="absolute inset-y-1 left-28 right-2 flex items-start sm:left-56 sm:right-4 sm:inset-y-4">{children}</div>}
     </div>
   )
 }
@@ -65,7 +67,7 @@ export function KodamaSettings({ data, setData, focusing }) {
   useEffect(() => { if (open && xp > (data.xp || 0)) setData((d) => ({ ...d, xp })) }, [open]) // the score is the highest reached: deleting a task never costs a level
   return (
     <>
-      <button className={`${btn} ${ghost} ml-auto shrink-0`} aria-haspopup="dialog" onClick={() => { setTab('Progress'); setOpen(true) }}>{name}, {g.stage.name.toLowerCase()}</button>
+      <button className={`${btn} ${ghost} ml-auto shrink-0 max-sm:!min-h-9 max-sm:!px-2 max-sm:text-xs`} aria-haspopup="dialog" onClick={() => { setTab('Progress'); setOpen(true) }}>{name}, {g.stage.name.toLowerCase()}</button>
       {open && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={() => setOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
           <section role="dialog" aria-modal="true" aria-label={`${name}, your kodama`} className="px-panel max-h-[94vh] w-full max-w-xl overflow-y-auto bg-yuki-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-base sm:p-4" onClick={(e) => e.stopPropagation()}>

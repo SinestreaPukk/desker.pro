@@ -90,15 +90,17 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         {mine.map((t) => (
           <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-1 gap-y-1 text-base">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => upd(t.id, { done: !t.done })} />
-            <input key={t.title} size={Math.max(6, Math.min(40, t.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 hover:border-control focus:border-accent focus:bg-white ${t.done ? 'text-slate-500 line-through' : ''}`}
+            <input key={t.title} size={Math.max(6, Math.min(40, t.title.length + 1))} className={`min-w-0 max-sm:flex-1 max-sm:basis-40 border border-transparent bg-transparent px-2 py-1 hover:border-control focus:border-accent focus:bg-white ${t.done ? 'text-slate-500 line-through' : ''}`}
               aria-label="Task name (click to rename)" defaultValue={t.title} maxLength={200}
               onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
               onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.title) upd(t.id, { title: v }); else e.target.value = t.title }} />
+            <span className="flex basis-full flex-wrap items-center gap-1 pl-8 sm:contents">
             <DateField className="w-36 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
             <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
               value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
             {t.hours > 0 && <span className="text-xs text-slate-600">{t.hours}h</span>}
+            </span>
           </li>
         ))}
       </ul>

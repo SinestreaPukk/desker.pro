@@ -87,10 +87,10 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
       )}
       <ul className="mt-3 space-y-1">
         {mine.map((t) => (
-          <li key={t.id} className="flex min-h-11 items-center gap-2 text-base">
+          <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-2 text-base">
             <input type="checkbox" checked={!!t.done} aria-label={`Done: ${t.title}`} onChange={() => setTasks(tasks.map((x) => (x.id === t.id ? { ...x, done: !x.done } : x)))} />
-            <span className={`min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
-            <span className="shrink-0 text-xs text-slate-600">{t.hours ? `${t.hours}h` : ''}{t.due ? `, ${fmtDate(t.due)}` : ''}</span>
+            <span className={`line-clamp-2 min-w-0 flex-1 break-words ${t.done ? 'text-slate-500 line-through' : ''}`}>{t.title}</span>
+            <span className="basis-full pl-8 text-xs text-slate-600 sm:basis-auto sm:shrink-0 sm:pl-0">{t.hours ? `${t.hours}h` : ''}{t.due ? `, ${fmtDate(t.due)}` : ''}</span>
           </li>
         ))}
         {!mine.length && <li className="text-base text-slate-600">No tasks yet. Add one, or let the AI break it down.</li>}
