@@ -2,6 +2,7 @@ import { limit } from './_rate.js'
 import { userOf } from './_auth.js'
 import feed from './_ics.js'
 import push from './_push.js'
+import events from './_events.js'
 import { loadDoc, saveDoc, hasContent, sql, SETTINGS } from './_store.js'
 
 const UID = /^[0-9a-f-]{36}$/
@@ -14,6 +15,7 @@ export default async function handler(req, res) {
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
   if (!(await limit(req, res, { scope: 'state', max: 600, id: uid }))) return // autosave PUTs are frequent
+  if (req.query.events) return events(req, res, uid) // analytics (api/_events.js), off unless ANALYTICS=on
   if (req.method === 'GET') {
     const doc = await loadDoc(uid)
     await sql.query('insert into user_day (user_id) select id from users where id = $1 on conflict do nothing', [uid]) // no users row yet = nothing to count

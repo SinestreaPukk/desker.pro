@@ -13,6 +13,7 @@ import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
 import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile } from './rhythm.js'
 import TimeAsk from './components/TimeAsk.jsx'
+import { track } from './analytics.js'
 import Today from './screens/Today.jsx'
 import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
@@ -99,6 +100,9 @@ export default function App() {
   const loaded = !!data
   useEffect(() => {
     if (!loaded) return
+    track('session_started', { device: innerWidth < 640 ? 'phone' : 'desktop', theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light' })
+    const q = new URLSearchParams(location.search)
+    if (q.get('from') === 'push') { track('notification_opened', { kind: q.get('k') }); history.replaceState(null, '', location.pathname) }
     setData((d) => {
       const k = d.kodama || {}
       return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(totalXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
@@ -115,7 +119,7 @@ export default function App() {
     } catch { /* storage blocked: no announcement */ }
   }, [stage])
   if (!data) return <div className="flex items-center gap-3 p-6"><Avatar /><p role="status" className="text-slate-700">{loadError || 'Loading…'}</p></div>
-  if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => setData((d) => startFrom(d, onboarding, first))} />
+  if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => { track('onboarding_completed', { skipped: !!onboarding.skipped, first: first?.task ? 'task' : first?.deadline ? 'deadline' : 'none' }); if (onboarding.kodama) track('kodama_named'); setData((d) => startFrom(d, onboarding, first)) }} />
 
   const { goals, tasks } = data
   const rhythm = profile(data)
@@ -152,7 +156,7 @@ export default function App() {
     setTimeout(() => setFresh((f) => f && { ...f, ids: [] }), 5000)
   }
   const makeTasks = () => {
-    setTasks(addTasks(tasks, goals.filter((g) => fresh.ids.includes(g.id) && g.firstStep).map((g) => ({ title: g.firstStep, goalId: g.id }))))
+    setTasks(addTasks(tasks, goals.filter((g) => fresh.ids.includes(g.id) && g.firstStep).map((g) => ({ title: g.firstStep, goalId: g.id })), 'ai'))
     setFresh(null)
   }
   const openReview = () => { setAgentOpen(true); setReviewReq((n) => n + 1) }
@@ -163,6 +167,8 @@ export default function App() {
     const before = new Map(tasks.map((t) => [t.id, t]))
     const moved = opts.auto ? [] : r.tasks.filter((t) => { const b = before.get(t.id); return b && !t.done && !t.fun && b.when && t.when && (b.when !== t.when || b.start !== t.start) })
     const timed = r.finished.map((id) => r.tasks.find((t) => t.id === id)).filter((t) => t && !t.fun && !t.repeat)
+    for (const t of r.tasks.filter((x) => r.finished.includes(x.id) && !x.fun)) track('task_completed', { timed: t.spent > 0 })
+    for (const t of timed.filter((x) => x.spent > 0)) track('duration_logged', { source: 'timer' })
     if (moved.length || timed.length) setData((d) => record(d, (x) => {
       x = moved.reduce((acc, t) => addSignal(acc, { k: 'resched', at: Date.now(), task: t.id }), x)
       return timed.filter((t) => t.spent > 0).reduce((acc, t) => addOutcome(acc, outcomeFor(t, d, t.spent, 'timer', t.doneAt)), x)
@@ -190,7 +196,7 @@ export default function App() {
   }
   const answerTime = (minutes) => {
     const t = tasks.find((x) => x.id === askTime.id)
-    if (t) setData((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap'))))
+    if (t) { track('duration_logged', { source: 'chip' }); setData((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap')))) }
     setAskTime(null)
   }
   const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar /></span>
@@ -249,7 +255,7 @@ export default function App() {
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (
         <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask} suggestWork={rhythm.focus || undefined}
-          onSession={(s) => setData((d) => record(d, (r) => addSession(r, { task: focusTask?.id, type: focusTask ? typeOf(focusTask) : undefined, ...s, lag: lagOf(focusTask, s.start) })))}
+          onSession={(s) => { track('focus_session_completed', { minutes: s.active, result: s.result }); setData((d) => record(d, (r) => addSession(r, { task: focusTask?.id, type: focusTask ? typeOf(focusTask) : undefined, ...s, lag: lagOf(focusTask, s.start) }))) }}
           onLog={(h) => focusTask && addSpent(focusTask.id, h)}
           onDone={(h) => { if (focusTask) setTasks(tasks.map((t) => (t.id === focusTask.id ? { ...t, done: true, spent: Math.round(((t.spent || 0) + h) * 1000) / 1000 } : t))); setFocus(null) }}
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />

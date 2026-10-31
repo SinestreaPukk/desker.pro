@@ -68,7 +68,7 @@ export default function AddBox({ inputRef, tasks, setTasks, deadlines, setDeadli
   const steps = () => {
     const { out, context } = est, ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && (!due || d <= due), gid = Date.now()
     if (due) setDeadlines([...deadlines, { id: gid, title: parsed.title, date: due, time: start || undefined, hours: Number.isFinite(out.hours) ? out.hours : undefined, context, projectId }])
-    setTasks(addTasks(tasks, out.options.map((o) => ({ title: o.title, ...(ok(o.due) ? { due: o.due } : due ? { due } : {}), hours: Number(o.hours) || undefined, type: validType(o.type), ...(due && { deadlineId: gid }), ...(projectId && { projectId }) }))))
+    setTasks(addTasks(tasks, out.options.map((o) => ({ title: o.title, ...(ok(o.due) ? { due: o.due } : due ? { due } : {}), hours: Number(o.hours) || undefined, type: validType(o.type), ...(due && { deadlineId: gid }), ...(projectId && { projectId }) })), 'ai'))
     setList('plan'); reset()
   }
 

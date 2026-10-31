@@ -10,9 +10,71 @@ const Tile = ({ label, value, sub }) => (
   <div className={`${panel} !p-4`}>
     <p className="text-base text-slate-600">{label}</p>
     <p className="mt-1 text-2xl tabular-nums">{value}</p>
-    {sub && <p className="mt-1 text-base text-slate-600">{sub}</p>}
+    {sub && <p className="mt-1 break-words text-base text-slate-600">{sub}</p>}
   </div>
 )
+
+
+// Beta health (Phase 8). Every block comes from its own query: if one fails (say the events table is not applied) only that tile says so.
+const pc = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'no data yet')
+const val = (q) => (q?.ok ? q.v : null)
+const row = (q) => val(q)?.[0]
+function Beta({ b, th, td }) {
+  if (!b) return null
+  const ret = row(b.ret), pa = row(b.perActive), du = row(b.durations), ri = row(b.rituals), rr = row(b.ritualRet), ev = row(b.events)
+  const bad = Object.entries(b).filter(([, q]) => !q.ok).map(([k, q]) => `${k}: ${q.error}`)
+  const acc = val(b.accuracy) || []
+  const evNote = ev ? null : 'needs the events table (db/migrations/002_events.sql) and ANALYTICS=on'
+  return (
+    <>
+      <h2 className="mb-2 font-semibold">Beta health: growth and retention</h2>
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Back the next day (D1)" value={ret ? pc(ret.b1, ret.e1) : 'n/a'} sub={ret && `${ret.b1} of ${ret.e1}`} />
+        <Tile label="Back around day 7 (D7)" value={ret ? pc(ret.b7, ret.e7) : 'n/a'} sub={ret && `${ret.b7} of ${ret.e7}, opened on day 7 or 8`} />
+        <Tile label="Back in week 4 (W4)" value={ret ? pc(ret.b28, ret.e28) : 'n/a'} sub={ret && `${ret.b28} of ${ret.e28}, opened on days 28 to 34`} />
+        <Tile label="Weekly active users" value={n(val(b.wau)?.at(-1)?.n ?? 0)} sub="Opened Desker in the latest week" />
+        <Tile label="Tasks done per active user" value={pa ? (pa.active7 ? (pa.done7 / pa.active7).toFixed(1) : 'n/a') : 'n/a'} sub={pa && `${pa.done7} done by ${pa.active7} people in 7 days`} />
+      </div>
+      <div className={`${panel} mb-8 overflow-x-auto !p-0`}>
+        <table className="w-full min-w-[420px] text-base">
+          <thead className="text-slate-600"><tr><th className={th}>Week starting</th><th className={th}>Sign-ups</th><th className={th}>Active people</th></tr></thead>
+          <tbody>
+            {[...new Set([...(val(b.signups) || []).map((x) => x.week), ...(val(b.wau) || []).map((x) => x.week)])].sort().map((w) => (
+              <tr key={w} className="border-t border-line"><td className={td}>{w}</td><td className={td}>{val(b.signups)?.find((x) => x.week === w)?.n ?? 0}</td><td className={td}>{val(b.wau)?.find((x) => x.week === w)?.n ?? 0}</td></tr>
+            ))}
+            {!val(b.signups)?.length && !val(b.wau)?.length && <tr><td className={`${td} text-slate-600`} colSpan={3}>No data yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 font-semibold">Beta health: is the rhythm engine working?</h2>
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Finished tasks with a real duration" value={du ? pc(du.timed + du.chip, du.done) : 'n/a'} sub={du && `${du.timed} timed and ${du.chip} from the chips, of ${du.done} done`} />
+        <Tile label="Energy check-ins per active user" value={pa && val(b.energy) ? (pa.active7 ? (row(b.energy).n / pa.active7).toFixed(1) : 'n/a') : 'n/a'} sub="Last 7 days" />
+      </div>
+      <div className={`${panel} mb-8 overflow-x-auto !p-0`}>
+        <table className="w-full min-w-[520px] text-base">
+          <thead className="text-slate-600"><tr><th className={th}>Weeks since sign-up</th><th className={th}>Finished tasks</th><th className={th}>Median error, own estimate</th><th className={th}>Median error, Desker's plan</th></tr></thead>
+          <tbody>
+            {acc.map((r) => (
+              <tr key={r.week} className="border-t border-line"><td className={td}>{r.week === 12 ? '12+' : r.week}</td><td className={td}>{r.n}</td><td className={td}>{Math.round(r.est_err * 100)}%</td><td className={td}>{r.plan_err == null ? 'n/a' : `${Math.round(r.plan_err * 100)}%`}</td></tr>
+            ))}
+            {!acc.length && <tr><td className={`${td} text-slate-600`} colSpan={4}>No data yet. The plan error should fall below the estimate error as weeks go by; that is the proof the engine works.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="mb-2 font-semibold">Beta health: the companion</h2>
+      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Wrap-ups per active day" value={ri ? pc(ri.wrapups, ri.active_days) : 'n/a'} sub={ri && `${ri.wrapups} wrap-ups over ${ri.active_days} active days, 28 days`} />
+        <Tile label="Morning plans per active day" value={ri ? pc(ri.morning_done, ri.active_days) : 'n/a'} sub={ri && `${ri.morning_done} done, 28 days`} />
+        <Tile label="Notifications opened" value={ev ? pc(ev.opened, ev.sent) : 'n/a'} sub={ev ? `${ev.opened} of ${ev.sent} sent, 28 days` : evNote} />
+        <Tile label="Back in week 4: ritual users vs not" value={rr ? `${pc(rr.ritual_back, rr.ritual_n)} vs ${pc(rr.other_back, rr.other_n)}` : 'n/a'} sub={rr && `${rr.ritual_back}/${rr.ritual_n} with 3+ rituals in their first two weeks, ${rr.other_back}/${rr.other_n} without`} />
+      </div>
+      <p className="mb-8 text-base text-slate-600">Rates are per active day or per notification, not per person. Small numbers swing a lot in a 20 to 50 person beta; read them as direction, not proof.{bad.length ? ` Failed: ${bad.join('; ')}.` : ''}</p>
+    </>
+  )
+}
 
 // Owner dashboard at /dsb. The password is checked on the server; it is only kept for this tab.
 export default function Dsb() {
@@ -47,7 +109,7 @@ export default function Dsb() {
     </main>
   )
 
-  const { counts: c, ai, kinds, daily, habit: h, active, funnel: f } = data
+  const { counts: c, ai, kinds, daily, habit: h, active, funnel: f, beta } = data
   const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'n/a')
   const tokens = ai.input + ai.output
   const max = Math.max(1, ...daily.map((d) => d.tokens))
@@ -59,6 +121,8 @@ export default function Dsb() {
         <h1 className="greeting text-4xl">Dashboard</h1>
         <button className={`${btn} border border-control bg-white`} onClick={load} disabled={busy}>{busy ? 'Refreshing…' : 'Refresh'}</button>
       </div>
+
+      <Beta b={beta} th={th} td={td} />
 
       <h2 className="mb-2 font-semibold">Habit</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -142,7 +142,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
   const split = (t, out) => {
     const date = t.due || t.when, id = Date.now()
     if (date) setDeadlines([...deadlines, { id, title: t.title, date, hours: Number.isFinite(out.hours) ? out.hours : null, context: '', projectId: t.projectId }])
-    setTasks(addTasks(tasks.filter((x) => x.id !== t.id), out.options.map((o) => ({ title: o.title, ...(OK(o.due, date) ? { due: o.due } : date ? { due: date } : {}), hours: Number(o.hours) || undefined, ...(date && { deadlineId: id }), projectId: t.projectId }))))
+    setTasks(addTasks(tasks.filter((x) => x.id !== t.id), out.options.map((o) => ({ title: o.title, ...(OK(o.due, date) ? { due: o.due } : date ? { due: date } : {}), hours: Number(o.hours) || undefined, ...(date && { deadlineId: id }), projectId: t.projectId })), 'ai'))
     setSel(null); setBd(null)
   }
   const dismiss = (t, out) => {

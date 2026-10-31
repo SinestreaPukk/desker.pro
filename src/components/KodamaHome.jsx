@@ -3,6 +3,7 @@ import { Scene, Kodama, SEASONS } from '../px.jsx'
 import { input, btn, ghost } from '../ui.js'
 import { nameOf, growthOf, stateOf, STAGES } from '../kodama.js'
 import { cleanName } from '../persona.js'
+import { track } from '../analytics.js'
 
 // The kodama's home: the window view with the kodama sitting in it. The speech line goes next to it (Today passes it in).
 export function Home({ data, focusing, heavy, view }) {
@@ -18,7 +19,7 @@ export function Home({ data, focusing, heavy, view }) {
 export function KodamaSettings({ data, setData, view }) {
   const g = growthOf(data), name = nameOf(data)
   const [draft, setDraft] = useState(name)
-  const save = () => { const n = cleanName(draft); setDraft(n); if (n !== name) setData((d) => ({ ...d, kodama: { ...d.kodama, name: n } })) }
+  const save = () => { const n = cleanName(draft); setDraft(n); if (n !== name) track('kodama_named'); if (n !== name) setData((d) => ({ ...d, kodama: { ...d.kodama, name: n } })) }
   return (
     <details className="mt-2">
       <summary className="cursor-pointer underline">{name}, {g.stage.name.toLowerCase()}</summary>

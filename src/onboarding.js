@@ -9,7 +9,7 @@ export function startFrom(d, answers, first, now = new Date()) {
   let tasks = d.tasks || [], deadlines = d.deadlines || []
   if (first?.deadline) deadlines = [...deadlines, first.deadline]
   if (first?.task) {
-    tasks = addTasks(tasks, [first.task])
+    tasks = addTasks(tasks, [first.task], 'none')
     const id = tasks[tasks.length - 1].id
     tasks = repair({ tasks, changed: [id], busy: d.busy || [], deadlines, freeHours: d.freeHours ?? 4, now, ...(plannerOf({ ...d, onboarding: answers }) || {}) }).tasks
   }

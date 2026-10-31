@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { track } from '../analytics.js'
 import { btn, ghost, panel, input, DANGER } from '../ui.js'
 import {
   profile, rhythmOf, TYPES, accuracyByWeek, learnedThisWeek, rangesText, withPrefs, resetRhythm, MIN_CHECKINS,
@@ -41,6 +42,7 @@ const Pct = ({ v }) => (v == null ? 'n/a' : `${v}%`)
 
 // "Your rhythm": what Desker has learned about how long your work takes and when you focus best, and every control over it.
 export default function Rhythm({ data, setData, onReplan }) {
+  useEffect(() => { track('rhythm_page_viewed') }, [])
   const p = profile(data)
   const r = rhythmOf(data)
   const [sure, setSure] = useState('')

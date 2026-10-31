@@ -1,8 +1,11 @@
 // The one way tasks get created. The UI (form, dump box, deadline options) uses it, and so can any
 // future source (e.g. a LINE webhook) that writes into the same workspace document.
-export function addTasks(tasks, items) {
+import { track } from './analytics.js'
+export function addTasks(tasks, items, source = 'manual') { // source: 'manual' | 'ai' | 'import' | 'none' (not counted)
   const base = Math.max(Date.now(), ...tasks.map((t) => t.id + 1))
-  return [...tasks, ...items.filter((i) => i.title?.trim()).map((i, k) => ({ done: false, happy: 50, ...i, title: i.title.trim(), id: base + k }))]
+  const fresh = items.filter((i) => i.title?.trim())
+  if (source !== 'none' && fresh.length) track('task_created', { source, count: fresh.length })
+  return [...tasks, ...fresh.map((i, k) => ({ done: false, happy: 50, ...i, title: i.title.trim(), id: base + k }))]
 }
 
 const day = (d) => d.toLocaleDateString('sv')
@@ -40,7 +43,7 @@ export function settle(prev, next, now = Date.now()) {
     ...t, done: false, subs: (t.subs || []).map((s) => ({ ...s, done: false })),
     due: t.due ? nextDate(t.due, t.repeat, today) : t.when ? t.due : nextDate(today, t.repeat, today), when: t.when ? nextDate(t.when, t.repeat, today) : t.when,
   }))
-  const out = addTasks(tasks, copies)
+  const out = addTasks(tasks, copies, 'none')
   return { tasks: out, finished: finished.map((t) => t.id), spawned: out.slice(tasks.length).map((t) => t.id) }
 }
 

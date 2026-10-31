@@ -5,6 +5,7 @@ import { isMissed } from './tasks.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
 import { planWeek } from './schedule.js'
 import { plannerArgs } from './shared.jsx'
+import { track } from './analytics.js'
 
 const when = (w, s) => `${new Date(`${w}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${s ? ` ${s}` : ''}`
 
@@ -34,6 +35,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
     const { plan, problems } = planWeek({ ...ctx, aiPlan })
     if (!plan.length && !problems.length) return setState({ error: 'Nothing could be planned. Check your free time per day in the chat with your kodama.' })
     const d = diff(data.tasks, plan)
+    track('plan_generated', { ai: !!aiPlan, moved: d.moved.length, problems: problems.length })
     setState({ plan, d, note: aiNote, risk: [...problems.map((p) => p.why), ...risks(applyPlan(data.tasks, plan), data.deadlines || [], ctx.freeHours).map((r) => `${r.title}: ${r.why}`)] })
   }
   useEffect(() => { run() }, [])

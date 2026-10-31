@@ -1,6 +1,6 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 7 done. Phase 8 follows (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
+Status: **Phases 1 to 8 done (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -95,7 +95,24 @@ Status: **Phases 1 to 7 done. Phase 8 follows (decisions recorded: kodama is the
 - **Decided not to change: the body font.** VT323 at 24px (20px small) is already well above 14px and is the pixel identity; swapping paragraphs to a system font would reflow every screen and mix two voices. Say if you want it anyway: it is one variable (`--font-sans`) plus `p`/`li` rules.
 - **Art still needed**: a Rhythm page stripe (it borrows the calendar one), a dusk sky that is not peach (the landing hero uses winter dusk; `hada` in `art/scene_build.py` roles), and the kodama poses listed under Phase 5.
 
+## Phase 8: measure it
+- **Events** (`src/analytics.js`): an allow-list of 18 event names (`signed_up` ... `notification_opened`, including `notification_sent`, which the server logs). `sanitize()` keeps only numbers, booleans and a fixed set of short words from a whitelist of property names, so a task title cannot get in even by mistake (tested). Sources are `manual`, `ai`, `import` for `task_created`; durations are `timer` or `chip`.
+  The client batches and sends to `/api/state?events=1` (no new function). **Off unless `ANALYTICS=on` (server) and `VITE_ANALYTICS=on` (client)**, so local development records nothing. Table in `db/migrations/002_events.sql` (not applied; without it the endpoint swallows the error).
+- **Dashboard** (`/dsb`, "Beta health", `api/_beta.js`): sign-ups and active people per week; D1 / D7 / W4 retention and tasks done per active user; *moat health*: share of finished tasks with a real duration, energy check-ins per active user, median estimate error vs Desker's plan error by weeks since sign-up;
+  *companion health*: wrap-ups and morning plans per active day, notification open rate, W4 retention for people with 3+ rituals in their first two weeks against everyone else. Each query is separate, so one failure shows on its own. Except the notification rate, everything is computed from existing tables and the account document, so it works before the events table exists.
+  The SQL was run against an in-memory Postgres (PGlite) with a tiny matching schema, not against your Neon database.
+- **Approximations, stated on the page**: wrap-up and morning-plan rates are per *active day* (the brief's "completion rate" and "open rate" would need an events table with a denominator for prompts shown); retention uses UTC days; the notification rate counts events from the last 28 days.
+- **Privacy placeholder** now describes the event log (tied to the account, no free text, deleted with the account, off by default). You still have to write the real policy.
+
+## TODO for you (collected)
+- **Apply migrations on a branch database first**: `db/migrations/001_rhythm.sql` (nothing reads it yet) and `002_events.sql` (needed for analytics and the notification rate). I did not run either against the Neon database in `.env.local`.
+- **Env vars to set when you want the features**: `ANALYTICS=on`, `VITE_ANALYTICS=on`; for notifications `VITE_VAPID_PUBLIC_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` and an hourly caller of `/api/state?push=1`; `VITE_CONTACT_EMAIL` for the landing footer Contact link. Nothing was invented; each is blank in `.env.example`.
+- **Legal text**: replace the TODO placeholders in `src/Legal.jsx` (privacy, terms).
+- **OAuth**: sign-in with Google/Apple is still not set up (needs your client IDs).
+- **Art to commission**: a Rhythm page stripe (borrows the calendar one), kodama poses (focusing, sleepy, cozy, calm) and Young tree / Elder accessories, a dusk sky that is not peach.
+- **Test push notifications end to end** with real keys and a real browser; it is not tested.
+
 ## Tests
-`npm test` (101 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (106 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.

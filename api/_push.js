@@ -5,6 +5,7 @@
 import webpush from 'web-push'
 import { sql } from './_store.js'
 import { planPush } from '../src/pushPlan.js'
+import { record } from './_events.js'
 
 export const configured = () => ['CRON_SECRET', 'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT'].every((k) => process.env[k])
 
@@ -31,8 +32,9 @@ export default async function handler(req, res) {
     const msg = local && planPush(doc, local, now.getTime())
     if (!msg) continue
     try {
-      await webpush.sendNotification(doc.push.sub, JSON.stringify({ ...msg, url: '/today' }), { TTL: 3600 })
+      await webpush.sendNotification(doc.push.sub, JSON.stringify({ ...msg, url: `/today?from=push&k=${msg.tag.startsWith('morning') ? 'morning' : 'evening'}` }), { TTL: 3600 })
       sent++
+      await record(u.id, [{ name: 'notification_sent', props: { kind: msg.tag.startsWith('morning') ? 'morning' : 'evening' }, at: Date.now() }])
     } catch (e) {
       if (e.statusCode === 404 || e.statusCode === 410) { gone++; await sql`update users set settings = settings #- '{push,sub}' where id = ${u.id}` } // the browser says this subscription is dead
     }

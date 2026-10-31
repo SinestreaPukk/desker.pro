@@ -56,7 +56,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
     setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
       return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, type: validType(o.type), deadlineId: dl.id, projectId: dl.projectId }
-    })))
+    }), 'ai'))
     setRes(null)
   }
   const upd = (id, patch) => setTasks(tasks.map((x) => (x.id === id ? { ...x, ...patch } : x)))

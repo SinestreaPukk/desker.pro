@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { track } from '../analytics.js'
 import { btn, BLUE, ghost, panel } from '../ui.js'
 import { logEnergy } from '../energy.js'
 import { fmtMin } from './TimeAsk.jsx'
@@ -18,6 +19,7 @@ export default function Ritual({ kind, data, setData, onReplan }) {
   const today = todayStr(), name = nameOf(data)
   const tasks = data.tasks.filter((t) => !t.fun)
   const planned = tasks.filter((t) => t.when === today && !t.done).sort((a, b) => (a.start || '99').localeCompare(b.start || '99'))
+  useEffect(() => { if (kind === 'morning') track('morning_plan_opened') }, [])
   const [asked, setAsked] = useState({}) // task id -> minutes chosen in the wrap-up
   const [feel, setFeel] = useState('')
   const [energy, setEnergy] = useState('')
@@ -25,12 +27,13 @@ export default function Ritual({ kind, data, setData, onReplan }) {
   const finishedToday = tasks.filter((t) => t.done && t.doneAt && new Date(t.doneAt).toLocaleDateString('sv') === today)
   const untimed = finishedToday.filter((t) => !(t.spent > 0) && !rh.outcomes.some((o) => o.task === t.id))
   const set = (fn) => setData(fn)
-  const tapEnergy = (l) => { setEnergy(l); set((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
-  const done = () => set((d) => finishRitual(feel ? { ...d, kodama: { ...d.kodama, feel: Object.fromEntries(Object.entries({ ...d.kodama?.feel, [today]: feel }).slice(-60)) } } : d, kind))
+  const tapEnergy = (l) => { track('energy_logged', { prompted: true }); setEnergy(l); set((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
+  const done = () => { if (kind === 'evening') track('wrapup_completed'); finish() }
+  const finish = () => set((d) => finishRitual(feel ? { ...d, kodama: { ...d.kodama, feel: Object.fromEntries(Object.entries({ ...d.kodama?.feel, [today]: feel }).slice(-60)) } } : d, kind))
 
   const markDone = (t) => set((d) => ({ ...d, tasks: d.tasks.map((x) => (x.id === t.id ? { ...x, done: true, doneAt: Date.now() } : x)) }))
   const toTomorrow = (t) => set((d) => applyPlanChecked(d, { updates: [{ id: t.id, when: tomorrow() }] }).data)
-  const answer = (t, minutes) => { setAsked((a) => ({ ...a, [t.id]: minutes })); set((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap')))) }
+  const answer = (t, minutes) => { track('duration_logged', { source: 'chip' }); setAsked((a) => ({ ...a, [t.id]: minutes })); set((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap')))) }
 
   if (kind === 'morning') {
     const mins = planned.reduce((n, t) => n + lengthOf(t), 0)

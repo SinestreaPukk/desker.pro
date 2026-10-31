@@ -46,7 +46,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
     setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
       return { title: o.title, due: ok(o.due) ? o.due : p.date, hours: Number(o.hours) || undefined, type: validType(o.type), projectId: p.id, goalId: p.goalId }
-    })))
+    }), 'ai'))
     setRes(null)
   }
   const addOne = (e) => {

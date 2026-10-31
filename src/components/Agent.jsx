@@ -6,6 +6,7 @@ import { nameOf } from '../kodama.js'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
 import { summaryForAI } from '../rhythm.js'
+import { track } from '../analytics.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
 export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
@@ -19,6 +20,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
   useEffect(() => { end.current?.scrollIntoView({ block: 'nearest' }) }, [msgs, busy])
   const send = async (content, label) => {
     const next = [...msgs, { role: 'user', content, label }]
+    track('agent_message_sent')
     setMsgs(next); setText(''); setBusy(true); setError('')
     try {
       const out = await post('/api/chat', {

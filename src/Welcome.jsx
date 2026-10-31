@@ -1,6 +1,7 @@
 // First sign-in, one short screen: two taps that give Desker a starting guess about you, then your first task or deadline.
 // Stored as data.onboarding ({ sharpest, slow, at }); "Skip" stores { skipped } so it is asked once. onDone(onboarding, first) with first = { task } | { deadline } | undefined.
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { track } from './analytics.js'
 import { btn, BLUE, ghost, input, panel } from './ui.js'
 import { Avatar } from './px.jsx'
 import Wallpaper from './Wallpaper.jsx'
@@ -14,6 +15,7 @@ export const SLOW = ['Rarely', 'Sometimes', 'Almost always']
 const Chip = ({ on, onClick, children }) => <button type="button" aria-pressed={on} onClick={onClick} className={`${btn} ${on ? BLUE : ghost}`}>{children}</button>
 
 export default function Welcome({ name, onDone }) {
+  useEffect(() => { track('signed_up') }, []) // the first screen a new account sees; a reload before finishing repeats it, so count distinct users
   const [sharpest, setSharpest] = useState('')
   const [slow, setSlow] = useState('')
   const [kname, setKname] = useState('')

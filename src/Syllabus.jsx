@@ -3,6 +3,7 @@ import { post } from './api.js'
 import { btn, input, BLUE, ghost } from './ui.js'
 import { encodeFile } from './files.js'
 import { addTasks } from './tasks.js'
+import { track } from './analytics.js'
 import { validItems, spreadBlocks } from './syllabus.js'
 import DateField from './components/DateField.jsx'
 
@@ -34,7 +35,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
     const dls = chosen.map((i, k) => ({ id: base + k, title: i.title.trim(), date: i.date, hours: i.hours, context: `From syllabus (${i.type || 'item'}).` }))
     const blocks = chosen.flatMap((i, k) => spreadBlocks({ title: i.title.trim(), date: i.date, hours: i.hours }).map((b) => ({ ...b, deadlineId: base + k })))
     setDeadlines([...deadlines, ...dls])
-    setTasks(addTasks(tasks, blocks))
+    setTasks(addTasks(tasks, blocks, 'import')); track('syllabus_imported', { count: blocks.length })
     setMade(`Added ${dls.length} deadline${dls.length === 1 ? '' : 's'} and ${blocks.length} study blocks. Rank them in Tasks.`)
     setItems(null); setText('')
   }

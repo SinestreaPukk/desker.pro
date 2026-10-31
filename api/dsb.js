@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from 'node:crypto'
 import { neon } from '@neondatabase/serverless'
 import { limit } from './_rate.js'
 import { auth } from './_auth.js'
+import beta from './_beta.js'
 
 const sql = neon(process.env.DATABASE_URL)
 // $ per million tokens [input, output]. claude-haiku-5-5 list price for prompts up to 100K tokens.
@@ -71,5 +72,6 @@ export default async function handler(req, res) {
     kinds: Object.values(kinds).sort((a, b) => b.cost - a.cost),
     daily: Object.values(days),
     prices: PRICES,
+    beta: await beta(sql),
   })
 }

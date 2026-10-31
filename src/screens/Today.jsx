@@ -6,6 +6,7 @@ import { profile, plannerOf, realityCheck, record, addSignal, rhythmOf, isOff } 
 import { METHODS } from '../methods.js'
 import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
+import { track } from '../analytics.js'
 import { nameOf, lineFor, ritualDue, sceneChoice } from '../kodama.js'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
@@ -40,7 +41,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   useEffect(() => {
     if (askEnergy) setData((d) => record(d, (r) => ({ ...r, ask: { day: todayStr(), n: (r.ask?.day === todayStr() ? r.ask.n : 0) + 1 } })))
   }, [])
-  const tap = (l) => { setEnergy(l); setAskEnergy(false); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
+  const tap = (l, prompted) => { track('energy_logged', { prompted: !!prompted }); setEnergy(l); setAskEnergy(false); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
   const [opts, setOpts] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -163,7 +164,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
           {askEnergy && (
             <div role="group" aria-label="How is your energy" className="px-rule mt-3 flex flex-wrap items-center gap-2 pb-3">
               <span>How is your energy right now?</span>
-              <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} className="px-btn capitalize" onClick={() => tap(l)}>{l}</button>)}</div>
+              <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} className="px-btn capitalize" onClick={() => tap(l, true)}>{l}</button>)}</div>
               <button className={btn} onClick={() => setAskEnergy(false)}>Not now</button>
             </div>
           )}
@@ -173,7 +174,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <p className="mt-1 break-words text-2xl">{cur.title}</p>
               <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
+                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
                 {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
                 {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
               </div>

@@ -5,7 +5,7 @@ import { Avatar } from './px.jsx'
 const PAGES = {
   privacy: ['Privacy', [
     ['What Desker stores', 'TODO: list what is kept for each account: tasks, deadlines, goals, the calendar link you paste, how long tasks take you, focus sessions and energy taps.'],
-    ['Product analytics', 'TODO: say that Desker counts anonymous product events (sign-ups, tasks completed, features used) to learn whether students come back. Events never contain task titles or other content.'],
+    ['Product analytics', 'TODO: say that Desker keeps a simple log of product events (signed up, task completed, timer used, notification opened) tied to your account, to learn whether students come back and whether planning gets more accurate. Events hold an event name, a time and a few numbers or fixed words; never task titles, notes or other text you wrote. They are deleted with your account, and no third-party analytics service receives them. Switched off unless the owner sets ANALYTICS=on.'],
     ['AI', 'TODO: explain which text is sent to the AI service (your tasks, goals and notes you share with the kodama) and that it is not used for anything else.'],
     ['Your choices', 'TODO: export (Settings, Export JSON), deletion (Settings, Danger zone) and turning prompts off.'],
   ]],
