@@ -5,6 +5,7 @@ import { validType } from '../rhythm.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
 import { getTaskTime, timeLabel, workLeft, workLeftText } from '../taskTime.js'
+import SaveButton from '../components/SaveButton.jsx'
 import DateField from '../components/DateField.jsx'
 
 export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio, rhythm }) {
@@ -65,7 +66,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const addOwn = (e) => {
     e.preventDefault()
     if (!own.trim()) return
-    setTasks(addTasks(tasks, [{ title: own, due: dl.date, deadlineId: dl.id, projectId: dl.projectId }]))
+    setTasks(addTasks(tasks, [{ title: own, due: dl.date, deadlineId: dl.id, projectId: dl.projectId, goalId: dl.goalId }]))
     setOwn('')
   }
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
@@ -83,6 +84,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             value={dl.time || ''} onChange={(e) => patch({ time: e.target.value || undefined })} />
           {left && left.plannedMinutes > 0 && <span className="text-base text-slate-600" title="Desker's planned time for what is not done, minus time you already focused">{workLeftText(left)}</span>}
         </span>
+        <SaveButton />
         {linked > 0 && <span className="text-base tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
         <span className={` px-3 py-0.5 text-base ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
           {dl.done ? 'Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
@@ -128,6 +130,15 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           <label className="flex items-center gap-1">Hours I need
             <input type="number" min="0" step="0.5" className={`${input} w-20`} placeholder="Not sure" value={dl.hours ?? ''}
               onChange={(e) => patch({ hours: e.target.value === '' ? null : +e.target.value })} />
+          </label>
+          <label className="flex items-center gap-1">Goal
+            <select className={input} value={dl.goalId ?? ''} onChange={(e) => {
+              const goalId = e.target.value === '' ? undefined : +e.target.value
+              patch({ goalId }); setTasks(tasks.map((t) => (t.deadlineId === dl.id ? { ...t, goalId } : t))) // its tasks follow, and count as hours put into the goal
+            }}>
+              <option value="">None</option>
+              {goals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+            </select>
           </label>
           <label className="flex items-center gap-1">Project
             <select className={input} value={dl.projectId ?? ''} onChange={(e) => {

@@ -8,17 +8,18 @@ import Row from '../components/Row.jsx'
 import Syllabus from '../Syllabus.jsx'
 import { DeadlineCard } from './Deadlines.jsx'
 import { post } from '../api.js'
+import SaveButton from '../components/SaveButton.jsx'
 import DateField from '../components/DateField.jsx'
 
 // Tasks, TickTick-style: quick add that understands "tomorrow 3pm #project", smart lists, date groups and a detail panel.
 // The Eisenhower matrix and AI sorting are one switch away.
-function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse, split, dismiss }) {
+function Detail({ t, goals = [], projects, deadlines, update, onDelete, onClose, bd, analyse, split, dismiss }) {
   const field = 'flex flex-col gap-1 text-base text-slate-600'
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto bg-white p-5 md:inset-y-0 md:left-auto md:w-[26rem] md:border-l md:border-line" role="dialog" aria-label="Task details" onKeyDown={(e) => e.key === 'Escape' && onClose()}>
       <div className="mb-4 flex items-center justify-between">
         <label className="flex items-center gap-2 text-base"><input type="checkbox" checked={!!t.done} onChange={() => update(t.id, { done: !t.done })} />{t.done ? 'Done' : 'Mark done'}</label>
-        <button className={`${btn} ${ghost}`} onClick={onClose}>Close</button>
+        <span className="flex gap-2"><SaveButton /><button className={`${btn} ${ghost}`} onClick={onClose}>Close</button></span>
       </div>
       <input className={`${input} w-full !text-base font-medium`} aria-label="Title" value={t.title} onChange={(e) => update(t.id, { title: e.target.value })} />
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -53,6 +54,12 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
           <label className={field}>Starts (for ongoing work)<DateField className={input} max={t.due || undefined} value={t.from || ''} onChange={(e) => update(t.id, { from: e.target.value || undefined })} /></label>
           <label className={field}>Do it on<DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
           <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
+          <label className={field}>Goal it serves
+            <select className={input} value={t.goalId ?? ''} onChange={(e) => update(t.id, { goalId: e.target.value === '' ? undefined : +e.target.value, manual: true })}>
+              <option value="">None</option>
+              {goals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+            </select>
+          </label>
           <label className={field}>Part of project
             <select className={input} value={t.projectId ?? ''} onChange={(e) => update(t.id, { projectId: e.target.value === '' ? undefined : +e.target.value })}>
               <option value="">None (Inbox)</option>
@@ -62,7 +69,7 @@ function Detail({ t, projects, deadlines, update, onDelete, onClose, bd, analyse
           <label className={field}>Part of deadline
             <select className={input} value={t.deadlineId ?? ''} onChange={(e) => {
               const dl = deadlines.find((d) => d.id === +e.target.value)
-              update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId } : { deadlineId: undefined })
+              update(t.id, dl ? { deadlineId: dl.id, due: t.due || dl.date, projectId: dl.projectId ?? t.projectId, goalId: dl.goalId ?? t.goalId } : { deadlineId: undefined })
             }}>
               <option value="">None</option>
               {deadlines.map((d) => <option key={d.id} value={d.id}>{d.title}, {fmtDate(d.date)}</option>)}
@@ -271,7 +278,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
           <ul className="mt-2 space-y-2">{doneList.map(row)}</ul>
         </details>
       )}
-      {selected && <Detail t={selected} projects={projects} deadlines={deadlines} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
+      {selected && <Detail t={selected} goals={goals} projects={projects} deadlines={deadlines} update={update} bd={bd?.id === selected.id ? bd : null} analyse={analyse} split={split} dismiss={dismiss} onClose={() => setSel(null)} onDelete={() => { deleteTask(selected); setSel(null) }} />}
       <button className={`${BLUE} fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center text-2xl md:hidden`} aria-label="Add a task"
         onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); quickRef.current?.focus() }}>+</button>
     </>

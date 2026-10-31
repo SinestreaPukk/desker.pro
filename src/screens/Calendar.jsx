@@ -6,6 +6,7 @@ import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
 import { getTaskTime, timeSentence, fmtMin } from '../taskTime.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
+import SaveButton from '../components/SaveButton.jsx'
 import DateField from '../components/DateField.jsx'
 
 function Detail({ t, goals, deadlines, update, remove, close, onStart, rhythm }) {
@@ -17,7 +18,7 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart, rhythm })
     <section className={`mt-4 p-3 ${color(t)}`} aria-label="Task details">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold">{t.fun ? 'Fun session' : 'Task details'}</h2>
-        <button className={`${btn} hover:bg-white`} onClick={close}>Close</button>
+        <span className="flex gap-2"><SaveButton /><button className={`${btn} hover:bg-white`} onClick={close}>Close</button></span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={`${lbl} sm:col-span-2`}>Title
@@ -27,10 +28,10 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart, rhythm })
           <DateField className={input} value={t.due || ''} onChange={(e) => update(t.id, { due: e.target.value })} />
         </label>}
         <label className={lbl}>Planned for
-          <DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value })} />
+          <DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, ...(!e.target.value && { start: undefined }) })} />
         </label>
         <label className={lbl}>Start time
-          <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined })} />
+          <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, ...(e.target.value && !t.when && { when: t.due || todayStr() }) })} />
         </label>
         <label className={lbl}>Your guess (hours)
           <input type="number" min="0" step="0.5" className={input} value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />

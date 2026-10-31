@@ -8,7 +8,7 @@ export const EVENTS = {
   right_now_started: { via: ['calendar', 'pick', 'auto'] }, plan_generated: { ai: 'bool', moved: 'int', problems: 'int' }, agent_message_sent: {},
   session_started: { device: ['phone', 'desktop'], theme: ['light', 'dark'] },
   focus_session_completed: { minutes: 'int', result: ['finished', 'abandoned'] }, duration_logged: { source: ['timer', 'chip'] },
-  energy_logged: { prompted: 'bool' }, morning_plan_opened: {}, wrapup_completed: {}, kodama_named: {}, followup_answered: { result: ['well', 'okay', 'rough'] }, rhythm_page_viewed: {},
+  energy_logged: { prompted: 'bool' }, morning_plan_opened: {}, wrapup_completed: {}, kodama_named: {}, followup_answered: { result: ['well', 'okay', 'rough'] }, rhythm_page_viewed: {}, feedback_sent: { kind: ['bug', 'idea', 'love', 'other'] },
   notification_opened: { kind: ['morning', 'evening'] }, notification_sent: { kind: ['morning', 'evening'] },
 }
 

@@ -3,6 +3,7 @@
 // nothing is deducted for time away, and no line here mentions missed days.
 import { cleanName } from './persona.js'
 import { dayStr, kodamaMood } from './milestones.js'
+import { goalDay, freeForGoals } from './goalwork.js'
 import { realityCheck, plannerOf, profile } from './rhythm.js'
 import { getTaskTime, fmtMin } from './taskTime.js'
 
@@ -87,6 +88,8 @@ export function stateOf(data, { focusing = false, now = new Date(), heavy = fals
   if (h >= 23 || h < 5) return 'sleepy'
   const m = kodamaMood(data?.goals || [], today)
   if (m.mood !== 'idle') return m.mood
+  if (goalDay(data, today)?.reached) return 'happy' // the day's goal time is in
+  if (freeForGoals(data, today)) return 'free' // everything that was in the way is done
   const justDone = (data?.tasks || []).some((t) => t.done && t.doneAt && now - t.doneAt < 36e5)
   if (justDone) return 'happy'
   if (doneToday(data, 'evening', today)) return 'cozy'
@@ -118,6 +121,8 @@ export function lineFor(data, { now = new Date(), focusing = false } = {}) {
   }
   const m = kodamaMood(data?.goals || [], today)
   if (m.happy) return 'A milestone. That took real work.'
+  if (goalDay(data, today)?.reached) return "Today's goal time is in. That is real progress."
+  if (freeForGoals(data, today)) return 'Everything that was in the way is done. The rest of today is yours: your goals, or something that makes you happy.'
   if (doneToday(data, 'evening', today)) return wrapReply(data, today)
   // Something true about today instead of a greeting: what is planned, what is coming, or how much is open.
   const planned = open.filter((t) => t.when === today)

@@ -142,7 +142,7 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 .px-kodama { width: calc(44 * var(--px)); height: calc(44 * var(--px)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(264 * var(--px)) calc(44 * var(--px)) no-repeat; image-rendering: pixelated; }
 .px-kodama[data-mood='idle'] { animation: k-idle 5s steps(1) infinite; }
 .px-kodama[data-mood='happy'] { background-position: calc(-88 * var(--px)) 0; animation: k-happy .8s steps(1) infinite; }
-.px-kodama[data-mood='lucky'] { background-position: calc(-176 * var(--px)) 0; animation: k-lucky 1.6s steps(1) infinite; }
+.px-kodama[data-mood='lucky'], .px-kodama[data-mood='free'] { background-position: calc(-176 * var(--px)) 0; animation: k-lucky 1.6s steps(1) infinite; } /* free reuses the lucky pose until it has its own drawing */
 /* Companion states without their own drawing yet reuse the idle and blink frames at a different pace (poses to draw are listed in CHANGES.md):
    focus = eyes open and still, sleepy = eyes mostly closed, cozy and calm = a slower idle. */
 .px-kodama[data-mood='focus'] { background-position: 0 0; }

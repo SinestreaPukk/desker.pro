@@ -13,6 +13,9 @@ import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile,
 import { logEnergy } from './energy.js'
 import EnergyAsk from './components/EnergyAsk.jsx'
 import NamePrompt from './components/NamePrompt.jsx'
+import Feedback from './components/Feedback.jsx'
+import { goalDay } from './goalwork.js'
+import { SyncContext } from './components/SaveButton.jsx'
 import TimeAsk from './components/TimeAsk.jsx'
 import { track } from './analytics.js'
 import Today from './screens/Today.jsx'
@@ -79,7 +82,7 @@ export default function App() {
     const id = setTimeout(() => setToast(null), 15000)
     return () => clearTimeout(id)
   }, [toast, toastHeld])
-  const { data, setData, loadError, status: saveStatus } = useSync(user?.id)
+  const { data, setData, loadError, status: saveStatus, save } = useSync(user?.id)
   // keep an imported calendar fresh (at most hourly)
   const stale = data?.sync?.url && Date.now() - data.sync.at > 36e5 ? data.sync.url : null
   useEffect(() => {
@@ -192,7 +195,9 @@ export default function App() {
   const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar /></span>
 
   return (
+    <SyncContext.Provider value={{ status: saveStatus, save }}>
     <div className="min-h-dvh">
+      <Feedback page={tab} />
       {needsName(data) && data.kodama?.legacy !== undefined && <NamePrompt setData={setData} />}
       <header className="sticky top-0 z-10 hidden border-b border-line bg-white md:block">
         <div className={`mx-auto px-8 pt-3 ${WRAP}`}>
@@ -202,7 +207,6 @@ export default function App() {
             <span className="block text-base font-semibold leading-tight">Desker</span>
           </button>
           <div className="flex items-center gap-2">
-            <span role="status" className="hidden text-xs text-slate-700 sm:block">{saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : ''}</span>
             <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Talk to {nameOf(data)}</button>
             <Settings data={data} setData={setData} />
           </div>
@@ -233,7 +237,7 @@ export default function App() {
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
               goTab={setTab} openTimer={() => setFocusOpen(true)} deleteTask={deleteTask} openAgent={() => setAgentOpen(true)} onReplan={openReplan} onReview={openReview} />}
             {tab === 'Tasks' && <Tasks rhythm={rhythm} goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
-            {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} onMilestone={milestoneReached} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
+            {tab === 'Goals' && <Goals daily={goalDay(data)} goals={goals} setGoals={setGoals} onMilestone={milestoneReached} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects rhythm={rhythm} goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
             {tab === 'Rhythm' && <Rhythm data={data} setData={setData} onReplan={openReplan} />}
             {tab === 'Calendar' && <Calendar rhythm={rhythm} goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
@@ -293,5 +297,6 @@ export default function App() {
         </div>
       </nav>
     </div>
+    </SyncContext.Provider>
   )
 }

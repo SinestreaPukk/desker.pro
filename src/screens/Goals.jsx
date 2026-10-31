@@ -3,7 +3,10 @@ import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import Review from '../Review.jsx'
 import { areaTag } from '../guide/questions.js'
 import KodamaCard from '../components/KodamaCard.jsx'
+import { goalHours } from '../goalwork.js'
 import { msOf, progress, addMilestone, removeMilestone, toggleMilestone } from '../milestones.js'
+
+const Hours = ({ pct, label }) => <div className="mt-2 h-3 w-full overflow-hidden border-2 border-line bg-panel" role="progressbar" aria-valuenow={pct} aria-valuemin="0" aria-valuemax="100" aria-label={label}><div className="h-full bg-primary" style={{ width: `${pct}%` }} /></div>
 
 function Hobbies({ hobbies, setHobbies }) {
   const [v, setV] = useState('')
@@ -61,7 +64,7 @@ function GuideEntry({ goals, guide, onGuide, setSkipped }) {
   )
 }
 
-export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbies, tasks, onReview, guide, onGuide, fresh, onMakeTasks, onDismissOffer }) {
+export default function Goals({ daily, goals, setGoals, onMilestone, hobbies, setHobbies, tasks, onReview, guide, onGuide, fresh, onMakeTasks, onDismissOffer }) {
   const [area, setArea] = useState('')
   const [pyramid, setPyramid] = useState(() => goals.some((g) => g.level < 3)) // a new student starts with this term's goals; the rest unfolds on request
   const areas = [...new Set(goals.map((g) => g.area).filter(Boolean))]
@@ -81,6 +84,7 @@ export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbie
   return (
     <>
       <KodamaCard goals={goals} className="mb-4" />
+      {daily && <div className={`${panel} mb-4`}><p className="flex flex-wrap justify-between gap-2"><b className="font-semibold">Goal time today</b><span>{Math.round(daily.put * 10) / 10}h of {Math.round(daily.target * 10) / 10}h{daily.reached && ' · reached'}</span></p><Hours pct={daily.pct} label="Goal time today" /><p className="mt-1 text-base text-slate-700">The kodama is happy once the goal time planned for today is in.</p></div>}
       <GuideEntry goals={goals} guide={guide} onGuide={onGuide} setSkipped={() => onGuide('skip')} />
       {fresh?.offer && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 bg-pale p-4 text-base">
@@ -124,6 +128,11 @@ export default function Goals({ goals, setGoals, onMilestone, hobbies, setHobbie
                     <button className={`${btn} text-danger hover:bg-slate-100`} onClick={() => setGoals(goals.filter((x) => x.id !== g.id))}>Delete</button>
                   </span>
                   </div>
+                  {(() => { const h = goalHours(g, tasks); const r = (n) => Math.round(n * 10) / 10; return (
+                    <div className="mt-2">
+                      <p className="flex flex-wrap justify-between gap-2 text-base text-slate-700"><span>Hours put in</span><span>{h.total > 0 ? `${r(h.put)}h of ${r(h.total)}h` : 'Link tasks with hours to fill this bar'}</span></p>
+                      {h.total > 0 && <Hours pct={h.pct} label={`Hours put into ${g.title}`} />}
+                    </div>) })()}
                   <div className="mt-2">
                     <p className="flex flex-wrap items-center gap-2 text-base text-slate-700">Milestones <span className="flex gap-1" aria-hidden="true">{msOf(g).map((m) => <span key={m.id} className={`px-pip ${m.at ? 'px-pip-on' : ''}`} />)}</span>{msOf(g).length > 0 && `${progress(g).done} of ${progress(g).total}`}</p>
                     <ul className="mt-1 space-y-1">

@@ -18,12 +18,12 @@ const SOCIAL = {
 }
 export const socialProviders = Object.keys(SOCIAL)
 
-async function send(to, subject, content) {
+export async function send(to, subject, content, replyTo) {
   if (!mail) return void console.log(`\n[mail to ${to}] ${subject}\n${mailText(content)}\n`)
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Desker <onboarding@resend.dev>', to, subject, html: mailHtml(content), text: mailText(content) }),
+    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Desker <onboarding@resend.dev>', to, subject, html: mailHtml(content), text: mailText(content), ...(replyTo && { reply_to: replyTo }) }),
     signal: AbortSignal.timeout(10_000),
   })
   if (!r.ok) throw new Error(`mail to ${to} failed: Resend ${r.status} ${await r.text().catch(() => '')}`)

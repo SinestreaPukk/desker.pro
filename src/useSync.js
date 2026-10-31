@@ -117,5 +117,6 @@ export function useSync(userId) {
     return () => { bc?.close(); chan.current = null; clearInterval(poll); document.removeEventListener('visibilitychange', visible); removeEventListener('focus', visible); removeEventListener('online', online); removeEventListener('pagehide', leave) }
   }, [userId, refresh, flush, keep])
 
-  return { data, setData, loadError, status }
+  const save = useCallback(() => { fails.current = 0; return flush() }, [flush]) // the Save button: send now, don't wait for the half-second timer or a retry gap
+  return { data, setData, loadError, status, save }
 }

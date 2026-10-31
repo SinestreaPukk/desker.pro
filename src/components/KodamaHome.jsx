@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Scene, Kodama, SEASONS } from '../px.jsx'
 import { input, btn, ghost } from '../ui.js'
+import { goalDay } from '../goalwork.js'
 import { nameOf, growthOf, stateOf, STAGES, WRAP_HOURS, wrapHour } from '../kodama.js'
 import { cleanName } from '../persona.js'
 import { badgesOf, nextBadge, habitStreak, habitDays } from '../game.js'
@@ -25,7 +26,8 @@ const MOODS = {
   idle: ['Resting', 'Nothing special going on. Ready when you are.'],
   focus: ['Focused', 'You are in a focus session, so it is keeping quiet.'],
   sleepy: ['Sleepy', 'It is late. It would like you to rest too.'],
-  happy: ['Happy', 'A goal milestone was reached today.'],
+  happy: ['Happy', 'A goal milestone was reached today, or all the goal time planned for today is in.'],
+  free: ['Free', 'Everything that was in the way is done. Now there is room for your goals or your happiness.'],
   lucky: ['Lucky', 'You reached a milestone yesterday, so today feels lucky.'],
   cozy: ['Cozy', 'You wrapped up the day. It is settling in.'],
   calm: ['Calm', 'Today looks full. It is staying steady with you.'],
@@ -90,6 +92,7 @@ export function KodamaSettings({ data, setData, focusing }) {
   const save = () => { const n = cleanName(draft); setDraft(n); if (n !== name) track('kodama_named'); if (n !== name) setData((d) => ({ ...d, kodama: { ...d.kodama, name: n, nameAsked: true } })) }
   const tasks = data.tasks || []
   const badges = badgesOf(data), got = badges.filter((b) => b.got), next = nextBadge(badges)
+  const day = goalDay(data)
   const mood = stateOf(data, { focusing: !!focusing }), [moodName, moodWhy] = MOODS[mood] || MOODS.idle
   const r = data.rhythm || {}, k = data.kodama || {}
   const timings = (r.outcomes || []).length + Object.values(r.archive || {}).reduce((n, a) => n + (a.n || 0), 0)
@@ -132,6 +135,7 @@ export function KodamaSettings({ data, setData, focusing }) {
             <div className="mt-3 space-y-3">
               {tab === 'Growth' && (
                 <>
+                  {day && <Card title="Goal time today" aside={`${Math.round(day.put * 10) / 10}h of ${Math.round(day.target * 10) / 10}h`}><Bar pct={day.pct} label="Goal time today" /><p className="mt-1 text-slate-700">{day.reached ? 'All of it is in. That is today\'s goal milestone.' : 'Put in the planned time and today counts as a goal milestone.'}</p></Card>}
                   <Card title="Growth stage" aside={`${g.points} growth`}>
                     <ol className="mt-2 grid grid-cols-5 gap-1 text-center">
                       {STAGES.map((st, i) => (
