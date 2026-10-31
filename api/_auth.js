@@ -42,7 +42,7 @@ const BY_EMAIL = {
 const hit = (key) => pool.query('insert into auth_hit (key) values ($1)', [key])
 const keyOf = (ctx) => (BY_EMAIL[ctx.path] && typeof ctx.body?.email === 'string' ? `${ctx.path}:${ctx.body.email.trim().toLowerCase().slice(0, 254)}` : null)
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 })
+const pool = new Pool({ connectionString: process.env.DATABASE_URL?.replace('sslmode=require', 'sslmode=verify-full'), max: 1 }) // same behaviour as 'require' in pg 8, without its warning
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -84,6 +84,7 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: mail,
+    sendOnSignIn: mail, // an unverified user who signs in gets a fresh link (covers a lost or failed first mail)
     autoSignInAfterVerification: true,
     sendVerificationEmail: ({ user, url }) => send(user.email, 'Confirm your Desker email', `Welcome to Desker. Confirm your email:\n${url}`),
   },

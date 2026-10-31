@@ -29,6 +29,7 @@ export default function AuthScreen() {
       : mode === 'forgot' ? authClient.requestPasswordReset({ email: f.email, redirectTo: '/reset-password' })
       : authClient.resetPassword({ newPassword: f.password, token }))
     setBusy(false)
+    if (error?.code === 'EMAIL_NOT_VERIFIED') return setMsg('Confirm your email first. We just sent you a new link; check your inbox and spam.')
     if (error) return setMsg(error.status === 429 ? 'Too many tries. Wait a little and try again.' : error.message || 'Something went wrong.')
     if (mode === 'forgot') return setMsg('If that email has an account, a reset link is on its way.')
     if (mode === 'reset') { history.replaceState(null, '', '/today'); return go('in'), setMsg('Password changed. Sign in with the new one.') }
