@@ -1,12 +1,12 @@
 // Shared by the AI endpoints: rate limit, Anthropic call, friendly errors. Key and prompts stay server-side.
 import { limit } from './_rate.js'
 import { sql } from './_store.js'
+import { userOf } from './_auth.js'
 
 // Token usage per AI call, read by the /dsb dashboard. Never lets a logging failure break the user's request.
 export async function record(req, model, usage, kind = new URL(req.url, 'http://x').pathname.split('/').pop()) {
   try {
-    const uid = String(req.headers['x-uid'] || '')
-    const user = /^[0-9a-f-]{36}$/.test(uid) ? uid : null
+    const user = await userOf(req)
     const tokens = [(usage?.input_tokens || 0) + (usage?.cache_creation_input_tokens || 0) + (usage?.cache_read_input_tokens || 0), usage?.output_tokens || 0]
     await sql.transaction((t) => [
       ...(user ? [t.query('insert into users (id) values ($1) on conflict do nothing', [user])] : []),
@@ -18,7 +18,9 @@ export async function record(req, model, usage, kind = new URL(req.url, 'http://
 // 60 AI calls per id per hour
 export async function guard(req, res) {
   if (req.method !== 'POST') return void res.status(405).end()
-  return limit(req, res, { scope: 'ai', max: 60 })
+  const id = await userOf(req)
+  if (!id) return void res.status(401).json({ error: 'Sign in first' })
+  return limit(req, res, { scope: 'ai', max: 60, id })
 }
 
 export const MODEL ='claude-haiku-5-5'

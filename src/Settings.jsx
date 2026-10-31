@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { btn, BLUE, ghost, input } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
-import { uid } from './api.js'
+import { authClient, useSession } from './auth.js'
 import { Icon } from './icons.jsx'
 
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
@@ -15,8 +15,10 @@ const store = {
 // row: a labelled sidebar entry whose panel opens upward; otherwise a round icon button.
 export default function Settings({ data, setData, row: inSidebar }) {
   const [open, setOpen] = useState(false)
+  const user = useSession().data.user
   const [rem, setRem] = useState(() => store.get('reminders') === '1' && 'Notification' in window && Notification.permission === 'granted')
   const [msg, setMsg] = useState('')
+  const [del, setDel] = useState(false)
   const [incoming, setIncoming] = useState(null)
   const latest = useRef(data)
   latest.current = data
@@ -75,20 +77,24 @@ export default function Settings({ data, setData, row: inSidebar }) {
           </label>
           <p className="text-xs text-slate-700">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
           <hr />
-          <p className="text-xs text-slate-700">Your data lives on our server under an anonymous id tied to this browser. Export a backup to keep it safe or to move it.</p>
+          <p className="text-xs text-slate-700">Signed in as {user.email}. Your data is saved to your account and follows you to any device.</p>
           <div className="text-xs text-slate-700">
-            <p>Sync code (also your API key, see README). Keep it private; paste it on another device to open this workspace there.</p>
-            <input readOnly className={`${input} mt-1 w-full font-mono text-xs`} aria-label="Your sync code" value={uid} onFocus={(e) => e.target.select()} />
-            <form className="mt-2 flex gap-2" onSubmit={(e) => {
-              e.preventDefault()
-              const c = e.target.code.value.trim()
-              if (!/^[0-9a-f-]{36}$/.test(c)) return setMsg('That is not a sync code.')
-              if (c !== uid && confirm('Switch to this workspace? Export a backup first if this device has data you want to keep.')) { localStorage.uid = c; location.reload() }
-            }}>
-              <input name="code" className={`${input} min-w-0 flex-1 font-mono text-xs`} placeholder="Paste a sync code" aria-label="Sync code to use" />
-              <button className={`${btn} ${ghost}`}>Use code</button>
-            </form>
+            <p>API key (see README). Keep it private.</p>
+            <input readOnly className={`${input} mt-1 w-full font-mono text-xs`} aria-label="Your API key" value={user.id} onFocus={(e) => e.target.select()} />
           </div>
+          <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => location.assign('/today'))}>Sign out</button>
+          {del ? (
+            <div role="alert" className="bg-yuki-1 p-2 text-base">
+              Delete your account and everything in it (tasks, goals, projects)? We email you a link to confirm. This cannot be undone.
+              <div className="mt-2 flex gap-2">
+                <button className={`${btn} text-danger`} onClick={async () => {
+                  const { error } = await authClient.deleteUser({ callbackURL: '/today' })
+                  setDel(false); setMsg(error ? error.message || 'Could not start deletion.' : 'Check your email for the confirmation link.')
+                }}>Send link</button>
+                <button className={`${btn} ${ghost}`} onClick={() => setDel(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : <button className={`${btn} ${ghost} text-danger`} onClick={() => setDel(true)}>Delete account</button>}
           <div className="flex flex-wrap gap-2">
             <button className={`${btn} ${ghost}`} onClick={exportData}>Export JSON</button>
             <label className={`${btn} inline-flex cursor-pointer items-center ${ghost}`}>Import JSON

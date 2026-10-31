@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { post, uid } from '../api.js'
+import { post } from '../api.js'
+import { useSession } from '../auth.js'
 import { BLUE, btn, input, ghost, panel, Q } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
@@ -60,6 +61,7 @@ function CalendarSync({ data, setData }) {
   const [url, setUrl] = useState(data.sync?.url || '')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
+  const uid = useSession().data.user.id
   const feed = `${location.origin}/api/ics?uid=${uid}`
   const webcal = feed.replace(/^https?/, 'webcal')
   const local = ['localhost', '127.0.0.1'].includes(location.hostname)

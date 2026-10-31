@@ -115,3 +115,64 @@ create table if not exists ai_calls (
 create index if not exists ai_calls_user on ai_calls (user_id, created_at);
 create index if not exists ai_calls_kind on ai_calls (kind, created_at);
 create index if not exists users_seen    on users (last_seen_at);
+
+-- Accounts (Better Auth, api/_auth.js). "user".id is the same value as users.id: the app row is created on the first save.
+-- Passwords live only in account.password, as a salted scrypt hash.
+create table if not exists "user" (
+  id              text primary key,
+  name            text not null,
+  email           text not null unique,
+  "emailVerified" boolean not null default false,
+  image           text,
+  "createdAt"     timestamptz not null default now(),
+  "updatedAt"     timestamptz not null default now()
+);
+create table if not exists session (
+  id          text primary key,
+  "expiresAt" timestamptz not null,
+  token       text not null unique,
+  "createdAt" timestamptz not null default now(),
+  "updatedAt" timestamptz not null default now(),
+  "ipAddress" text,
+  "userAgent" text,
+  "userId"    text not null references "user"(id) on delete cascade
+);
+create index if not exists session_by_user on session ("userId");
+create table if not exists account (
+  id                      text primary key,
+  "accountId"             text not null,
+  "providerId"            text not null,
+  "userId"                text not null references "user"(id) on delete cascade,
+  "accessToken"           text,
+  "refreshToken"          text,
+  "idToken"               text,
+  "accessTokenExpiresAt"  timestamptz,
+  "refreshTokenExpiresAt" timestamptz,
+  scope                   text,
+  password                text,
+  "createdAt"             timestamptz not null default now(),
+  "updatedAt"             timestamptz not null default now()
+);
+create index if not exists account_by_user on account ("userId");
+create table if not exists verification (
+  id          text primary key,
+  identifier  text not null,
+  value       text not null,
+  "expiresAt" timestamptz not null,
+  "createdAt" timestamptz not null default now(),
+  "updatedAt" timestamptz not null default now()
+);
+create index if not exists verification_identifier on verification (identifier);
+create table if not exists "rateLimit" (
+  id            text primary key,
+  key           text,
+  count         integer,
+  "lastRequest" bigint
+);
+
+-- Per-email attempt log behind the account-level rate limits in api/_auth.js (pruned daily by the code).
+create table if not exists auth_hit (
+  key text not null,
+  at  timestamptz not null default now()
+);
+create index if not exists auth_hit_key on auth_hit (key, at);
