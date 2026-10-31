@@ -62,10 +62,16 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const stats = doneStats(tasks)
   const clashes = overlaps(tasks, data.busy || []).length // planned times that overlap (older plans, or edits by hand)
   const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
+  const left = (h) => (h > 0 ? Math.round(h * 10) / 10 : 0)
   const soon = [
-    ...deadlines.map((d) => ({ id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline' })),
-    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task' })),
+    ...deadlines.filter((d) => !d.done).map((d) => {
+      const mine = open.filter((t) => t.deadlineId === d.id) // work left = its open tasks, or the whole estimate if it has none yet
+      return { id: `d${d.id}`, title: d.title, date: d.date, kind: 'Deadline', work: mine.length ? left(mine.reduce((n, t) => n + Math.max(0, (t.hours || 0) - (t.spent || 0)), 0)) : left(d.hours) }
+    }),
+    ...open.filter((t) => t.due).map((t) => ({ id: `t${t.id}`, title: t.title, date: t.due, kind: 'Task', work: left((t.hours || 0) - (t.spent || 0)) })),
   ].filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))
+  const daysTo = (date) => Math.round((new Date(`${date}T12:00`) - new Date(`${today}T12:00`)) / 864e5)
+  const timeLeft = (date) => { const n = daysTo(date); return n === 0 ? 'Due today' : `${n} day${n === 1 ? '' : 's'} left` }
   const thisWeek = soon.filter((x) => x.date <= weekEnd)
   const finding = clashes
     ? `${clashes === 1 ? 'Two things are' : 'Some things are'} planned at the same time. Replan to fix it.`
@@ -270,6 +276,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <li key={x.id} className="px-rule py-2">
                 <p className="break-words">{x.title}</p>
                 <p className="text-xs text-slate-700">{x.kind}, {x.date === today ? 'today' : fmtDate(x.date)}</p>
+                <p className="text-xs text-slate-700">{timeLeft(x.date)}{x.work ? `. ${x.work}h of work left` : ''}</p>
               </li>
             ))}
             {!soon.length && <li className="text-slate-700">Nothing due soon. Add a task with a date, or ask your kodama to plan tomorrow.</li>}
