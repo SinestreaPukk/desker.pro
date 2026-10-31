@@ -117,14 +117,14 @@ details > summary { cursor: pointer; }
 .px-avatar-scene { animation-name: blink-scene; }
 @keyframes blink-scene { 0%, 94% { background-position: 0 0; } 95%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
 
-/* Kodama: 24x24 sprite, 6 frames (idle, blink, happy a/b, lucky a/b), drawn big at the scene scale. Idle plays with a leaf and blinks, happy jumps, lucky waves and sparkles. */
-.px-kodama { width: calc(24 * var(--px-scene)); height: calc(24 * var(--px-scene)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(144 * var(--px-scene)) calc(24 * var(--px-scene)) no-repeat; image-rendering: pixelated; }
+/* Kodama: 33x33 sprite, 6 frames (idle, blink, happy a/b, lucky a/b), at 1.5 x --px. Idle plays with a leaf and blinks, happy jumps, lucky waves and sparkles. */
+.px-kodama { --k: calc(1.5 * var(--px)); width: calc(33 * var(--k)); height: calc(33 * var(--k)); flex: none; background: url(/pixel/kodama.sheet.png) 0 0 / calc(198 * var(--k)) calc(33 * var(--k)) no-repeat; image-rendering: pixelated; }
 .px-kodama[data-mood='idle'] { animation: k-idle 5s steps(1) infinite; }
-.px-kodama[data-mood='happy'] { background-position: calc(-48 * var(--px-scene)) 0; animation: k-happy .8s steps(1) infinite; }
-.px-kodama[data-mood='lucky'] { background-position: calc(-96 * var(--px-scene)) 0; animation: k-lucky 1.6s steps(1) infinite; }
-@keyframes k-idle { 0%, 93% { background-position: 0 0; } 94%, 100% { background-position: calc(-24 * var(--px-scene)) 0; } }
-@keyframes k-happy { 0%, 49% { background-position: calc(-48 * var(--px-scene)) 0; } 50%, 100% { background-position: calc(-72 * var(--px-scene)) 0; } }
-@keyframes k-lucky { 0%, 49% { background-position: calc(-96 * var(--px-scene)) 0; } 50%, 100% { background-position: calc(-120 * var(--px-scene)) 0; } }
+.px-kodama[data-mood='happy'] { background-position: calc(-66 * var(--k)) 0; animation: k-happy .8s steps(1) infinite; }
+.px-kodama[data-mood='lucky'] { background-position: calc(-132 * var(--k)) 0; animation: k-lucky 1.6s steps(1) infinite; }
+@keyframes k-idle { 0%, 93% { background-position: 0 0; } 94%, 100% { background-position: calc(-33 * var(--k)) 0; } }
+@keyframes k-happy { 0%, 49% { background-position: calc(-66 * var(--k)) 0; } 50%, 100% { background-position: calc(-99 * var(--k)) 0; } }
+@keyframes k-lucky { 0%, 49% { background-position: calc(-132 * var(--k)) 0; } 50%, 100% { background-position: calc(-165 * var(--k)) 0; } }
 .px-pip { display: inline-block; width: calc(4 * var(--px)); height: calc(4 * var(--px)); background: var(--color-yuki-2); }
 .px-pip-on { background: var(--color-matsu-1); }
 

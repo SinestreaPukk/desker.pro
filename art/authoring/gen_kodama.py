@@ -1,89 +1,68 @@
 #!/usr/bin/env python3
-"""Kodama sprite sheet at a low resolution: 24x24 frames, six of them, drawn big at --px-scene.
-The cloud head, its light and the colours come from the pose sheet; the faces, limbs and sparkles are drawn by hand at this size.
-idle-a / idle-b  leaf play (the default) and a blink     happy-a / happy-b  arms out, smiling, sprout; then a 1px hop
-lucky-a / lucky-b  waving, sparkles that swap places
-Palette art/palette/kodama.json (read off the sheet). Light from upper-left."""
-import json, pathlib
-ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-PALETTE = {'line': '#3F2919', 'lime': '#BDD759', 'lime-hi': '#D1E281', 'lime-lo': '#9FBF42', 'leg': '#3D925F', 'blush': '#E07F4C', 'eye': '#F5F2CE', 'leaf': '#708C3A'}
-LETTER = {'K': 'line', 'G': 'lime', 'H': 'lime-hi', 'g': 'lime-lo', 'L': 'leg', 'P': 'blush', 'W': 'eye', 'M': 'leaf'}
-N = 24; BASE = 22                       # all poses stand on row 22
-HEAD = [                                # 18 x 14 cloud, two top bumps and a bump each side
-    '....KKKK..KKKK....',
-    '..KKHHGGKKGGGGKK..',
-    '.KHHHGGGGGGGGGGGK.',
-    'KHHGGGGGGGGGGGGGGK',
-    'KHGGGGGGGGGGGGGGGK',
-    'KGGGGGGGGGGGGGGGGK',
-    'KGGGGGGGGGGGGGGGGK',
-    'KGGGGGGGGGGGGGGGgK',
-    'KGGGGGGGGGGGGGGggK',
-    '.KGGGGGGGGGGGGgggK',
-    '.KGGGGGGGGGGGgggK.',
-    '..KGGGGGGGGGgggK..',
-    '...KKGGGGGGggKK...',
-    '.....KKKKKKKK.....']
-HX, HY = 3, 5                           # head origin on the canvas
+"""Kodama sprite sheet, 44x44, six frames, from the pose sheet (traced by kodama_read.py, cut and quantised by kodama_poses.py).
+idle-a / idle-b  the leaf-play pose (the default) and a blink
+happy-a / happy-b  the jump pose, then a 2px hop
+lucky-a / lucky-b  the waving pose with sparkles that swap places
+Palette: art/palette/kodama.json, written here from the colours found on the sheet."""
+import json, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import kodama_poses as kp
+ROOT = kp.ROOT
+POSES = {k: [r.translate(str.maketrans('Bbh', 'KKK')) for r in v] for k, v in kp.POSES.items()}   # the sheet's log colours only leak in as stray cells
+inv = {v: k for k, v in kp.LETTER.items()}
+N = 44; BOTTOM = 43; M = 33   # drawn at 44, shipped at 33 (3/4)   # all poses stand on the same baseline
 
 def canvas(): return [['.'] * N for _ in range(N)]
-class Pose:
-    def __init__(s, dy=0, hx=HX): s.c = canvas(); s.dy = dy; s.hx = hx
-    def put(s, x, y, ch):
-        y += s.dy
-        if 0 <= x < N and 0 <= y < N: s.c[y][x] = ch
-    def head(s):
-        for j, r in enumerate(HEAD):
-            for i, ch in enumerate(r):
-                if ch != '.': s.put(s.hx + i, HY + j, ch)
-    def at(s, x, y, rows, skip='.'):
-        for j, r in enumerate(rows):
-            for i, ch in enumerate(r):
-                if ch != skip: s.put(s.hx + x + i, HY + y + j, ch)
-    def leg(s, x, d):                   # hangs below the head; foot points in direction d (-1 left, +1 right)
-        s.at(x, 14, ['KLLK', 'KLLK'])
-        s.at(x + (-2 if d < 0 else 0), 16, ['KLLLLK'] if True else [])
-        s.at(x + (-2 if d < 0 else 0), 17, ['KKKKKK'])
-    def sparkle(s, plus, dot):
-        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)): s.put(plus[0] + dx, plus[1] + dy, 'P')
-        s.put(dot[0], dot[1], 'P')
-    def rows(s): return [''.join(r) for r in s.c]
-
-EYE = ['.KK.', 'KKWK', 'KKKK', '.KK.']
+def place(c, rows, dy=0):
+    h, w = len(rows), len(rows[0]); x0, y0 = (N - w) // 2, BOTTOM - h + dy
+    for y, r in enumerate(rows):
+        for x, ch in enumerate(r):
+            if ch != '.' and 0 <= y0 + y < N: c[y0 + y][x0 + x] = ch
+    return x0, y0
 
 def idle(blink):
-    p = Pose(); p.head()
-    for ex in (3, 11):
-        if blink: p.at(ex, 5, ['KKKK']); p.at(ex, 6, ['.GG.'])      # lid shut: one dark line
-        else: p.at(ex, 4, EYE)
-    p.at(2, 8, ['PP']); p.at(14, 8, ['PP'])
-    p.at(8, 9, ['MMM']); p.at(9, 10, ['M']); p.at(7, 10, ['K']); p.at(11, 10, ['K']); p.at(8, 11, ['KKK'])    # a leaf held at the mouth
-    p.leg(4, -1); p.leg(11, 1)
-    return p
+    c = canvas(); x0, y0 = place(c, POSES['leaf'])
+    if blink:                                                                        # eyes shut: lid lines where the eyes were
+        for ex in (8, 19):
+            for y in range(11, 19):
+                for x in range(ex, ex + 7): c[y0 + y][x0 + x] = 'G'
+            for x in range(ex, ex + 7): c[y0 + 15][x0 + x] = 'K'
+            c[y0 + 14][x0 + ex] = 'K'; c[y0 + 14][x0 + ex + 6] = 'K'
+    return c
 def happy(dy):
-    p = Pose(dy); p.head()
-    for ex in (3, 11): p.at(ex, 5, ['.KK.', 'K..K'])                                                       # smiling closed eyes
-    p.at(2, 8, ['PP']); p.at(14, 8, ['PP']); p.at(8, 9, ['KK'])
-    p.at(-3, 6, ['KKKK', 'KGGG', 'KGGG', 'KKKK'][:4]); p.at(17, 6, ['KKKK', 'GGGK', 'GGGK', 'KKKK'])        # arms thrown out
-    p.at(9, -1, ['K']); p.at(9, -2, ['K']); p.at(10, -3, ['MMM']); p.at(6, -3, ['MMM']); p.at(5, -4, ['KKKKK']) if False else None
-    p.at(5, -2, ['MM']); p.at(10, -2, ['MM'])                                                                # the sprout
-    p.leg(3, -1); p.leg(12, 1)                                                                                # feet kicked out
-    return p
+    c = canvas(); place(c, POSES['jump'], dy); return c
 def lucky(spark):
-    p = Pose(0, 2); p.head()
-    for ex in (3, 11): p.at(ex, 4, EYE)
-    p.at(2, 8, ['PP']); p.at(14, 8, ['PP']); p.at(8, 9, ['KK'])
-    p.at(18, 1, ['.KK.', 'KGGK', 'KGGK', 'KGGK', 'KGGK', 'KGGK', 'K...'])                                      # an arm raised, waving
-    p.leg(4, -1); p.leg(11, 1)
-    p.sparkle((3, 3), (20, 13)) if spark == 0 else p.sparkle((20, 1), (2, 12))
-    return p
+    c = canvas(); place(c, POSES['wave'])
+    plus, dot = ((4, 9), (41, 20)) if spark == 0 else ((40, 5), (2, 18))
+    for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)): c[plus[1] + dy][plus[0] + dx] = 'P'
+    c[dot[1]][dot[0]] = 'P'
+    return c
 
-FRAMES = [('idle-a', idle(False)), ('idle-b', idle(True)), ('happy-a', happy(0)), ('happy-b', happy(-1)), ('lucky-a', lucky(0)), ('lucky-b', lucky(1))]
-used = sorted({ch for _, p in FRAMES for r in p.rows() for ch in r if ch != '.'})
+def shrink(c):
+    """Resample N -> M: area-average the colours (alpha-weighted), then snap each cell to the nearest sheet colour, so eyes keep their highlights."""
+    import numpy as np
+    rgb = {ch: np.array(kp.PAL[inv[ch]], float) for ch in {x for r in c for x in r if x != '.'}}
+    out = [['.'] * M for _ in range(M)]
+    for y in range(M):
+        for x in range(M):
+            y0, y1, x0, x1 = y * N / M, (y + 1) * N / M, x * N / M, (x + 1) * N / M
+            acc, tot = np.zeros(3), 0.0
+            wts = {}
+            for j in range(int(y0), min(N, int(np.ceil(y1)))):
+                for i in range(int(x0), min(N, int(np.ceil(x1)))):
+                    w = (min(j + 1, y1) - max(j, y0)) * (min(i + 1, x1) - max(i, x0)); tot += w
+                    if c[j][i] != '.': acc += rgb[c[j][i]] * w; wts[c[j][i]] = wts.get(c[j][i], 0) + w
+            cover = sum(wts.values())
+            if cover < tot * .5: continue
+            m = acc / cover
+            out[y][x] = min(rgb, key=lambda k: ((rgb[k] - m) ** 2).sum())
+    return out
+FRAMES = [(n, shrink(c)) for n, c in [('idle-a', idle(False)), ('idle-b', idle(True)), ('happy-a', happy(0)), ('happy-b', happy(-2)), ('lucky-a', lucky(0)), ('lucky-b', lucky(1))]]
+used = sorted({ch for _, c in FRAMES for row in c for ch in row if ch != '.'})
 (ROOT / 'art/palette/kodama.json').write_text(json.dumps({'name': 'kodama', 'note': 'The one exception to yuki16: colours read off the kodama pose sheet. Used only by the kodama sprite.',
-    'colors': {LETTER[ch]: PALETTE[LETTER[ch]] for ch in used}}, indent=2) + '\n')
-head = ['# kodama: tree spirit mascot, hand-drawn at low resolution from the pose sheet. Generated by art/authoring/gen_kodama.py.', f'size {N} {N}', 'palette kodama', '. transparent'] + [f'{ch} {LETTER[ch]}' for ch in used]
+    'colors': {inv[ch]: '#%02X%02X%02X' % kp.PAL[inv[ch]] for ch in used}}, indent=2) + '\n')
+head = ['# kodama: tree spirit mascot from the pose sheet. Generated by art/authoring/gen_kodama.py.', f'size {M} {M}', 'palette kodama', '. transparent'] + [f'{ch} {inv[ch]}' for ch in used]
 body = []
-for name, p in FRAMES: body += [f'frame {name}'] + p.rows()
+for name, c in FRAMES: body += [f'frame {name}'] + [''.join(r) for r in c]
 (ROOT / 'art/sprites/kodama.sprite.txt').write_text('\n'.join(head + body) + '\n')
 print('wrote kodama', used)

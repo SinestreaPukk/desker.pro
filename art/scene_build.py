@@ -6,7 +6,7 @@ three role->yuki16 tables, so the pixels are identical and only the palette chan
 the moon is upper-left, so every lit face on every object faces upper-left.
 
 Planes: sky and stars and clouds and moon -> far peaks -> forest ridge -> far shore (house, pines) -> lake
-(reflections, glints) -> torii in the shallows -> near bank (drifts, footprints, post) -> foreground
+(reflections, glints) -> sailboat -> near bank (drifts, footprints, post) -> foreground
 framing (rock, reeds, pine branch). The avatar is a live overlay (blink) standing on the post.
 
 Output: public/pixel/scene-{morning,dusk,night}.png, scene.json, src/scene-motion.json.
@@ -34,6 +34,7 @@ R = {
     'pine': ('matsu-1', 'matsu-0', 'matsu-1'), 'pine_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'pine_d': ('yoru-2', 'matsu-2', 'yoru-2'),
     'thatch': ('kuri', 'kuri', 'kuri'), 'thatch_s': ('yoru-1', 'yoru-1', 'yoru-1'), 'wood': ('kuri', 'kuri', 'kuri'), 'wood_s': ('yoru-1', 'yoru-1', 'yoru-1'),
     'win': ('hada-0', 'hada-0', 'hada-0'), 'win_g': ('hada-1', 'hada-1', 'hada-1'), 'pool0': ('hada-1', 'yuki-2', 'hada-1'), 'pool1': ('hada-0', 'yuki-1', 'hada-0'),
+    'sail': ('yuki-2', 'yuki-0', 'hada-0'), 'sail_s': ('yuki-3', 'yuki-2', 'yuki-3'),
     'tor': ('beni', 'beni', 'beni'), 'tor_s': ('kuri', 'kuri', 'kuri'), 'tor_h': ('hada-1', 'hada-1', 'hada-1'),
     'stone_l': ('yuki-3', 'yuki-3', 'yuki-3'), 'stone_s': ('yoru-0', 'yoru-0', 'yoru-0'), 'stone_d': ('yoru-1', 'yoru-1', 'yoru-1'),
     'reed': ('matsu-1', 'matsu-0', 'matsu-1'), 'reed_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'reed_h': ('kuri', 'kuri', 'kuri'),
@@ -54,9 +55,9 @@ SEASONS = {
     'winter': {},
     'spring': {**STRAW, **GREEN_GROUND,
         'sky0': ('yoru-2', 'kori-1', 'yoru-0'), 'sky1': ('yoru-1', 'yuki-1', 'hada-1'), 'sky2': ('yoru-0', 'hada-0', 'hada-0'), 'halo': ('yoru-0', 'hada-0', 'hada-0'),
-        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'hada-0', 'hada-1'),
-        'pn_hi': ('hada-0', 'hada-0', 'hada-0'),
-        'br': ('hada-1', 'hada-0', 'hada-1'), 'br_s': ('kuri', 'hada-1', 'kuri'), 'br_d': ('yoru-1', 'kuri', 'yoru-1')},
+        'hill': ('matsu-2', 'matsu-1', 'matsu-2'), 'hill_l': ('matsu-1', 'matsu-0', 'matsu-1'),
+        'pn_hi': ('yuki-2', 'yuki-1', 'hada-0'),
+        'br': ('matsu-1', 'matsu-0', 'matsu-1'), 'br_s': ('matsu-2', 'matsu-1', 'matsu-2'), 'br_d': ('yoru-2', 'matsu-2', 'yoru-2'), 'br_hi': ('yuki-2', 'yuki-1', 'hada-0')},
     'summer': {**STRAW, **GREEN_GROUND,
         'sky0': ('yoru-2', 'kori-2', 'yoru-1'), 'sky1': ('yoru-1', 'kori-1', 'yoru-0'), 'sky2': ('yoru-0', 'yuki-1', 'hada-0'), 'halo': ('yoru-0', 'yuki-0', 'hada-0'),
         'sn_hi': ('matsu-0', 'yuki-0', 'hada-0'),
@@ -165,7 +166,7 @@ def mountain(A, pts, seed, base=46):
             if is_(A, x + i // 2, y + i, 'rock_l', 'snow_fl'): put(A, x + i // 2, y + i, 'rock_s' if is_(A, x + i // 2, y + i, 'rock_l') else 'snow_fs')
 
 def peaks(A):
-    mountain(A, [(40, 46), (62, 36), (74, 28), (86, 19), (94, 14), (100, 11), (105, 14), (110, 20), (115, 18), (122, 24), (130, 30), (144, 40), (160, 46)], 3)
+    mountain(A, [(40, 46), (58, 38), (68, 31), (75, 27), (80, 28), (87, 19), (92, 15), (95, 17), (100, 11), (103, 13), (107, 19), (111, 17), (115, 23), (121, 21), (127, 27), (135, 33), (144, 40), (160, 46)], 3)
     mountain(A, [(0, 40), (8, 38), (20, 37), (34, 34), (44, 28), (51, 23), (56, 25), (60, 24), (66, 32), (78, 41), (84, 46)], 5)
     mountain(A, [(118, 46), (130, 37), (142, 29), (150, 23), (155, 21), (161, 24), (168, 28), (176, 30), (184, 28), (191, 31), (192, 46)], 9)
 
@@ -203,7 +204,7 @@ def lake(A):
         if is_(A, x, y, 'w_far', 'w_mid', 'w_near'):
             for i in range(g.randint(3, 7)): put(A, x + i, y, 'w_far' if y > 53 else 'w_mid' if y > 49 else 'w_mid')
 
-REFL = {'rf_hi': 'rf_l', 'rf_l': 'rf_m', 'rf_m': 'rf_s', 'rf_s': 'w_near', 'cap_hi': 'cap_l', 'cap_l': 'cap_s', 'cap_s': 'w_near', 'pn_hi': 'pn_l', 'pn_l': 'pn_s', 'pn_s': 'pine_s', 'br': 'br_s', 'br_s': 'br_d', 'br_d': 'w_near', 'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near',
+REFL = {'sail': 'sail_s', 'sail_s': 'w_near', 'rf_hi': 'rf_l', 'rf_l': 'rf_m', 'rf_m': 'rf_s', 'rf_s': 'w_near', 'cap_hi': 'cap_l', 'cap_l': 'cap_s', 'cap_s': 'w_near', 'pn_hi': 'pn_l', 'pn_l': 'pn_s', 'pn_s': 'pine_s', 'br': 'br_s', 'br_s': 'br_d', 'br_d': 'w_near', 'sn_hi': 'sn_l', 'sn_l': 'sn_m', 'sn_m': 'sn_s', 'sn_s': 'sn_d', 'sn_d': 'w_near', 'thatch': 'thatch_s', 'thatch_s': 'w_near', 'wood': 'wood_s', 'wood_s': 'w_near',
         'win': 'win_g', 'win_g': 'win_g', 'tor': 'tor_s', 'tor_s': 'thatch_s', 'tor_h': 'tor', 'pine': 'pine_s', 'pine_s': 'pine_d', 'pine_d': 'w_near', 'stone_l': 'stone_s', 'stone_s': 'stone_d'}
 def reflect(A, L, base, shear=1):
     """Mirror an object layer about its waterline: one ramp step darker, 1px ripple gaps, a gentle sideways wobble."""
@@ -265,38 +266,40 @@ def pine(L, cx, base, h, seed, w_scale=1.0):
 
 HOUSE_X, HOUSE_Y = 133, 46     # front-left corner of the front wall, waterline of the far shore
 def house(L):
-    """Gassho-zukuri: front gable under a thick snow load, thatch showing at the eaves, timber-framed walls, warm windows, long roof going back."""
-    x0, yb, W1, HW, HG, DX, DY = HOUSE_X, HOUSE_Y, 18, 5, 17, 14, -5
+    """A small log cabin on the far shore: low gabled roof under a snow load, log walls, two lit windows, a stone chimney with a thread of smoke."""
+    x0, yb, W1, HW, HG, DX, DY = HOUSE_X, HOUSE_Y, 22, 7, 10, 12, -4
     ax, ay = x0 + W1 // 2, yb - HW - HG
     ex, ey = x0 + W1 + 2, yb - HW
     def P(pts, r): poly(L, pts, r)
-    P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wood_s')        # right wall, in shade
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'thatch_s')                                    # side roof: straw...
-    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 4), (ex - 2, ey - 4)], 'rf_s')                              # ...under a heavy shaded snow load
-    for i in range(DX + 1):                                                                                          # lit crest along the ridge, ragged lower lip
+    P([(x0 + W1, yb - HW), (x0 + W1 + DX, yb - HW + DY), (x0 + W1 + DX, yb + DY), (x0 + W1, yb)], 'wood_s')      # right wall, in shade
+    for y in range(yb - HW + 1, yb, 2):                                                                          # log courses on the side wall
+        for x in range(x0 + W1, x0 + W1 + DX + 1): put(L, x, y + round((x - x0 - W1) * DY / DX), 'thatch_s')
+    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY), (ex, ey)], 'thatch_s')                                    # side roof: shingles...
+    P([(ax, ay), (ax + DX, ay + DY), (ex + DX, ey + DY - 3), (ex - 2, ey - 3)], 'rf_s')                           # ...under a shaded snow load
+    for i in range(DX + 1):
         put(L, ax + i, ay + round(i * DY / DX), 'rf_m')
-        y = ey - 4 - round(i * 5 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'rf_m'); put(L, ex - 2 + i, y + 1, 'rf_s')
-    for i in range(0, DX + 1):
-        for k in range(3): put(L, ex + i, ey - round(i * 5 / DX) - k, 'thatch' if (i + k) % 3 else 'thatch_s')
-    for i in range(0, DX + 1, 2): put(L, ex + i, ey - round(i * 5 / DX) - 1, 'thatch'); put(L, ex + i + 1, ey - round(i * 5 / DX) - 2, 'thatch_s')
-    rect(L, x0, yb - HW, x0 + W1, yb, 'wood')                                                                        # front wall, timber frame
-    for px_ in range(x0, x0 + W1 + 1, 6): rect(L, px_, yb - HW, px_, yb, 'wood_s')
-    rect(L, x0, yb - 2, x0 + W1, yb - 2, 'wood_s')
-    for wx in (x0 + 1, x0 + 7, x0 + 13):
-        rect(L, wx + 1, yb - 4, wx + 3, yb - 3, 'win'); put(L, wx + 2, yb - 1, 'win_g') if wx == x0 + 7 else None
-    rect(L, x0 + 12, yb - 1, x0 + 14, yb, 'wood_s')
-    P([(x0 - 3, yb - HW), (x0 + W1 + 3, yb - HW), (ax, ay)], 'rf_l')                                                 # front gable: snow...
-    P([(x0 + 2, yb - HW), (x0 + W1 - 2, yb - HW), (ax, ay + 7)], 'thatch')                                            # ...with the straw face showing inside
-    for yy in range(ay + 8, yb - HW):
+        y = ey - 3 - round(i * 4 / DX) + (1 if i % 3 == 0 else 0); put(L, ex - 2 + i, y, 'rf_m'); put(L, ex - 2 + i, y + 1, 'rf_s')
+    for i in range(0, DX + 1, 2): put(L, ex + i, ey - round(i * 4 / DX) - 1, 'wood_s')                          # eave shadow
+    rect(L, x0, yb - HW, x0 + W1, yb, 'wood')                                                                    # front wall: horizontal logs
+    for y in range(yb - HW + 1, yb + 1, 2): rect(L, x0, y, x0 + W1, y, 'wood_s')
+    rect(L, x0, yb - HW, x0, yb, 'wood_s')
+    for wx in (x0 + 3, x0 + 14):                                                                                 # two lit windows with frames
+        rect(L, wx - 1, yb - 6, wx + 4, yb - 2, 'wood_s'); rect(L, wx, yb - 5, wx + 3, yb - 3, 'win'); put(L, wx + 1, yb - 4, 'win_g')
+    rect(L, x0 + 9, yb - 5, x0 + 11, yb, 'wood_s'); put(L, x0 + 10, yb - 2, 'win_g')                             # door
+    P([(x0 - 3, yb - HW), (x0 + W1 + 3, yb - HW), (ax, ay)], 'rf_l')                                             # front gable: snow...
+    P([(x0 + 2, yb - HW), (x0 + W1 - 2, yb - HW), (ax, ay + 5)], 'wood')                                          # ...with planks showing inside
+    for yy in range(ay + 6, yb - HW):
         for x in range(x0 + 3, x0 + W1 - 2):
-            if (x * 2 + yy // 3) % 5 == 0 and L[yy, x] == IDX['thatch']: L[yy, x] = IDX['thatch_s']
-    rect(L, ax - 2, ay + 9, ax + 2, ay + 10, 'wood_s'); rect(L, ax - 1, ay + 9, ax + 1, ay + 10, 'win')               # attic window
-    for i in range(HG):                                                                                              # snow thickness on the rafters: lit left, cool right, crisp rim
+            if x % 3 == 0 and L[yy, x] == IDX['wood']: L[yy, x] = IDX['wood_s']
+    rect(L, ax - 1, ay + 7, ax + 1, ay + 8, 'win')                                                               # a small gable window
+    for i in range(HG):                                                                                          # snow on the rafters: lit left, cool right
         y = ay + i; hw = (i * (W1 // 2 + 3)) // HG
-        put(L, ax - hw, y, 'rf_hi'); put(L, ax - hw + 1, y, 'rf_hi' if i > 3 else 'rf_l'); put(L, ax + hw, y, 'rf_m'); put(L, ax + hw - 1, y, 'rf_s')
-    for x in range(x0 - 3, x0 + W1 + 4):                                                                             # eave: snow overhang and icicles
+        put(L, ax - hw, y, 'rf_hi'); put(L, ax - hw + 1, y, 'rf_hi' if i > 2 else 'rf_l'); put(L, ax + hw, y, 'rf_m'); put(L, ax + hw - 1, y, 'rf_s')
+    for x in range(x0 - 3, x0 + W1 + 4):
         if x % 2 == 0: put(L, x, yb - HW + 1, 'rf_l' if x < ax else 'rf_m')
-    for x in (x0 - 1, x0 + 3, x0 + 8, x0 + W1 + 1): put(L, x, yb - HW + 2, 'rf_hi' if x < ax else 'rf_m')
+    cx_ = ax + 6; cy = ay + round(6 * DY / DX)                                                                   # chimney on the ridge
+    rect(L, cx_, cy - 5, cx_ + 2, cy + 1, 'stone_s'); rect(L, cx_, cy - 5, cx_, cy + 1, 'stone_l'); rect(L, cx_ - 1, cy - 6, cx_ + 3, cy - 6, 'rf_l')
+    for k, (dx, dy) in enumerate(((1, -8), (2, -10), (1, -12), (2, -14))): put(L, cx_ + dx, cy + dy, 'cloud_l' if k % 2 else 'cloud')
     return ax, ay
 
 def pool(A):
@@ -306,31 +309,25 @@ def pool(A):
             for x in range(cx - hw, cx + hw + 1):
                 if 0 <= y < 50 and ((x - cx) / hw) ** 2 + ((y - cy) / max(1, hh)) ** 2 <= 1 and is_(A, x, y, 'sn_l', 'sn_m', 'sn_hi', 'sn_s'): put(A, x, y, r)
 
-# ---------------------------------------------------------------- torii in the shallows
-def torii(L, cx, wl):
-    """Front view, two tapered pillars, nuki, shimaki and an upswept kasagi under snow. cx = centre, wl = waterline."""
+# ---------------------------------------------------------------- a sailboat on the calm lake
+def boat(L, cx, wl):
+    """Side view: a tall mast, a lit main sail and a smaller jib, a dark hull, a red pennant. cx = mast column, wl = waterline."""
     top = wl - 21
-    for y in range(top + 3, wl + 1):
-        t = (y - top) / 21; off = 6 + (1 if t > .5 else 0)
-        for px_ in (-off, off - 1):
-            put(L, cx + px_, y, 'tor'); put(L, cx + px_ + 1, y, 'tor_s' if px_ > 0 else 'tor')
-            if px_ < 0: put(L, cx + px_ - 1, y, 'tor_s') if False else None
-    for x in range(cx - 7, cx + 8): put(L, x, top + 8, 'tor'); put(L, x, top + 9, 'tor_s')                      # nuki
-    for x in range(cx - 8, cx + 9): put(L, x, top + 5, 'tor'); put(L, x, top + 6, 'tor_s')                      # shimaki
-    for x in range(cx - 11, cx + 12):                                                                           # kasagi: curved, ends turn up
-        up = 1 if abs(x - cx) > 8 else 0
-        put(L, x, top + 2 - up, 'tor_h' if x <= cx else 'tor'); put(L, x, top + 3 - up, 'tor'); put(L, x, top + 4 - up, 'tor_s')
-    for x in range(cx - 10, cx + 11):                                                                           # snow on the kasagi
-        up = 1 if abs(x - cx) > 8 else 0
-        put(L, x, top + 1 - up, 'cap_hi' if x <= cx + 1 else 'cap_l')
-        if abs(x - cx) < 8: put(L, x, top - up, 'cap_hi' if x < cx - 2 else 'cap_l') if abs(x - cx) < 5 else None
-    for y in (wl - 1, wl):                                                                                      # stone plinths
-        for px_ in (-7, 6): put(L, cx + px_ - 1, y, 'stone_l'); put(L, cx + px_ + 2, y, 'stone_s')
+    for y in range(top + 1, wl - 3): put(L, cx, y, 'wood_s')
+    poly(L, [(cx + 1, top + 3), (cx + 1, wl - 5), (cx + 10, wl - 5)], 'sail_s')                  # main sail, turned a little from the light
+    poly(L, [(cx + 1, top + 5), (cx + 1, wl - 5), (cx + 6, wl - 5)], 'sail')
+    poly(L, [(cx - 1, top + 7), (cx - 1, wl - 5), (cx - 8, wl - 5)], 'sail')                     # jib: lit
+    poly(L, [(cx - 1, top + 11), (cx - 1, wl - 5), (cx - 4, wl - 5)], 'sail_s') if False else None
+    for dx in range(0, 4): put(L, cx + 1 + dx, top + 1 + (dx // 2), 'tor')                        # pennant
+    poly(L, [(cx - 10, wl - 4), (cx + 12, wl - 4), (cx + 9, wl), (cx - 7, wl)], 'wood')          # hull
+    for x in range(cx - 9, cx + 12): put(L, x, wl - 4, 'wood_s' if x > cx else 'rf_hi')        # deck edge: lit left, dark right
+    for x in range(cx - 7, cx + 10): put(L, x, wl, 'wood_s')
 
-def torii_rings(A, cx, wl):
-    for px_ in (-7, 6):
-        for dx in range(-3, 6):
-            if abs(dx - 1) >= 2 and is_(A, cx + px_ + dx, wl + 1, 'w_mid', 'w_near'): put(A, cx + px_ + dx, wl + 1, 'glint')
+def boat_rings(A, cx, wl):
+    for x in list(range(cx - 12, cx - 8)) + list(range(cx + 11, cx + 15)):
+        if is_(A, x, wl + 1, 'w_mid', 'w_near'): put(A, x, wl + 1, 'glint')
+    for x in range(cx - 6, cx + 9, 3):
+        if is_(A, x, wl + 1, 'w_mid', 'w_near', 'wood'): put(A, x, wl + 1, 'glint')
 
 # ---------------------------------------------------------------- near bank
 def bank(A):
@@ -417,7 +414,7 @@ def build(season='winter'):
         reflect(A, L, 46)
     for L in (ho, p3, p4, p5, p1, p2): stamp(A, L)
     pool(A)
-    to = new(); torii(to, 66, 58); reflect(A, to, 58); stamp(A, to); torii_rings(A, 66, 58)
+    to = new(); boat(to, 62, 58); reflect(A, to, 58); stamp(A, to); boat_rings(A, 62, 58)
     bank(A); post(A); rock_and_reeds(A); branch(A)
     return A
 
@@ -452,7 +449,7 @@ def main():
         for v in VARIANTS:
             colour(A, v, season).save(out / f'scene-{season}-{v}.png')
             hexof = lambda n: '#%s' % PAL[T[n][VARIANTS.index(v)]].lstrip('#')
-            fall = {'snow': ('sn_m', 'sn_hi'), 'petal': ('hada-1', 'hada-0'), 'leaf': ('kuri', 'hada-1'), 'none': ('sn_m', 'sn_hi')}[FALL[season]]
+            fall = {'snow': ('sn_m', 'sn_hi'), 'petal': ('yuki-2', 'yuki-0'), 'leaf': ('kuri', 'hada-1'), 'none': ('sn_m', 'sn_hi')}[FALL[season]]
             col = lambda n: ('#%s' % PAL[n].lstrip('#')) if n in PAL else hexof(n)
             motion[season][v] = {'back': col(fall[0]), 'front': col(fall[1]), 'glint': hexof('glint')}
         if '--check' in sys.argv: check(A, season)

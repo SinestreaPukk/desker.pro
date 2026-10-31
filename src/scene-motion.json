@@ -20,18 +20,18 @@
   "spring": {
     "fall": "petal",
     "night": {
-      "back": "#D49E95",
-      "front": "#F0D2C2",
+      "back": "#B4C5D1",
+      "front": "#F4F7F6",
       "glint": "#8394AE"
     },
     "morning": {
-      "back": "#D49E95",
-      "front": "#F0D2C2",
+      "back": "#B4C5D1",
+      "front": "#F4F7F6",
       "glint": "#DDE6EA"
     },
     "dusk": {
-      "back": "#D49E95",
-      "front": "#F0D2C2",
+      "back": "#B4C5D1",
+      "front": "#F4F7F6",
       "glint": "#F0D2C2"
     }
   },
