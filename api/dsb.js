@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     if (!timingSafeEqual(digest(req.body?.password ?? ''), digest(process.env.DSB_PASSWORD))) return res.status(401).json({ error: 'Wrong password' })
   }
 
-  const [[u], [c], byKind, daily, [ai], [r]] = await Promise.all([
+  const [[u], [c], byKind, daily, [ai], [r], active] = await Promise.all([
     sql`select count(*)::int users, count(*) filter (where "emailVerified")::int verified,
       count(*) filter (where last_seen_at > now() - interval '7 days')::int active7,
       count(*) filter (where exists (select 1 from tasks t where t.user_id = u.id) or exists (select 1 from goals g where g.user_id = u.id)
@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     sql`select kind, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls group by kind, model`,
     sql`select created_at::date::text as day, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls where created_at > now() - interval '14 days' group by 1, 2 order by 1`,
     sql`select count(*)::int calls, count(distinct user_id)::int users from ai_calls`,
+    sql`select day::text as day, count(*)::int users from user_day where day > current_date - 14 group by 1 order by 1`,
     // Accounts only. A person counts for a return once they are old enough to have had the chance: day 1 needs a full day since sign-up, day 7 a full week.
     // "Next day" = opened the app the UTC day after signing up; "a week later" = opened it 7 or more days after. Opens are logged in user_day from when it was deployed.
     sql`select count(*) filter (where a."createdAt"::date < current_date)::int eligible1,
@@ -57,6 +58,7 @@ export default async function handler(req, res) {
   res.json({
     counts: { ...u, ...c },
     habit: r,
+    active,
     ai: { ...total, users: ai.users },
     kinds: Object.values(kinds).sort((a, b) => b.cost - a.cost),
     daily: Object.values(days),

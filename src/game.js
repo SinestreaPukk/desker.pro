@@ -10,6 +10,9 @@ export const xpOf = ({ tasks = [], goals = [], guide }) =>
   tasks.filter((t) => t.done).reduce((n, t) => n + (t.fun ? 5 : taskXp(t)), 0)
   + goals.reduce((n, g) => n + (g.milestones || []).filter((m) => m.at).length * MILESTONE_XP, 0) + (guide?.done ? GUIDE_XP : 0)
 
+// The score never goes down: data.xp is the highest total reached (App.jsx raises it), so deleting or un-ticking tasks cannot cost a level.
+export const totalXp = (data) => Math.max(Number.isFinite(data.xp) ? data.xp : 0, xpOf(data))
+
 // Level n starts at 25 * (n-1)^2 XP: 0, 25, 100, 225, 400... quick early wins, slower later.
 export const levelOf = (xp) => {
   const level = Math.floor(Math.sqrt(xp / 25)) + 1, from = 25 * (level - 1) ** 2, to = 25 * level ** 2

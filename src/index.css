@@ -162,7 +162,11 @@ details[open] > summary::before { clip-path: polygon(0 0, 100% 0, 100% 50%, 75% 
 /* calendar hour lines */
 .hour-lines { background-image: url(/pixel/divider.png); background-size: calc(4 * var(--px)) var(--px); background-repeat: repeat-x; image-rendering: pixelated; }
 
+@keyframes hop { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(calc(-4 * var(--px))) } }
+.px-hop > .px-avatar { display: block; }
+.px-hop { display: inline-block; animation: hop 500ms steps(3) 4; }
 @media (prefers-reduced-motion: reduce) {
+  .px-hop { animation: none; }
   .px-avatar, .px-kodama, .dot, .cheer { animation: none; }
   .px-kodama[data-mood='idle'] { background-position: 0 0; }
   .px-hanko { animation: none; background-position: calc(-32 * var(--px)) 0; }

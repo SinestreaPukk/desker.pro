@@ -1,10 +1,10 @@
-import { xpOf, levelOf, questOf, badgesOf } from '../game.js'
+import { totalXp, levelOf, questOf, badgesOf } from '../game.js'
 import { doneStats } from '../tasks.js'
 
 // Today's game card: level and XP bar, the day's quest, the streak and the badges (earned ones lit).
 export default function PlayerCard({ data, className = '' }) {
   const { tasks = [] } = data
-  const L = levelOf(xpOf(data)), q = questOf(tasks), { streak } = doneStats(tasks), badges = badgesOf(data)
+  const L = levelOf(totalXp(data)), q = questOf(tasks), { streak } = doneStats(tasks), badges = badgesOf(data)
   return (
     <section className={`${className}`} aria-label="Your progress">
       <h2 className="px-tab px-tab-kori mb-3 inline-block">Level {L.level}</h2>

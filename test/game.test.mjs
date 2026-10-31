@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { xpOf, levelOf, questOf, badgesOf } from '../src/game.js'
+import { totalXp, xpOf, levelOf, questOf, badgesOf } from '../src/game.js'
 
 test('xp: harder tasks pay more, milestones and the guide add on top', () => {
   assert.equal(xpOf({ tasks: [{ done: true }] }), 10)
@@ -24,4 +24,9 @@ test('badges: earned from the data', () => {
   const got = (d) => badgesOf(d).filter((b) => b.got).map((b) => b.id)
   assert.deepEqual(got({}), [])
   assert.deepEqual(got({ tasks: [{ done: true, spent: 6 }], guide: { done: true } }).sort(), ['first', 'focus', 'guide'])
+})
+test('total xp never drops below the saved high-water mark', () => {
+  assert.equal(totalXp({ xp: 120, tasks: [] }), 120)
+  assert.equal(totalXp({ xp: 5, tasks: [{ done: true }] }), 10)
+  assert.equal(totalXp({ xp: 'x', tasks: [] }), 0)
 })

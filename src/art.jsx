@@ -5,6 +5,7 @@ export function Hero({ name, className = '' }) {
 }
 
 const BANNERS = {
+  Tasks: ['Tasks', 'Everything you need to do, ranked by how much it matters. Tick it off when it is done.'],
   Goals: ['Goals', 'Build your pyramid. The AI links each task to a goal and uses its level to judge importance.'],
   Projects: ['Projects', 'Something bigger than a task: an investment, an exam, a launch. It owns the tasks that get it done.'],
   Calendar: ['Calendar', 'Planned tasks, deadlines and your calendar events in one place.'],

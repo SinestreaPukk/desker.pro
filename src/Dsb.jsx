@@ -47,7 +47,7 @@ export default function Dsb() {
     </main>
   )
 
-  const { counts: c, ai, kinds, daily, habit: h } = data
+  const { counts: c, ai, kinds, daily, habit: h, active } = data
   const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : 'n/a')
   const tokens = ai.input + ai.output
   const max = Math.max(1, ...daily.map((d) => d.tokens))
@@ -65,6 +65,21 @@ export default function Dsb() {
         <Tile label="Back the next day" value={pct(h.back1, h.eligible1)} sub={`${h.back1} of ${h.eligible1} accounts signed up at least a day ago`} />
         <Tile label="Back a week later" value={pct(h.back7, h.eligible7)} sub={`${h.back7} of ${h.eligible7} accounts signed up at least a week ago`} />
         <Tile label="Finished the goals guide" value={pct(h.guide_done, c.users)} sub={`${h.guide_done} of ${c.users} accounts, ${h.guide_started} started it`} />
+      </div>
+
+      <h2 className="mb-2 font-semibold">People who opened Desker, last 14 days</h2>
+      <div className={`${panel} mb-8`}>
+        {active.length ? (
+          <ul className="space-y-1 text-base">
+            {active.map((d) => (
+              <li key={d.day} className="flex items-center gap-3">
+                <span className="w-24 shrink-0 text-slate-600">{d.day}</span>
+                <span className="h-4 bg-primary" style={{ width: `${Math.max(2, (d.users / Math.max(...active.map((x) => x.users))) * 55)}%` }} aria-hidden="true" />
+                <span className="tabular-nums">{d.users}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-base text-slate-600">Nothing yet. Opens are counted from when tracking was deployed.</p>}
       </div>
 
       <h2 className="mb-2 font-semibold">People and content</h2>

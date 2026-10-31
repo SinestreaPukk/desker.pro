@@ -152,4 +152,39 @@ def calendar():
         c.rect(x + 1, 19 + (i % 2), 3, 1, col); c.rect(x + 2, 21 + (i % 2), 1, 1, col)
     c.save('strip-calendar')
 
-goals(); projects(); calendar()
+def tasks():
+    c = Cv(); sky(c, 'kori-1', 'yuki-1', 'yuki-0', 7, 12)
+    # a string of sticky notes pinned along the top, the first few ticked off
+    sag = lambda x: 2 + round(2 * (1 - ((x - 98) / 92) ** 2))
+    for x in range(8, 188): c.px(x, sag(x), 'kuri')
+    for i, (x, col) in enumerate(((30, 'daidai-0'), (60, 'hada-0'), (108, 'kori-2'), (134, 'hada-0'), (182, 'daidai-0'))):
+        y = sag(x + 4) + 1
+        c.rect(x, y, 9, 9, col); c.rect(x, y + 8, 9, 1, 'hada-1' if col != 'kori-2' else 'yoru-0'); c.px(x + 4, y - 1, 'yoru-1')
+        if i < 3:
+            for k, (dx, dy) in enumerate(((1, 3), (2, 4), (3, 5), (4, 4), (5, 3), (6, 2))): c.px(x + dx + 1, y + dy, 'matsu-1')
+        else:
+            c.rect(x + 2, y + 3, 5, 1, 'yoru-0'); c.rect(x + 2, y + 5, 4, 1, 'yoru-0')
+    # the desk
+    c.rect(0, 19, W, 2, 'kuri'); c.rect(0, 19, W, 1, 'hada-1'); c.rect(0, 21, W, 3, 'yoru-1'); c.dither(0, 21, W, 1, 'kuri', 'yoru-1')
+    # stack of three books
+    for j, (w, col, x) in enumerate(((20, 'beni', 8), (16, 'kori-2', 10))):
+        y = 16 - j * 3
+        c.rect(x, y, w, 3, col); c.rect(x, y, w, 1, 'yuki-1' if col != 'beni' else 'hada-1'); c.rect(x + w - 2, y + 1, 2, 2, 'yuki-0')
+    # a mug with steam
+    c.rect(44, 14, 8, 5, 'hada-0'); c.rect(44, 14, 8, 1, 'hada-1'); c.rect(48, 14, 4, 5, 'hada-1'); c.rect(52, 15, 2, 3, 'hada-1'); c.px(53, 16, 'hada-0'); c.rect(45, 15, 6, 1, 'kuri')
+    for x, y in ((46, 12), (47, 11), (46, 10), (49, 11), (50, 10), (49, 9)): c.px(x, y, 'yuki-2')
+    # a clipboard with a checklist
+    c.rect(78, 9, 22, 11, 'hada-1'); c.rect(79, 10, 20, 9, 'yuki-0'); c.rect(86, 8, 6, 2, 'yoru-1')
+    for r, ticked in enumerate((True, True, False)):
+        y = 12 + r * 2 + r
+        c.rect(81, y, 2, 2, 'yuki-2'); c.rect(85, y, 11 - r * 2, 1, 'yoru-0')
+        if ticked: c.px(81, y + 1, 'matsu-1'); c.px(82, y, 'matsu-1')
+    # pencil pot and a little plant
+    c.rect(118, 15, 7, 4, 'kori-2'); c.rect(118, 15, 7, 1, 'kori-1')
+    for x, y, col in ((119, 10, 'daidai-0'), (121, 9, 'matsu-0'), (123, 11, 'beni')): c.rect(x, y, 1, 5, col); c.px(x, y - 1, 'hada-0' if col == 'daidai-0' else col)
+    c.rect(165, 15, 8, 4, 'daidai-2'); c.rect(164, 14, 10, 1, 'daidai-0')
+    for x, y in ((167, 11), (169, 9), (171, 11), (168, 12), (170, 12)): c.rect(x, y, 2, 3, 'matsu-1'); c.px(x, y, 'matsu-0')
+    c.rect(168, 12, 3, 3, 'matsu-1'); c.rect(169, 13, 1, 2, 'matsu-0')
+    c.save('strip-tasks')
+
+goals(); projects(); calendar(); tasks()

@@ -23,7 +23,7 @@ import { btn, ghost } from './ui.js'
 import { Banner } from './art.jsx'
 import { Avatar, Hanko } from './px.jsx'
 import { toggleMilestone } from './milestones.js'
-import { xpOf, levelOf } from './game.js'
+import { xpOf, totalXp, levelOf } from './game.js'
 
 // One URL per section. The old /do-now lives on Today now.
 const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
@@ -89,12 +89,14 @@ export default function App() {
     return () => clearTimeout(id)
   }, [data])
   // Level up: cheer when the level passes the one last seen on this device (the first visit just records it).
-  const level = data ? levelOf(xpOf(data)).level : 0
+  const level = data ? levelOf(totalXp(data)).level : 0
+  const earned = data ? xpOf(data) : 0
+  useEffect(() => { if (data && earned > (data.xp || 0)) setData((d) => ({ ...d, xp: earned })) }, [earned, data?.xp]) // raise the saved high-water mark
   useEffect(() => {
     if (!level) return
     try {
       const seen = +localStorage.seenLevel || 0
-      if (seen && level > seen) setToast({ stamp: true, text: `Level up! You are level ${level}.` })
+      if (seen && level > seen) setToast({ stamp: true, hop: true, text: `Level up! You are level ${level}.` })
       localStorage.seenLevel = Math.max(seen, level)
     } catch { /* storage blocked: no cheer */ }
   }, [level])
@@ -216,7 +218,7 @@ export default function App() {
       )}
       {toast && (
         <div role="status" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
-          {toast.stamp && <Hanko key={toast.text} />}
+          {toast.hop ? <span className="px-hop"><Avatar /></span> : toast.stamp && <Hanko key={toast.text} />}
           <span className="min-w-0 flex-1 break-words">{toast.text}</span>
           {toast.undo && <button className="min-h-11 shrink-0 px-3 underline" onClick={toast.undo}>Undo</button>}
           <button className="min-h-11 shrink-0 px-3" onClick={() => setToast(null)}>Dismiss</button>
