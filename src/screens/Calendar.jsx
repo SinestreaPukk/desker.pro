@@ -4,6 +4,7 @@ import { useSession } from '../auth.js'
 import { BLUE, btn, input, ghost, panel, Q, CAL } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
+import { lengthOf } from '../schedule.js'
 import { quadrant, dateKey, color, evDay, hhmm, hm24, minutes, importCalendar, Happy, REPEATS, todayStr, busyForAI } from '../shared.jsx'
 import DateField from '../components/DateField.jsx'
 
@@ -158,7 +159,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     for (const t of tasks) {
       if (dateKey(t) !== k) continue
       const hm = HM.exec(t.start || ''), cls = `${shade(t)} ${sel === t.id ? 'ring-2 ring-ink' : ''}`
-      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + (t.hours || 1) * 60), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
+      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + lengthOf(t)), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
       else allDay.push({ id: `t${t.id}`, label: t.title, cls, onClick: () => setSel(t.id) })
     }
     for (const x of deadlines) {

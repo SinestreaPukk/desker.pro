@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
+import { validType } from '../rhythm.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate, readSource } from '../shared.jsx'
 import DateField from '../components/DateField.jsx'
@@ -54,7 +55,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
     const ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && d <= dl.date
     setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
-      return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, deadlineId: dl.id, projectId: dl.projectId }
+      return { title: o.title, due: ok(o.due) ? o.due : dl.date, hours: Number(o.hours) || undefined, type: validType(o.type), deadlineId: dl.id, projectId: dl.projectId }
     })))
     setRes(null)
   }

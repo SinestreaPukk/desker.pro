@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { post } from '../api.js'
 import { addTasks } from '../tasks.js'
+import { validType } from '../rhythm.js'
 import { progress, unlink } from '../projects.js'
 import { BLUE, btn, input, ghost, panel, LEVELS } from '../ui.js'
 import { ratioOf, fmtDate } from '../shared.jsx'
@@ -44,7 +45,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
     const ok = (d) => /^\d{4}-\d\d-\d\d$/.test(d) && (!p.date || d <= p.date)
     setTasks(addTasks(tasks, picked.map((i) => {
       const o = res.options[i]
-      return { title: o.title, due: ok(o.due) ? o.due : p.date, hours: Number(o.hours) || undefined, projectId: p.id, goalId: p.goalId }
+      return { title: o.title, due: ok(o.due) ? o.due : p.date, hours: Number(o.hours) || undefined, type: validType(o.type), projectId: p.id, goalId: p.goalId }
     })))
     setRes(null)
   }

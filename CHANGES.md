@@ -1,6 +1,6 @@
 # Changes (fix, refocus & redesign pass)
 
-Status: **Phases 1 to 3 and 6 done. Phases 4, 5, 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
+Status: **Phases 1 to 4 and 6 done. Phases 5, 7, 8 follow (decisions recorded: kodama is the companion, migrations as files only, retune Yuki).**
 
 ## Phase 1: reliable planner and calendar
 - `src/schedule.js` (new, pure, tested in `test/schedule.test.mjs`): the only code that assigns planned times.
@@ -44,7 +44,28 @@ Status: **Phases 1 to 3 and 6 done. Phases 4, 5, 7, 8 follow (decisions recorded
 - **Not done, on purpose: letting people in before they confirm their email.** Verification is only required when a mail provider is configured. Skipping it would let anyone register someone else's address and later block or hijack that person's sign-up. If you still want it, the safe version is: verify before the first password reset or before any email is sent, which needs a server change in `api/_auth.js` (`requireEmailVerification`).
 - SEO: `index.html` carries the landing copy (visually hidden, replaced when the app loads), canonical link, Open Graph and Twitter tags, and `public/og.png` (1200x630, made from the winter scene). Real pre-rendering would need an SSR build step; not added.
 
+## Phase 4: the rhythm engine
+- **Model** (`src/rhythm.js`, pure, 19 tests in `test/rhythm.test.mjs`): each kind of work (Reading, Problem set, Writing, Revision, Lab report, Group work, Admin, Other) gets a
+  "takes you Nx your estimate" number. It starts from a prior (1.3, or 1.0 / 1.3 / 1.6 from the sign-up answer) and moves toward the data with weight n / (n + 5); a type with
+  little data leans on the overall number; one wild sample is squashed to 4x; a forgotten timer (over 10 h) is ignored. Energy is an hour-by-weekday curve: the sign-up "sharpest"
+  answer is the prior, check-ins (and, weakly, the hours you finish things) take over; it only drives planning after 8 check-ins. Also typical focus length and start lag (3+ sessions each).
+- **Capture**: the focus timer records each sitting (start, end, focused minutes, pauses, finished or abandoned, start lag); ticking a task off without the timer asks "How long did that
+  take?" (estimate preselected, 15 min / 30 min / 1 h / 2 h / Other, skippable); tasks timed with the timer record automatically. Today asks about energy at most twice a day (8:00-21:00, not
+  within 3 h of a tap); the energy buttons still work any time. Reschedules and Right now accept/skip are recorded as signals. Task type comes from the title (offline rules), or from the AI
+  when it generates the task (`type` in `api/deadline.js` and `api/_project.js`), and can be corrected on the Rhythm page.
+- **Use**: the scheduler reserves learned time (`scale` per task, `pad` for a habit of starting late) and puts deep work in the best-energy slot of its day (never breaking a deadline, free
+  time or calendar event). The reserved length is stored on the task (`block`, `blockOf`; extra fields, no schema change) and the Calendar draws it. Replan, the chat agent and first-run planning all go through it.
+  Today shows a reality check ("You planned 5 h. At your usual pace that is about 7 h"), predicted energy for Right now, and the timer starts at your typical focus length. The agent gets a numbers-only summary.
+- **Your rhythm** page (tab `/rhythm`, replaces the Insights card): summary and "what Desker learned this week" (Sundays: the report), per-type multipliers, weekly accuracy (your estimates vs
+  Desker's plan), energy heatmap, and controls: correct a type, forget a timing, ignore a date range, switch learning off, download JSON, delete everything learned. On phones it is reached from Today's card
+  (six labels do not fit the bottom bar).
+- **Storage and migration**: lives in the account document (`rhythm`, whitelisted in `SETTINGS`; `energyLog` as before), capped at 300 outcomes / 150 sessions / 150 signals, older outcomes folded into small
+  per-type sums so nothing learned is lost. `db/migrations/001_rhythm.sql` creates `focus_sessions`, `energy_logs`, `task_outcomes`, `rhythm_profile`. **It is not applied and nothing reads it yet.**
+  Run it on a branch database when you are ready; switching the app to the tables is a follow-up.
+- **Not done**: splitting a long task into several blocks (one task = one slot in the data model; the timer length and break-friendly blocks are the substitute, say if you want real splitting);
+  a separate AI call to classify old tasks (no new function: the Hobby plan caps at 12); a Rhythm stripe for the page banner (borrows the calendar stripe).
+
 ## Tests
-`npm test` (65 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
+`npm test` (84 pass), `sh scripts/pixel-lint.sh` (0 errors). No typecheck script exists in the project.
 
 ## Not done yet, and why: see the questions at the end of the session.

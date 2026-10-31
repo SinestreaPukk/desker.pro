@@ -10,13 +10,16 @@ import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
 import { Icon } from './icons.jsx'
-import { quadrant, patternOf, ratioOf, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
+import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
+import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile } from './rhythm.js'
+import TimeAsk from './components/TimeAsk.jsx'
 import Today from './screens/Today.jsx'
 import Tasks from './screens/Tasks.jsx'
 import Goals from './screens/Goals.jsx'
 import Projects from './screens/Projects.jsx'
 import { unlink } from './projects.js'
 import Calendar from './screens/Calendar.jsx'
+import Rhythm from './screens/Rhythm.jsx'
 import Agent from './components/Agent.jsx'
 import Guide from './guide/Guide.jsx'
 import { addTasks } from './tasks.js'
@@ -27,7 +30,7 @@ import { toggleMilestone } from './milestones.js'
 import { xpOf, totalXp, levelOf } from './game.js'
 
 // One URL per section. The old /do-now lives on Today now.
-const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar' }
+const PATHS = { Today: '/today', Tasks: '/tasks', Goals: '/goals', Projects: '/projects', Calendar: '/calendar', Rhythm: '/rhythm' }
 const TABS = Object.keys(PATHS)
 const tabOf = () => TABS.find((t) => PATHS[t] === location.pathname) || (location.pathname === '/deadlines' ? 'Tasks' : 'Today') // deadlines live in Tasks now
 
@@ -61,6 +64,7 @@ export default function App() {
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 60_000); return () => clearInterval(id) }, [])
   const [cheer, setCheer] = useState(0) // bumps when Do First is cleared, to animate the logo
   const [toast, setToast] = useState(null) // { text, undo }
+  const [askTime, setAskTime] = useState(null) // { id, title, est }: "How long did that take?" for a task ticked off without the timer
   const [toastHeld, holdToast] = useState(false) // hover or focus pauses the countdown
   useEffect(() => {
     if (!toast || toastHeld) return
@@ -105,6 +109,8 @@ export default function App() {
   if (!data.onboarding) return <Welcome name={user?.name} onDone={(onboarding, first) => setData((d) => startFrom(d, onboarding, first))} />
 
   const { goals, tasks } = data
+  const rhythm = profile(data)
+  setLiveRatio(rhythm.off || rhythm.dur.n < 3 ? undefined : rhythm.dur.overall)
   // drop a focus or pick whose task was deleted or finished elsewhere
   const live = (x) => x && (!x.taskId || tasks.some((t) => t.id === x.taskId && !t.done)) ? x : null
   const focus = live(data.focus)
@@ -142,8 +148,18 @@ export default function App() {
   }
   const openReview = () => { setAgentOpen(true); setReviewReq((n) => n + 1) }
   // Every task change goes through settle(): it stamps doneAt, adds the next copy of finished repeating tasks, and feeds Undo.
-  const setTasks = (next) => {
+  // opts.auto: the change is Desker's own replan, not the user moving something (not counted as a reschedule)
+  const setTasks = (next, opts = {}) => {
     const r = settle(tasks, next)
+    const before = new Map(tasks.map((t) => [t.id, t]))
+    const moved = opts.auto ? [] : r.tasks.filter((t) => { const b = before.get(t.id); return b && !t.done && !t.fun && b.when && t.when && (b.when !== t.when || b.start !== t.start) })
+    const timed = r.finished.map((id) => r.tasks.find((t) => t.id === id)).filter((t) => t && !t.fun && !t.repeat)
+    if (moved.length || timed.length) setData((d) => record(d, (x) => {
+      x = moved.reduce((acc, t) => addSignal(acc, { k: 'resched', at: Date.now(), task: t.id }), x)
+      return timed.filter((t) => t.spent > 0).reduce((acc, t) => addOutcome(acc, outcomeFor(t, d, t.spent, 'timer', t.doneAt)), x)
+    }))
+    const untimed = timed.filter((t) => !(t.spent > 0))
+    if (untimed.length === 1 && r.finished.length === 1 && !data.rhythm?.prefs?.off) setAskTime({ id: untimed[0].id, title: untimed[0].title, est: untimed[0].hours })
     const doFirst = (list) => list.some((t) => !t.done && !t.fun && quadrant(t) === 0)
     const cleared = r.finished.length > 0 && doFirst(tasks) && !doFirst(r.tasks)
     if (cleared) setCheer((n) => n + 1)
@@ -151,12 +167,22 @@ export default function App() {
     if (r.finished.length) {
       const names = r.tasks.filter((t) => r.finished.includes(t.id)).map((t) => t.title)
       setToast({ stamp: true, text: `Done: ${names.length > 1 ? `${names.length} tasks` : names[0]}${r.spawned.length ? ' (next one added)' : ''}${cleared ? '. Do First is clear.' : ''}`,
-        undo: () => { setData((d) => ({ ...d, tasks: settle(d.tasks, d.tasks.filter((t) => !r.spawned.includes(t.id)).map((t) => (r.finished.includes(t.id) ? { ...t, done: false } : t))).tasks })); setToast(null) } })
+        undo: () => { setData((d) => ({ ...d, tasks: settle(d.tasks, d.tasks.filter((t) => !r.spawned.includes(t.id)).map((t) => (r.finished.includes(t.id) ? { ...t, done: false } : t))).tasks })); setToast(null); setAskTime(null) } })
     }
   }
   const deleteTask = (t) => {
     setData((d) => ({ ...d, tasks: d.tasks.filter((x) => x.id !== t.id) }))
     setToast({ text: `Deleted: ${t.title}`, undo: () => { setData((d) => ({ ...d, tasks: [...d.tasks, t] })); setToast(null) } })
+  }
+  // minutes after (negative: before) the planned start, when this sitting was planned for today
+  const lagOf = (t, start) => {
+    if (!t?.when || !/^\d\d:\d\d$/.test(t.start || '') || t.when !== new Date(start).toLocaleDateString('sv')) return undefined
+    return Math.max(-60, Math.min(240, Math.round((start - new Date(`${t.when}T${t.start}:00`).getTime()) / 6e4)))
+  }
+  const answerTime = (minutes) => {
+    const t = tasks.find((x) => x.id === askTime.id)
+    if (t) setData((d) => record(d, (r) => addOutcome(r, outcomeFor(t, d, minutes / 60, 'tap'))))
+    setAskTime(null)
   }
   const logo = () => <span key={cheer} className={`flex ${cheer ? 'cheer' : ''}`}><Avatar /></span>
 
@@ -194,7 +220,7 @@ export default function App() {
 
         <main className={`mx-auto w-full px-4 pb-32 pt-4 md:px-8 md:pt-8 ${tab === 'Tasks' ? 'max-w-[1400px]' : 'max-w-[1164px]'}`}>
           {saveError && <p role="alert" className="px-panel mb-4 p-3 text-danger">{saveError === 'conflict' ? <>Desker was changed on another device, so your latest edits were not saved. <button className="underline" onClick={() => location.reload()}>Reload to get the latest</button>.</> : 'Your latest changes could not be saved. Check your connection; they will retry on the next change.'}</p>}
-          {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan)); setReplanOpen(false) }} />}
+          {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan), { auto: true }); setReplanOpen(false) }} />}
           <Banner tab={tab} />
           <div key={tab} className={`enter ${tab === 'Tasks' ? '' : 'max-w-[1100px]'}`}>
             {tab === 'Today' && <Today data={data} setData={setData} tasks={tasks} goals={goals} deadlines={deadlines} focus={focus} pick={pick} setFocus={setFocus} setPick={setPick} setTasks={setTasks}
@@ -202,6 +228,7 @@ export default function App() {
             {tab === 'Tasks' && <Tasks goals={goals} tasks={tasks} setTasks={setTasks} goTab={setTab} setFocus={setFocus} deleteTask={deleteTask} projects={projects} deadlines={deadlines} setDeadlines={setDeadlines} />}
             {tab === 'Goals' && <Goals goals={goals} setGoals={setGoals} onMilestone={milestoneReached} hobbies={hobbies} setHobbies={setHobbies} tasks={tasks} onReview={openReview} guide={data.guide} onGuide={openGuide} fresh={fresh} onMakeTasks={makeTasks} onDismissOffer={() => setFresh(null)} />}
             {tab === 'Projects' && <Projects goals={goals} projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} deadlines={deadlines} />}
+            {tab === 'Rhythm' && <Rhythm data={data} setData={setData} onReplan={openReplan} />}
             {tab === 'Calendar' && <Calendar goals={goals} tasks={tasks} setTasks={setTasks} freeHours={data.freeHours} freeToday={freeTodayOf(data)} deadlines={deadlines} setDeadlines={setDeadlines} data={data} setData={setData} onStart={startTask} onReplan={openReplan} />}
           </div>
         </main>
@@ -212,10 +239,16 @@ export default function App() {
       </aside>
       {guideOpen && <Guide guide={data.guide} saveGuide={saveGuide} onClose={() => setGuideOpen(false)} onSave={finishGuide} />}
       {focus && focusOpen && (
-        <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask}
+        <Focus key={focus.at} title={focus.title} estimate={focusTask?.hours} spent={focusTask?.spent} logged={!!focusTask} suggestWork={rhythm.focus || undefined}
+          onSession={(s) => setData((d) => record(d, (r) => addSession(r, { task: focusTask?.id, type: focusTask ? typeOf(focusTask) : undefined, ...s, lag: lagOf(focusTask, s.start) })))}
           onLog={(h) => focusTask && addSpent(focusTask.id, h)}
           onDone={(h) => { if (focusTask) setTasks(tasks.map((t) => (t.id === focusTask.id ? { ...t, done: true, spent: Math.round(((t.spent || 0) + h) * 1000) / 1000 } : t))); setFocus(null) }}
           onStop={(h) => { if (focusTask) addSpent(focusTask.id, h); setFocus(null) }} />
+      )}
+      {askTime && (
+        <div className={`fixed inset-x-4 z-40 mx-auto max-w-md md:left-8 md:right-auto md:mx-0 ${toast ? 'bottom-44 md:bottom-28' : 'bottom-24 md:bottom-6'}`}>
+          <TimeAsk key={askTime.id} title={askTime.title} est={askTime.est} onSave={answerTime} onSkip={() => setAskTime(null)} />
+        </div>
       )}
       {toast && (
         <div role="status" onMouseEnter={() => holdToast(true)} onMouseLeave={() => holdToast(false)} onFocus={() => holdToast(true)} onBlur={() => holdToast(false)} className="px-btn-primary fixed inset-x-4 bottom-24 z-40 mx-auto flex max-w-md items-center justify-between gap-3 p-2 md:bottom-6 md:left-8 md:right-auto md:mx-0">
@@ -226,7 +259,7 @@ export default function App() {
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Sections">
-        {TABS.map((t) => (
+        {TABS.filter((t) => t !== 'Rhythm').map((t) => (
           <button key={t} className={`flex min-h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 text-xs ${tab === t ? 'bg-pale font-medium text-ink' : 'text-slate-600'}`}
             aria-current={tab === t ? 'page' : undefined} onClick={() => setTab(t)}>
             <Icon name={t} />{t}

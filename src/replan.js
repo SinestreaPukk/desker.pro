@@ -1,3 +1,4 @@
+import { withSlot } from './schedule.js'
 // Helpers around the AI's replan answer: validate it, show what changes, and flag deadline risks.
 const DATE = /^\d{4}-\d\d-\d\d$/, TIME = /^\d\d:\d\d$/
 const day = (d) => d.toLocaleDateString('sv')
@@ -22,7 +23,7 @@ export function diff(tasks, plan) {
   return { moved, pushedBack: moved.filter((m) => m.pushedBack), fresh: moved.filter((m) => m.fresh) }
 }
 
-export const applyPlan = (tasks, plan) => tasks.map((t) => { const p = plan.find((x) => x.id === t.id); return p ? { ...t, when: p.when, start: p.start } : t })
+export const applyPlan = (tasks, plan) => tasks.map((t) => { const p = plan.find((x) => x.id === t.id); return p ? withSlot(t, p) : t })
 
 // Deadline risks for a schedule: tasks planned after (or left past) their due date, and deadlines needing more hours than free time allows.
 export function risks(tasks, deadlines, freeHours, today = day(new Date())) {

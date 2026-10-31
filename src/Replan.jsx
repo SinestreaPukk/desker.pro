@@ -4,6 +4,7 @@ import { btn, BLUE, ghost } from './ui.js'
 import { isMissed } from './tasks.js'
 import { validPlan, diff, applyPlan, risks } from './replan.js'
 import { planWeek } from './schedule.js'
+import { plannerArgs } from './shared.jsx'
 
 const when = (w, s) => `${new Date(`${w}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}${s ? ` ${s}` : ''}`
 
@@ -16,7 +17,7 @@ export default function Replan({ data, busy, energy, ratio, onApply, onClose }) 
     if (!open.length) return setState({ error: 'You have no open tasks to plan. Add some in Tasks first.' })
     const today = new Date().toLocaleDateString('sv')
     const ctx = { tasks: data.tasks, busy: data.busy || [], deadlines: data.deadlines || [], freeHours: data.freeHours ?? 4, freeToday: data.freeToday?.date === today ? data.freeToday.hours : undefined,
-      scale: ratio > 0 ? Math.min(3, Math.max(0.5, ratio)) : 1 }
+      ...plannerArgs(data) }
     let aiPlan, aiNote = ''
     try {
       const out = await post('/api/replan', {

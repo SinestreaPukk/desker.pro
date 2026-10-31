@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { post } from '../api.js'
 import { addTasks, doneStats, isMissed } from '../tasks.js'
-import { logEnergy, energyProfile, ranges } from '../energy.js'
+import { logEnergy } from '../energy.js'
+import { profile, plannerOf, realityCheck, record, addSignal, rhythmOf, isOff } from '../rhythm.js'
 import { METHODS } from '../methods.js'
 import { Scene } from '../px.jsx'
 import KodamaCard from '../components/KodamaCard.jsx'
-import Insights from '../components/Insights.jsx'
+import RhythmCard from '../components/RhythmCard.jsx'
 import { sceneChoice } from '../game.js'
 import Review from '../Review.jsx'
 import { overlaps } from '../schedule.js'
@@ -14,31 +15,6 @@ import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
 import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
 
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
-
-function Energy({ log, reset }) {
-  const [sure, setSure] = useState(false)
-  const p = energyProfile(log)
-  return (
-    <div className="text-base">
-      {p.enough
-        ? <p className="text-slate-700">Usually high energy: {ranges(p.high) || 'no clear hours yet'}. Usually low: {ranges(p.low) || 'no clear hours yet'}. The AI agent and Replan put demanding work in your high hours.</p>
-        : <p className="text-slate-600">Tap your energy level a few times a day. After {8 - p.n > 0 ? `${8 - p.n} more` : 'a few more'} check-ins, Desker learns when you do your best work.</p>}
-      {log.length > 0 && (
-        <>
-          <details className="mt-2">
-            <summary className="cursor-pointer text-accent">View check-ins ({log.length})</summary>
-            <ul className="mt-1 max-h-40 overflow-y-auto text-slate-700">
-              {[...log].reverse().slice(0, 50).map((e) => <li key={e.at}>{new Date(e.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}: {e.level}</li>)}
-            </ul>
-          </details>
-          {sure
-            ? <p className="mt-2" role="alert">Delete all {log.length} check-ins? <button className={`${btn} text-danger hover:bg-white`} onClick={() => { reset(); setSure(false) }}>Delete</button><button className={`${btn} hover:bg-white`} onClick={() => setSure(false)}>Cancel</button></p>
-            : <button className={`${btn} mt-2 ${ghost}`} onClick={() => setSure(true)}>Reset energy data</button>}
-        </>
-      )}
-    </div>
-  )
-}
 
 const Tile = ({ label, caption, children, keep }) => (
   <div className="px-rule pb-2 lg:col-span-3">
@@ -51,7 +27,20 @@ const Tile = ({ label, caption, children, keep }) => (
 // Today: one question, "what should I do right now?", with the week around it.
 export default function Today({ data, setData, tasks, goals, deadlines, focus, pick, setFocus, setPick, setTasks, goTab, openTimer, deleteTask, openAgent, onReplan, onReview }) {
   const [minutes, setMinutes] = useState(60)
-  const [energy, setEnergy] = useState('medium')
+  const rhythm = profile(data)
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes()
+  const predicted = rhythm.off || !rhythm.energy.confident ? null : rhythm.energy.levelAt(todayStr(), nowMin) // from the user's own check-ins; only said once there are enough
+  const [energy, setEnergy] = useState(predicted || 'medium')
+  const signal = (k, task) => setData((d) => record(d, (r) => addSignal(r, { k, at: Date.now(), task })))
+  // At most two unprompted "how is your energy?" questions a day, never at night, never twice within 3 hours of a tap.
+  const [askEnergy, setAskEnergy] = useState(() => {
+    const day = todayStr(), seen = data.rhythm?.ask, n = seen?.day === day ? seen.n : 0, h = new Date().getHours()
+    return !isOff(data) && n < 2 && h >= 8 && h < 21 && Date.now() - ((data.energyLog || []).at(-1)?.at || 0) > 3 * 36e5 && tasks.some((t) => !t.done && !t.fun)
+  })
+  useEffect(() => {
+    if (askEnergy) setData((d) => record(d, (r) => ({ ...r, ask: { day: todayStr(), n: (r.ask?.day === todayStr() ? r.ask.n : 0) + 1 } })))
+  }, [])
+  const tap = (l) => { setEnergy(l); setAskEnergy(false); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
   const [opts, setOpts] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -88,11 +77,12 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const picks = METHODS.map((m) => ({ m, r: m.pick(tasks, { minutes, energy }) }))
   const lead = picks.find((p) => p.r)
   const cur = focus || pick || cal || (lead && { taskId: lead.r.t.id, title: lead.r.t.title, method: lead.m.name, why: lead.r.why, minutes: lead.r.t.hours ? Math.round(lead.r.t.hours * 60) : undefined })
+  const check = realityCheck(tasks, plannerOf(data), today, freeTodayOf(data) ?? data.freeHours ?? 4)
   const finish = () => {
     if (cur.taskId) setTasks(tasks.map((t) => (t.id === cur.taskId ? { ...t, done: true } : t)))
     setFocus(null)
   }
-  const choose = (m, t, why) => setPick({ taskId: t.id, title: t.title, method: m.name, why, minutes: t.hours ? Math.round(t.hours * 60) : undefined })
+  const choose = (m, t, why) => { if (cur && !focus && !pick && cur.taskId !== t.id) signal('skip', cur.taskId); setPick({ taskId: t.id, title: t.title, method: m.name, why, minutes: t.hours ? Math.round(t.hours * 60) : undefined }) }
   const ask = async () => {
     setBusy(true); setError('')
     try {
@@ -131,8 +121,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-4xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
           <p className="mt-2 text-slate-700">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
+          {check?.over && <p role="note" className="mt-2 text-slate-700">You planned {check.planned} h for today. At your usual pace that is about {check.real} h, and you have {check.free} h free. Replan to spread it out.</p>}
           <KodamaCard goals={goals} onlyNews className="mt-3 hidden sm:flex" />
-          {(missed.length > 0 || clashes > 0) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
+          {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 lg:order-2"><Scene {...sceneChoice(data)} /></div>
       </header>
@@ -167,13 +158,20 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       <div className="mb-6 grid gap-6 lg:grid-cols-12">
         <section className={`${panel} !p-3 lg:col-span-9 lg:!p-4`} aria-label="Right now">
           <h2 className="px-tab px-tab-beni inline-block">Right now</h2>
+          {askEnergy && (
+            <div role="group" aria-label="How is your energy" className="px-rule mt-3 flex flex-wrap items-center gap-2 pb-3">
+              <span>How is your energy right now?</span>
+              <div className="px-seg">{['low', 'medium', 'high'].map((l) => <button key={l} className="px-btn capitalize" onClick={() => tap(l)}>{l}</button>)}</div>
+              <button className={btn} onClick={() => setAskEnergy(false)}>Not now</button>
+            </div>
+          )}
           {cur ? (
             <div className={`${card} mt-3`}>
               <p className="text-slate-700">{focus ? 'You are doing' : pick ? 'You picked' : 'Do this next'}</p>
               <p className="mt-1 break-words text-2xl">{cur.title}</p>
               <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => setFocus({ ...cur, at: Date.now() })}>{focus ? 'Done' : 'Start'}</button>
+                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
                 {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
                 {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
               </div>
@@ -204,9 +202,10 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               <div role="group" aria-labelledby="energy-label" className="px-seg">
                 {['low', 'medium', 'high'].map((l) => (
                   <button key={l} aria-pressed={energy === l} className="px-btn capitalize"
-                    onClick={() => { setEnergy(l); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }}>{l}</button>
+                    onClick={() => tap(l)}>{l}</button>
                 ))}
               </div>
+              {predicted && <span className="text-xs text-slate-700">Usually {predicted} around now. Tap to correct.</span>}
             </div>
           </div>
 
@@ -247,10 +246,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                   ))}
                 </ul>
               )}
-              <div>
-                <p className="mb-1">Your energy pattern</p>
-                <Energy log={data.energyLog || []} reset={() => setData((d) => ({ ...d, energyLog: [] }))} />
-              </div>
+              <button className={link} onClick={() => goTab('Rhythm')}>See your energy pattern</button>
             </div>
           </details></>}
         </section>
@@ -296,7 +292,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
               </div>
             </div>
           )}
-          <div className="mt-6"><Insights data={data} onReplan={onReplan} /></div>
+          <div className="mt-6"><RhythmCard data={data} onOpen={() => goTab('Rhythm')} /></div>
         </section>
         <div className="flex flex-col gap-6 lg:col-span-6">
           <Review tasks={tasks} goals={goals} onAgent={onReview} />

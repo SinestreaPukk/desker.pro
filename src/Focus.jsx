@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { btn, BLUE, ghost } from './ui.js'
 
-const read = () => { try { return { work: 25, brk: 5, ...JSON.parse(localStorage.pomo || '{}') } } catch { return { work: 25, brk: 5 } } }
+const read = (work = 25) => { try { return { work, brk: 5, ...JSON.parse(localStorage.pomo || '{}') } } catch { return { work, brk: 5 } } } // work: the learned typical focus length, used until the user sets their own
 const savedMode = () => { try { return localStorage.pomoMode || null } catch { return null } } // 'pomo' | 'free' once the user ticked "don't ask again"
 const FREE = 1e12 // plain focus never reaches the end of its phase; it just counts up
 const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` }
 
 // Pomodoro timer for one task. Focus time is logged on the task (task.spent, hours) every minute and whenever you pause or leave.
-export default function Focus({ title, estimate, spent = 0, logged, onLog, onDone, onStop }) { // onDone/onStop receive the last unlogged hours
-  const [cfg, setCfg] = useState(read)
+export default function Focus({ title, estimate, spent = 0, logged, suggestWork, onLog, onSession, onDone, onStop }) { // onDone/onStop receive the last unlogged hours; onSession the whole sitting
+  const [cfg, setCfg] = useState(() => read(suggestWork))
   const [phase, setPhase] = useState('work')
   const [left, setLeft] = useState(() => (savedMode() === 'free' ? FREE : cfg.work * 6e4))
   const [mode, setMode] = useState(savedMode) // null = still asking
@@ -16,7 +16,7 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
   const [running, setRunning] = useState(() => savedMode() !== null)
   const [cycles, setCycles] = useState(0)
   const [session, setSession] = useState(0) // focused ms this session
-  const acc = useRef(0), last = useRef(Date.now()), st = useRef({})
+  const acc = useRef(0), last = useRef(Date.now()), st = useRef({}), sit = useRef({ start: Date.now(), pauses: 0 })
   st.current = { phase, left, running, cfg }
   const logRef = useRef(onLog); logRef.current = onLog
 
@@ -52,8 +52,12 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
     last.current = Date.now()
     setMode(m); setLeft(m === 'free' ? FREE : cfg.work * 6e4); setRunning(true)
   }
-  const pause = () => { if (running) flush(); setRunning(!running) }
-  const leave = (fn) => () => fn(take()) // the caller logs these last hours together with its own change
+  const pause = () => { if (running) { flush(); sit.current.pauses++ } setRunning(!running) }
+  // the caller logs these last hours together with its own change; the sitting is reported once, as finished (Done) or abandoned (Stop)
+  const leave = (fn, result) => () => {
+    if (result && session >= 6e4) onSession?.({ start: sit.current.start, end: Date.now(), active: Math.round(session / 6e4), pauses: sit.current.pauses, result })
+    fn(take())
+  }
   const total = (phase === 'work' ? cfg.work : cfg.brk) * 6e4
   const free = mode === 'free'
   const field = 'px-field w-20'
@@ -80,8 +84,8 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
       <div className="flex flex-wrap justify-center gap-2">
         <button className={`${btn} ${ghost}`} onClick={pause}>{running ? 'Pause' : 'Resume'}</button>
         {!free && <button className={`${btn} ${ghost}`} onClick={() => { flush(); setPhase(phase === 'work' ? 'break' : 'work'); setLeft((phase === 'work' ? cfg.brk : cfg.work) * 6e4) }}>{phase === 'work' ? 'Skip to break' : 'Skip break'}</button>}
-        <button className={`${btn} ${BLUE}`} onClick={leave(onDone)}>Done</button>
-        <button className={`${btn} ${ghost}`} onClick={leave(onStop)}>Stop</button>
+        <button className={`${btn} ${BLUE}`} onClick={leave(onDone, 'finished')}>Done</button>
+        <button className={`${btn} ${ghost}`} onClick={leave(onStop, 'abandoned')}>Stop</button>
       </div>
       {!free && <div className="flex gap-4 text-base text-yuki-2">
         <label className="flex items-center gap-2">Focus (min)<input type="number" min="1" max="120" className={field} value={cfg.work} onChange={(e) => set('work', e.target.value)} /></label>

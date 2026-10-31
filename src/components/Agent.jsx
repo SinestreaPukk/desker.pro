@@ -4,6 +4,7 @@ import { BLUE, btn, ghost, input, LEVELS } from '../ui.js'
 import { Avatar } from '../px.jsx'
 import { Icon } from '../icons.jsx'
 import { weekReview } from '../review.js'
+import { summaryForAI } from '../rhythm.js'
 import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, applyPlanChecked, QUICK, todayStr } from '../shared.jsx'
 
 export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
@@ -20,7 +21,7 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       const out = await post('/api/chat', {
         goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
         tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId }) => ({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId })),
-        pattern: patternOf(data), ratio: ratioOf(data.tasks),
+        pattern: patternOf(data), ratio: ratioOf(data.tasks), rhythm: summaryForAI(data),
         projects: (data.projects || []).map(({ id, title, kind, date }) => ({ id, title, kind, date })),
         deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
         hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),

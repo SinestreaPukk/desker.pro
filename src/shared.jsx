@@ -1,6 +1,6 @@
 import { post } from './api.js'
 import { isMissed, timeRatio } from './tasks.js'
-import { energyProfile } from './energy.js'
+import { profile, plannerOf } from './rhythm.js'
 import { repair } from './schedule.js'
 import { encodeFile } from './files.js'
 import { LEVELS, Q, CAL } from './ui.js'
@@ -52,8 +52,14 @@ export async function importCalendar(body) {
 
 
 export const REPEATS = [['', 'Never'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', 'Weekly'], ['monthly', 'Monthly']]
-export const patternOf = (d) => { const p = energyProfile(d.energyLog); return p.enough && (p.high.length || p.low.length) ? { high: p.high, low: p.low } : undefined }
-export const ratioOf = (tasks) => timeRatio(tasks)?.ratio
+export const patternOf = (d) => { const e = profile(d).energy; const high = e.confident ? e.hours('high') : [], low = e.confident ? e.hours('low') : []; return high.length || low.length ? { high, low } : undefined }
+// How much longer than estimated this person's work takes. The rhythm model's number once it has 3+ finished tasks to go on
+// (App publishes it with setLiveRatio each render, so the six screens that ask the AI to break work down do not need it passed in), else the old timer-based ratio.
+let live
+export const setLiveRatio = (r) => { live = r }
+export const ratioOf = (tasks) => live ?? timeRatio(tasks)?.ratio
+// scheduler options from what Desker has learned (nothing when the user switched learning off)
+export const plannerArgs = (d) => { const p = plannerOf(d); return p ? { scale: p.scale, pad: p.pad, energy: p.energy } : {} }
 export const todayStr = () => new Date().toLocaleDateString('sv')
 // Calendar-based suggestion: what the schedule says to do now.
 export function fromCalendar(tasks) {
@@ -93,7 +99,7 @@ export function applyPlanChecked(d, o) {
   const merged = { ...d, tasks: fun ? [...tasks.filter((t) => !t.fun || t.done), ...fun] : tasks, freeHours: Number.isFinite(o.freeHours) ? o.freeHours : d.freeHours, freeToday: Number.isFinite(o.freeToday) ? { date: todayStr(), hours: o.freeToday } : d.freeToday, mood: typeof o.mood === 'string' && o.mood ? o.mood.slice(0, 80) : d.mood }
   const ids = [...changed, ...(fun || []).map((f) => f.id)]
   if (!ids.length) return { data: merged, problems: [] }
-  const fixed = repair({ tasks: merged.tasks, changed: ids, busy: merged.busy || [], deadlines: merged.deadlines || [], freeHours: merged.freeHours ?? 4, freeToday: freeTodayOf(merged) })
+  const fixed = repair({ tasks: merged.tasks, changed: ids, busy: merged.busy || [], deadlines: merged.deadlines || [], freeHours: merged.freeHours ?? 4, freeToday: freeTodayOf(merged), ...plannerArgs(merged) })
   return { data: { ...merged, tasks: fixed.tasks }, problems: fixed.problems.map((p) => p.why) }
 }
 

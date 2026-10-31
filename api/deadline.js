@@ -18,7 +18,7 @@ ${ratio ? `Calibration: from their finished, timed tasks this user really takes 
 
 Decide:
 - If hours are unknown AND the context is too thin to estimate them AND you have asked fewer than 2 questions so far (asked so far: ${asked}), reply with ONLY {"question": "<one short question that would help most, e.g. topics covered, current readiness, past experience>"}.
-- Otherwise reply with ONLY {"hours": <total hours needed, use the user's number if given>, "summary": "<1 sentence on how you got there>", "options": [{"title": "<specific action>", "hours": <number>, "due": "<yyyy-mm-dd between today and the deadline>"}]}
+- Otherwise reply with ONLY {"hours": <total hours needed, use the user's number if given>, "summary": "<1 sentence on how you got there>", "options": [{"title": "<specific action>", "hours": <number>, "type": "<Reading, Problem set, Writing, Revision, Lab report, Group work, Admin or Other>", "due": "<yyyy-mm-dd between today and the deadline>"}]}
 If the whole job is one clear action of about 2 hours or less, give exactly 1 option. Otherwise give 3 to 6 concrete, distinct options, e.g. one per topic or milestone, ordered by due date, hours adding up to roughly the total, with weaker areas getting more time. The last option should land at least a day before the deadline when possible.
 
 Task quality rules (these matter more than anything above):

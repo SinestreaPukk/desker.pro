@@ -17,7 +17,18 @@ const mins = (s) => { const m = TIME.exec(s || ''); return m ? +m[1] * 60 + +m[2
 const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const up = (m) => Math.ceil(m / STEP) * STEP
 // Block length in minutes. A task with no hours gets 1h (and is reported as assumed).
-export const lengthOf = (t, scale = 1) => Math.max(STEP, up(Math.round((t.hours > 0 ? t.hours : 1) * 60 * scale)))
+// scale: a number or (task) => number (the learned "it takes you 1.4x" multiplier). With no scale, a block Desker
+// reserved earlier (task.block, valid while task.hours is still what it was computed from) is used, else the estimate.
+export const lengthOf = (t, scale) => {
+  if (scale === undefined && t.block > 0 && t.blockOf === t.hours) return t.block
+  const k = typeof scale === 'function' ? scale(t) : scale ?? 1
+  return Math.max(STEP, up(Math.round((t.hours > 0 ? t.hours : 1) * 60 * k)))
+}
+// The task with a planned slot written onto it, plus the length Desker reserved when that differs from the estimate.
+export const withSlot = (t, p) => {
+  const raw = lengthOf({ ...t, block: undefined })
+  return { ...t, when: p.when, start: p.start, ...(p.len && p.len !== raw ? { block: p.len, blockOf: t.hours } : { block: undefined, blockOf: undefined }) }
+}
 const hoursText = (m) => `${Math.round((m / 60) * 4) / 4}h`
 
 // Imported events ({ t, s, e } in epoch ms; all-day { d } never blocks) -> Map(date -> [{ s, e, title }]) in minutes.
@@ -42,8 +53,11 @@ const clash = (list, s, e) => list.some(([a, b]) => s < b && a < e)
 
 // tasks: the open tasks to place. fixed: other tasks that stay where they are (they block time and use free hours).
 // prefer: { [taskId]: { when, start? } } a proposed slot (from the AI); kept only if it is valid.
-// Returns { plan: [{ id, when, start, late?, assumed? }], problems: [{ id, title, why, short? }] }.
-export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHours = 4, freeToday, prefer = {}, now = new Date(), dayStart = DAY_START, dayEnd = DAY_END, horizon = 14, scale = 1 }) {
+// scale: number | (task) => number, how much longer than estimated each task really takes. pad: extra minutes at the end of
+// every block (a known tendency to start late). energy: { at(date, minute) -> 0..2, deep(task) -> bool }; deep work then
+// takes the highest-energy free slot of its day instead of the earliest one (the day itself is still the earliest that works).
+// Returns { plan: [{ id, when, start, len, late?, assumed? }], problems: [{ id, title, why, short? }] }.
+export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHours = 4, freeToday, prefer = {}, now = new Date(), dayStart = DAY_START, dayEnd = DAY_END, horizon = 14, scale = 1, pad = 0, energy }) {
   const today = iso(now), nowMin = now.getHours() * 60 + now.getMinutes()
   const occ = new Map(), used = new Map() // date -> [[s, e]] blocked intervals / minutes charged to free time
   const block = (date, s, e) => { if (!occ.has(date)) occ.set(date, []); occ.get(date).push([s, e]) }
@@ -57,10 +71,18 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
   const capOf = (date) => Math.max(0, (date === today && freeToday != null ? freeToday : freeHours) * 60)
   const roomOn = (date) => Math.max(0, capOf(date) - (used.get(date) || 0))
   const floorOn = (date) => Math.max(dayStart, date === today ? up(nowMin) : 0)
-  const slot = (date, d, floor, ceil) => {
+  const avgEnergy = (date, s, d) => { let sum = 0, n = 0; for (let m = s; m < s + d; m += 30) { sum += energy.at(date, m); n++ } return sum / n }
+  const slot = (date, d, floor, ceil, t) => {
     const list = occ.get(date) || []
-    for (let s = up(floor); s + d <= ceil; s += STEP) if (!clash(list, s, s + d)) return s
-    return null
+    const pick = energy && t && energy.deep(t)
+    let best = null, top = -1
+    for (let s = up(floor); s + d <= ceil; s += STEP) {
+      if (clash(list, s, s + d)) continue
+      if (!pick) return s
+      const v = avgEnergy(date, s, d)
+      if (v > top + 0.05) { best = s; top = v } // only a real improvement moves it, so ties keep the earliest time
+    }
+    return best
   }
   const lastDayOf = (t) => {
     const dl = deadlines.find((x) => x.id === t.deadlineId)
@@ -76,7 +98,7 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
   const order = [...tasks].filter((t) => !t.done).sort((a, b) =>
     (lastDayOf(a) || '9999').localeCompare(lastDayOf(b) || '9999') || (b.important ? 1 : 0) - (a.important ? 1 : 0) || lengthOf(b) - lengthOf(a))
   for (const t of order) {
-    const d = lengthOf(t, scale), last = lastDayOf(t), assumed = !(t.hours > 0)
+    const d = lengthOf(t, scale) + pad, last = lastDayOf(t), assumed = !(t.hours > 0)
     if (!t.fun && d > freeHours * 60) { // longer than any day's free time: it can never fit as one block
       problems.push({ id: t.id, title: t.title, short: (d - freeHours * 60) / 60, why: freeHours > 0 ? `${t.title} needs ${hoursText(d)}, more than your ${hoursText(freeHours * 60)} of free time in a day. Split it into smaller tasks.` : `${t.title} cannot be planned: free time per day is 0.` })
       continue
@@ -84,11 +106,11 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
     const place = (date, s, late) => {
       block(date, s, s + d)
       if (!t.fun) used.set(date, (used.get(date) || 0) + d)
-      plan.push({ id: t.id, when: date, start: hm(s), ...(late && { late: true }), ...(assumed && { assumed: true }) })
+      plan.push({ id: t.id, when: date, start: hm(s), len: d, ...(late && { late: true }), ...(assumed && { assumed: true }) })
     }
     const fits = (date, late) => {
       if (!t.fun && roomOn(date) < d) return null
-      return slot(date, d, floorOn(date), late || !(date === last) ? dayEnd : limitOn(t, date, last))
+      return slot(date, d, floorOn(date), late || !(date === last) ? dayEnd : limitOn(t, date, last), t)
     }
     // 1. the proposed slot, if it is valid as it stands
     const p = prefer[t.id]
@@ -151,20 +173,20 @@ export function overlaps(tasks, busy = []) {
 }
 
 // A whole-week plan: every open work task gets a slot. aiPlan ([{ id, when, start }], optional) is honoured where it is valid.
-export function planWeek({ tasks, busy, deadlines, freeHours, freeToday, aiPlan, scale, now, dayStart, dayEnd }) {
+export function planWeek({ tasks, busy, deadlines, freeHours, freeToday, aiPlan, scale, pad, energy, now, dayStart, dayEnd }) {
   const open = tasks.filter((t) => !t.done)
   // a task keeps its current slot when that is still valid; the AI's proposal, where there is one, wins over it
   const prefer = Object.fromEntries([...open.filter((t) => t.when).map((t) => [t.id, { when: t.when, start: t.start }]), ...(aiPlan || []).map((p) => [p.id, p])])
-  return schedule({ tasks: open.filter((t) => !t.fun), fixed: open.filter((t) => t.fun), busy, deadlines, freeHours, freeToday, prefer, scale, now, dayStart, dayEnd })
+  return schedule({ tasks: open.filter((t) => !t.fun), fixed: open.filter((t) => t.fun), busy, deadlines, freeHours, freeToday, prefer, scale, pad, energy, now, dayStart, dayEnd })
 }
 
 // Check a handful of tasks whose time was just set by someone else (the chat agent). `changed` = ids to verify; the rest stay put.
 // Returns { tasks, problems } with the changed tasks moved only where their proposed slot was invalid.
-export function repair({ tasks, changed, busy, deadlines, freeHours, freeToday, now, scale }) {
+export function repair({ tasks, changed, busy, deadlines, freeHours, freeToday, now, scale, pad, energy }) {
   const set = new Set(changed)
   const mine = tasks.filter((t) => set.has(t.id) && !t.done)
   const prefer = Object.fromEntries(mine.filter((t) => t.when).map((t) => [t.id, { when: t.when, start: t.start }]))
-  const { plan, problems } = schedule({ tasks: mine, fixed: tasks.filter((t) => !set.has(t.id) && !t.done), busy, deadlines, freeHours, freeToday, prefer, now, scale })
+  const { plan, problems } = schedule({ tasks: mine, fixed: tasks.filter((t) => !set.has(t.id) && !t.done), busy, deadlines, freeHours, freeToday, prefer, now, scale, pad, energy })
   const by = new Map(plan.map((p) => [p.id, p]))
-  return { tasks: tasks.map((t) => (by.has(t.id) ? { ...t, when: by.get(t.id).when, start: by.get(t.id).start } : t)), problems }
+  return { tasks: tasks.map((t) => (by.has(t.id) ? withSlot(t, by.get(t.id)) : t)), problems }
 }
