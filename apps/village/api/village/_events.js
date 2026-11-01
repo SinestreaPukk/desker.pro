@@ -11,6 +11,7 @@ const SPEC = {
   focus_started: { plannedMin: num(600) },
   focus_completed: { plannedMin: num(600), actualMin: num(600), valid: bool },
   board_opened: {},
+  board_item_added: { kind: oneOf('due', 'exam', 'announcement') }, board_item_to_planner: { kind: oneOf('due', 'exam') },
   question_asked: {}, question_answered: {}, question_resolved: {},
   invite_created: {},
   invite_accepted: {},

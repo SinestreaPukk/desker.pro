@@ -9,7 +9,7 @@ import { cleanQuestion, cleanAnswer, canResolve, QUESTION_RATE, ANSWER_RATE } fr
 const ID = /^[0-9a-f-]{36}$/
 
 /** Tell the room (best effort: the question is saved either way and shows when the Board is opened). */
-async function notify(vid, body) {
+export async function notify(vid, body) {
   const base = process.env.VILLAGE_REALTIME_HTTP ?? process.env.VITE_REALTIME_URL?.replace(/^ws/, 'http')
   if (!base || !process.env.VILLAGE_ROOM_SECRET) return
   try {

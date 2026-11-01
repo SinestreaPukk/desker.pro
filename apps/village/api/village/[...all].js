@@ -13,9 +13,10 @@ import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { inviteRoutes, manage, closeVillage } from './_manage.js'
 import { qa } from './_qa.js'
+import { board } from './_board.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
-import { cleanCreate, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
+import { cleanCreate, tagOf, MAX_COURSE_TAGS, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
 
 const MAX_MEMBERS = 50 // = VILLAGE_MAX_MEMBERS in packages/shared/src/constants.ts (plain JS here, no TS build step)
 const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in packages/shared/src/types.ts
@@ -143,10 +144,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, spotId: spot })
   }
 
-  if (second === 'board' && req.method === 'GET') { // Phase 0 Board: deadlines of members who share them, for this village's courses (polled by the client every 5 minutes)
-    const items = await boardRows([v.id])
-    return res.json({ items: buildBoard(items, v.course_tags ?? [], Date.now()) })
-  }
+  if (await board({ req, res, uid, v, parts: parts.slice(1), ev, auto: () => boardRows([v.id]) })) return // the Board: shared deadlines read live, plus items added by hand, announcements, planner
 
   if (second === 'event' && req.method === 'POST') { // what the browser knows: opened, bubble sent, board opened, minutes on leave (also by sendBeacon)
     if (!(await limit(req, res, { scope: 'village-event', max: 600, id: uid }))) return
@@ -199,6 +197,11 @@ export default async function handler(req, res) {
     if (b.libraryAutoFocus !== undefined) { if (typeof b.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' }); patch.library_auto_focus = b.libraryAutoFocus }
     if (b.whoCanInvite !== undefined) { if (!['admins', 'everyone'].includes(b.whoCanInvite)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_invite = b.whoCanInvite }
     if (b.defaultSharing !== undefined) { if (!['basic', 'full'].includes(b.defaultSharing)) return res.status(400).json({ error: 'Invalid' }); patch.default_status_sharing = b.defaultSharing }
+    if (b.addCourse !== undefined) { // a new course tag, so its deadlines can be added to the Board
+      const tag = tagOf(b.addCourse); if (!/^[A-Z]{2,6}\d{2,5}$/.test(tag)) return res.status(400).json({ error: 'Invalid' })
+      await sql.query('update village set course_tags = array_append(course_tags, $2) where id = $1 and not ($2 = any(course_tags)) and cardinality(course_tags) < $3', [v.id, tag, MAX_COURSE_TAGS])
+      if (!Object.keys(patch).length) return res.json({ ok: true })
+    }
     if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to change' })
     await sql.query('update village set settings = settings || $2::jsonb where id = $1', [v.id, JSON.stringify(patch)])
     return res.json({ ok: true })

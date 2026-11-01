@@ -8,7 +8,7 @@ export type Info = {
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
   const r = await fetch(`/api/village/${path}`, { credentials: 'include', ...init, headers: { 'content-type': 'application/json' } })
   const body = await r.json().catch(() => ({}))
-  if (!r.ok) throw Object.assign(new Error(body.error ?? `HTTP ${r.status}`), { code: body.error as string | undefined })
+  if (!r.ok) throw Object.assign(new Error(body.error ?? `HTTP ${r.status}`), { code: body.error as string | undefined, body })
   return body as T
 }
 export const mine = () => call<{ villages: Mine[]; closed: { slug: string; name: string }[] }>('mine')
@@ -21,9 +21,16 @@ export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug
 export const focusStart = (slug: string, plannedMin: number) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin }) })
 export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; plannedMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
-export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
-export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[] }
-export const board = (slug: string) => call<{ items: BoardItem[] }>(`${slug}/board`)
+export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
+export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[]; confirmedBy: string[]; itemId?: string; createdBy?: string; inPlanner: boolean }
+export type Announcement = { id: string; title: string; body: string | null; pinned: boolean; createdAt: string; by: string }
+export const board = (slug: string) => call<{ items: BoardItem[]; announcements: Announcement[] }>(`${slug}/board`)
+export type NewItem = { kind: 'due' | 'exam'; courseCode: string; title: string; date: string; time?: string; force?: boolean }
+export const addItem = (slug: string, b: NewItem) => call<{ id: string }>(`${slug}/board`, { method: 'POST', body: JSON.stringify(b) })
+export const confirmItem = (slug: string, id: string, on: boolean) => call<{ ok: true }>(`${slug}/board/${id}/confirm`, { method: 'POST', body: JSON.stringify({ on }) })
+export const deleteItem = (slug: string, id: string) => call<{ ok: true }>(`${slug}/board/${id}`, { method: 'DELETE' })
+export const announce = (slug: string, b: { title: string; body?: string; pinned: boolean }) => call<{ id: string }>(`${slug}/board/announce`, { method: 'POST', body: JSON.stringify(b) })
+export const toPlanner = (slug: string, it: BoardItem) => call<{ ok: true; already?: boolean }>(`${slug}/board/planner`, { method: 'POST', body: JSON.stringify({ title: it.title, courseCode: it.courseCode, dueAt: it.dueAt, kind: it.kind }) })
 /** Analytics (SPEC §13): never message text. `beacon` survives the tab closing. */
 export function track(slug: string, name: string, props: Record<string, unknown> = {}, beacon = false) {
   const body = JSON.stringify({ name, props }), url = `/api/village/${slug}/event`

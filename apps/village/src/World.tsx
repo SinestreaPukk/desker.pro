@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { actionOf, isTyping, urgency, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { track, board as fetchBoard, claimDesk, focusEnd, focusStart, info, type BoardItem, type Info } from './api.ts'
+import { track, board as fetchBoard, questions as fetchQuestions, claimDesk, focusEnd, focusStart, info, type Announcement, type BoardItem, type Info } from './api.ts'
 import Board from './Board.tsx'
 import { AskBox } from './Questions.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
@@ -52,14 +52,20 @@ export default function World({ slug }: { slug: string }) {
   const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [qOpen, setQOpen] = useState(false), [qRev, setQRev] = useState(0), [now, setNow] = useState(Date.now())
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
-  const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
+  const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null), [news, setNews] = useState<Announcement[]>([])
+  const redPin = useRef(false), qPin = useRef(false)
   const zoneAt = useRef<Partial<Record<ZoneId, number>>>({}), noteTimer = useRef<ReturnType<typeof setTimeout>>()
   const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
   const [wheel, setWheel] = useState(false), [mapOn, setMapOn] = useState(() => !isTouchUi()), [note, setNote] = useState(''), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
   const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
-  const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); bridgeRef.current?.boardPin(r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now())) }, () => {})
+  const pins = () => bridgeRef.current?.boardPin(redPin.current, qPin.current)
+  const loadBoardRef = useRef<() => void>(() => {})
+  const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); setNews(r.announcements); redPin.current = r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now()); pins() }, () => {})
+  loadBoardRef.current = loadBoard
+  const loadQPin = () => fetchQuestions(slug).then((r) => { qPin.current = r.questions.some((q) => !q.resolved && q.answers === 0); pins() }, () => {}) // a "?" on the Board in the world while a question waits for its first answer
+  useEffect(() => { if (data) loadQPin() }, [data, qRev])
   useEffect(() => { if (!data) return; loadBoard(); const t = setInterval(loadBoard, 300_000); return () => clearInterval(t) }, [data]) // polled every 5 minutes in Phase 0
   useEffect(() => { if (boardOpen) { loadBoard(); track(slug, 'board_opened') } }, [boardOpen])
   useEffect(() => { // village_opened, and session_minutes on leave and whenever the tab hides (sendBeacon, as a closing tab cannot wait)
@@ -91,6 +97,7 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'log') setLog(m.items)
       else if (m.t === 'said' && m.text && m.userId !== data.me.userId) blip()
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
+      else if (m.t === 'qupdate' && m.qid === 'board') { loadBoardRef.current(); bridgeRef.current?.boardPulse() } // the API sends qid 'board' when something changes on the Board
       else if (m.t === 'qupdate' || m.t === 'asked') setQRev((n) => n + 1)
       else if (m.t === 'answered') { setQRev((n) => n + 1); toast(`${m.name} answered your question`); blip() }
       else if (m.t === 'knocked') { setKnock({ from: m.fromUserId, name: m.name }); blip(240, 180) }
@@ -210,11 +217,11 @@ export default function World({ slug }: { slug: string }) {
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
-        {boardOpen && <Board items={boardItems} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} rev={qRev} onClose={() => setBoardOpen(false)} />}
+        {boardOpen && <Board items={boardItems} news={news} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} courseTags={data.village.courseTags} rev={qRev} onChanged={loadBoard} onClose={() => setBoardOpen(false)} />}
         {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.') }} onClose={() => setQOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
-        {mapOn && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}
+        {mapOn && !boardOpen && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}
         {note && <div className="zone-note" role="status">{note}</div>}
         {wheel && <EmoteWheel onPick={(id) => { send.current({ t: 'emote', id }); setWheel(false) }} onClose={() => setWheel(false)} />}
         {knock && <div className="knock-card" role="alert"><span><b>{knock.name}</b> knocked: chat when you're free?</span><span className="row"><button onClick={() => { bridgeRef.current?.follow(knock.from, true); setKnock(null) }}>Walk over</button><button onClick={() => setKnock(null)}>Later</button></span></div>}

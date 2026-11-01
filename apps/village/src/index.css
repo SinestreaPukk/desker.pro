@@ -115,3 +115,16 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .board .questions li.done { opacity: .6 } .board .thread .q { margin: 6px 0 2px } .board .thread button { cursor: pointer }
 .board .reply { display: flex; gap: 6px; margin-top: 8px } .board .reply input { flex: 1; font: inherit; padding: 6px 8px; border: 1px solid #b4c6de; border-radius: 6px } .board .thread em { color: #b3261e; font-size: 13px }
 .board .thread li { display: flex; flex-direction: column; gap: 2px } .board .thread li button { margin-left: 8px; font-size: 12px }
+
+/* The full Board (CP6) */
+.board.wide { width: min(920px, 100vw) } .board .cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start } .board .cols .questions { margin-top: 0 }
+.board .tabs { display: none } .board .filters { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px }
+.board .filters button, .add-item .chips button { border: 1px solid #b4c6de; background: #eef2f8; border-radius: 12px; padding: 1px 8px; font-size: 12px; cursor: pointer } .board .filters .on, .add-item .chips .on { background: #35599a; color: #fff }
+.board h3 { display: flex; justify-content: space-between; align-items: center } .board .plus { border: 1px solid #35599a; background: #fff; color: #35599a; border-radius: 50%; width: 22px; height: 22px; line-height: 1; cursor: pointer; font-size: 16px }
+.board .acts { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px } .board .acts button { font-size: 12px; padding: 2px 6px; border: 1px solid #b4c6de; background: #fff; border-radius: 6px; cursor: pointer } .board .acts button[aria-pressed=true] { background: #e3f1e3; border-color: #5a9a5a } .board .acts .in { font-size: 12px; color: #3d7a3d }
+.board .del { margin-left: auto; border: 0; background: none; cursor: pointer } .board .who em { font-size: 11px; font-style: normal; align-self: center; color: #5b6b86 }
+.board li.pinned { border-color: #d89b3a; background: #fff8e8 } .board .body { margin: 4px 0; white-space: pre-wrap } .board .bmsg { background: #e3f1e3; border-radius: 6px; padding: 4px 8px; font-size: 13px }
+.add-item input:not([type=radio]):not([type=checkbox]), .add-item textarea { font: inherit; padding: 6px 8px; border: 1px solid #b4c6de; border-radius: 6px; width: 100%; box-sizing: border-box } .add-item .row { display: flex; gap: 6px; flex-wrap: wrap } .add-item .row input { width: auto; flex: 1 }
+.add-item .chips { display: flex; gap: 4px; flex-wrap: wrap } .add-item .newtag { display: inline-flex; gap: 4px } .add-item .newtag input { width: 100px } .add-item .err { color: #b3261e }
+@media (max-width: 640px) { .board.wide { width: 100vw } .board .tabs { display: flex; gap: 4px; margin-bottom: 8px } .board .tabs button { flex: 1; padding: 6px 2px; border: 1px solid #b4c6de; background: #eef2f8; border-radius: 8px; cursor: pointer } .board .tabs .on { background: #35599a; color: #fff }
+  .board .cols { display: block } .board .bcol { display: none } .board .bcol.on { display: block } }

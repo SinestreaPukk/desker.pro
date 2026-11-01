@@ -16,7 +16,9 @@ export class Bridge {
   /** React tells the scene a village timer started (true) or ended (false). */
   timer: (on: boolean) => void = () => {}
   /** A red pin on the Board in the world while something is due within 24 hours. */
-  boardPin: (on: boolean) => void = () => {}
+  boardPin: (red: boolean, question?: boolean) => void = () => {}
+  /** Something new went on the Board while you are here: the pins pulse gently. */
+  boardPulse: () => void = () => {}
   /** Phase 1 CP3: Do Not Disturb, and what you can do about another person (all set by the scene). */
   toggleDnd: () => void = () => {}
   /** Minimap: where everyone is (tiles), and click-to-walk to a tile. */

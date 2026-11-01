@@ -39,6 +39,7 @@ export class WorldScene extends Phaser.Scene {
   private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
   private notice: { text: string; until: number } | null = null
+  private qpin?: Phaser.GameObjects.Text
   private bubbles = new Map<string, { box: Phaser.GameObjects.Container; timer: Phaser.Time.TimerEvent }>()
   private tint!: Phaser.GameObjects.Rectangle
   private glows: Phaser.GameObjects.Image[] = []
@@ -103,7 +104,9 @@ export class WorldScene extends Phaser.Scene {
     b.locate = (id) => { const t = this.who(id); if (!t || t === this.me) return; const cam = this.cameras.main; cam.startFollow(t.sprite, true, CAMERA_LERP, CAMERA_LERP); this.time.delayedCall(2000, () => cam.startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP)) } // locate only; walking to them comes in Phase 1
     const bd = this.world.interactables.find((o) => o.kind === 'board')
     this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
-    b.boardPin = (on) => { this.pin?.setVisible(on) }
+    this.qpin = bd ? this.add.text((bd.x + bd.w) * TILE_PX - 12, bd.y * TILE_PX - 2, '?', { fontFamily: 'VT323, monospace', fontSize: '10px', color: '#14213d', backgroundColor: '#f2c14e', padding: { x: 2, y: 0 } }).setDepth(D.above).setVisible(false) : undefined
+    b.boardPin = (on, q = false) => { this.pin?.setVisible(on); this.qpin?.setVisible(q) }
+    b.boardPulse = () => { for (const o of [this.pin, this.qpin]) if (o) this.tweens.add({ targets: o, scale: 1.8, duration: 300, yoyo: true, repeat: 2 }) }
     b.interact = () => this.interact()
     b.walkToTile = (x, y) => { this.setFollow(null); this.walkTo(x, y, false) }
     b.positions = () => [{ userId: this.data0.userId, x: this.fx, y: this.fy }, ...[...this.remotes].map(([userId, r]) => ({ userId, x: r.shown.x, y: r.shown.y }))]
