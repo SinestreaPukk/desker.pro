@@ -492,3 +492,12 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 ### Phase 0 status
 All 12 checkpoints are built. What the owner still has to do: apply migrations 005 and 006 to production, deploy the Worker and the Vercel project, set the DNS and env vars (README), delete the stray production test account `village-test-b278e9@desker.test`, then run the demo script with friends and read `village-report.ts` for the gate (3 groups, 3+ sessions each in a week).
 Known simplifications: tap-to-walk is straight lines; the Board is polled every 5 minutes and read-only; chat history lives in the room's SQLite, not Postgres; the room forgets positions on restart; no sounds beyond a blip and chime; the avatar is not yet customisable; real-device phone testing is outstanding.
+
+## Phase 1, Checkpoint 1: create a village (done)
+- `/new` (name + address + template, courses, rules), `POST /api/village` (limits 5 owned / 20 joined in `packages/shared/src/create.js`), picker cards (colour dots = seen in the last 10 min, studying now = open timers, next Board deadline). Deviation: the welcome line is a toast until a Kodama NPC exists.
+## Phase 1, Checkpoint 2: invites, joining, roles (built, awaiting owner's test)
+- Migration `007_village_invite.sql` (file only). `/i/:code` preview -> Join -> first-time setup (colour, sharing, deadlines). Invite panel (expiry, uses, guest links, copy, LINE, QR via `qrcode-generator`, revoke). The temporary join key is gone (`/join`, `join_key_hash`, `keyMatches`); `scripts/village-seed.ts` now prints a real invite and is dev only.
+- Roles: one table in `packages/shared/src/permissions.js` (`can`, `canModerate`, `canSetRole`, `inviteVerdict`), used by the API, the room (claimDesk) and the screens; tested row by row.
+- Manage members (owner/admin): role, kick (can rejoin), ban/unban, transfer by typing the village name. Leave (non-owner), close village (soft delete, 7-day undo from the picker; members see "This village was closed").
+- Kick/ban/role change/close reach the room at once: the API calls the Worker's `POST /room/:vid/revoke` with a 60 s signed `role: 'revoke'` token (base URL from `VILLAGE_REALTIME_HTTP`, else `VITE_REALTIME_URL` with ws->http). Closing code 4004 = removed, 4005 = reconnect with a fresh token. Without it, changes still land when the 10-minute token ends.
+- New dependency: `qrcode-generator` (apps/village), loaded only when a QR is shown.

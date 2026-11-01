@@ -11,13 +11,15 @@ import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
 import { finishSession, todaysTasks } from './_session.js'
 import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
-import { keyMatches } from '../../../../packages/db/keys.js'
+import { inviteRoutes, manage, closeVillage } from './_manage.js'
+import { can } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { cleanCreate, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
 
 const MAX_MEMBERS = 50 // = VILLAGE_MAX_MEMBERS in packages/shared/src/constants.ts (plain JS here, no TS build step)
 const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in packages/shared/src/types.ts
 const SHARING = ['full', 'basic', 'off']
+const defaultSharing = (settings) => (settings?.default_status_sharing === 'full' ? 'full' : 'basic')
 // ponytail: desks are recognised by the snowy_campus naming (lib-desk-01..24); a second template would read its desk ids from its own map.
 const DESK = /^lib-desk-(0[1-9]|1\d|2[0-4])$/
 const ev = (villageId, uid, name, props) => sql.query('insert into village_event (village_id, user_id, name, props) values ($1, $2, $3, $4)', [villageId, uid, name, cleanEvent(name, props) ?? {}]).catch(() => {}) // analytics never breaks the request
@@ -37,7 +39,8 @@ const memberOf = async (slug, uid) => (await sql.query(
 export default async function handler(req, res) {
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
-  const [first, second] = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
+  const parts = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
+  const [first, second] = parts
 
   if (first === 'mine' && !second && req.method === 'GET') {
     const rows = await sql.query(
@@ -50,7 +53,8 @@ export default async function handler(req, res) {
     const byVillage = new Map(), all = rows.length ? await boardRows(rows.map((r) => r.id)) : []
     for (const r of all) (byVillage.get(r.vid) ?? byVillage.set(r.vid, []).get(r.vid)).push(r)
     const now = Date.now()
-    return res.json({ villages: rows.map(({ id, course_tags, ...r }) => {
+    const closed = await sql.query(`select slug, name from village where owner_id = $1 and deleted_at > now() - interval '7 days' order by deleted_at desc`, [uid]) // the 7-day undo
+    return res.json({ closed, villages: rows.map(({ id, course_tags, ...r }) => {
       const next = buildBoard(byVillage.get(id) ?? [], course_tags ?? [], now).filter((e) => e.dueAt > now).sort((a, b) => a.dueAt - b.dueAt)[0]
       return { ...r, next: next ? { title: next.title, courseCode: next.courseCode, dueAt: next.dueAt } : null }
     }) })
@@ -93,27 +97,22 @@ export default async function handler(req, res) {
     const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
+  if (first === 'invite') return inviteRoutes({ req, res, uid, code: second, action: parts[2], ev, maxMembers: MAX_MEMBERS, defaultSharing })
   if (!first || first === 'mine' || first === 'courses') return res.status(404).json({ error: 'Not found' })
   const slug = first.slice(0, 64)
 
-  if (second === 'join' && req.method === 'POST') {
-    if (!(await limit(req, res, { scope: 'village-join', max: 20, id: uid }))) return // a key is 24 random chars; this just stops guessing
-    const v = (await sql.query('select id, settings from village where slug = $1 and deleted_at is null', [slug]))[0]
-    if (!v || !keyMatches(req.body?.key, v.settings?.join_key_hash)) return res.status(403).json({ error: 'bad_key' })
-    const mine = (await sql.query('select banned_at from village_member where village_id = $1 and user_id = $2', [v.id, uid]))[0]
-    if (mine?.banned_at) return res.status(403).json({ error: 'bad_key' })
-    if (mine) return res.json({ ok: true, joined: false })
-    // Insert only while there is room, in one statement, so two people joining at once cannot pass the limit.
-    const ins = await sql.query(
-      `insert into village_member (village_id, user_id, status_sharing) select $1, $2, $4
-        where (select count(*) from village_member where village_id = $1 and banned_at is null) < $3 on conflict do nothing returning user_id`, [v.id, uid, MAX_MEMBERS, v.settings?.default_status_sharing === 'full' ? 'full' : 'basic'])
-    if (!ins.length) return res.status(409).json({ error: 'full' })
-    await ev(v.id, uid, 'village_joined', { via: 'link' })
-    return res.json({ ok: true, joined: true })
+  if (second === 'restore' && req.method === 'POST') { // undo closing, within 7 days, owner only
+    const r = await sql.query(`update village set deleted_at = null where slug = $1 and owner_id = $2 and deleted_at > now() - interval '7 days' returning id`, [slug, uid])
+    return r.length ? res.json({ ok: true }) : res.status(404).json({ error: 'not_found' })
   }
 
   const v = await memberOf(slug, uid)
-  if (!v) return no(res)
+  if (!v) { // a village that was closed says so to people who were in it
+    const gone = await sql.query('select 1 from village v join village_member m on m.village_id = v.id where v.slug = $1 and v.deleted_at is not null and m.user_id = $2 and m.banned_at is null', [slug, uid])
+    return gone.length ? res.status(410).json({ error: 'closed' }) : no(res)
+  }
+  if (!second && req.method === 'DELETE') return closeVillage({ res, uid, v })
+  if (await manage({ req, res, uid, v, parts: parts.slice(1), ev })) return
 
   if (!second && req.method === 'GET') {
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [v.id, uid])
@@ -121,7 +120,7 @@ export default async function handler(req, res) {
       `select m.user_id as "userId", u.name, coalesce(m.settings->>'colour', 'snow') as colour, m.role, m.desk_spot_id as "deskSpotId", m.last_seen_at as "lastSeenAt"
          from village_member m join "user" u on u.id = m.user_id where m.village_id = $1 and m.banned_at is null order by m.joined_at`, [v.id])
     return res.json({
-      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false },
+      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false, whoCanInvite: v.settings?.who_can_invite === 'everyone' ? 'everyone' : 'admins' },
       me: { userId: uid, role: v.role, colour: v.mine?.colour ?? 'snow', statusSharing: v.status_sharing, shareDeadlines: v.share_deadlines, deskSpotId: v.desk_spot_id },
       members,
     })
@@ -130,6 +129,7 @@ export default async function handler(req, res) {
   if (second === 'desk' && req.method === 'PUT') { // claim a desk (or release with null). One desk per member: claiming a new one frees the old.
     const spot = req.body?.spotId
     if (spot === null) { await sql.query('update village_member set desk_spot_id = null where village_id = $1 and user_id = $2', [v.id, uid]); return res.json({ ok: true, spotId: null }) }
+    if (!can(v.role, 'claimDesk')) return res.status(403).json({ error: 'forbidden' }) // guests have no desk
     if (typeof spot !== 'string' || !DESK.test(spot)) return res.status(400).json({ error: 'Invalid desk' })
     try {
       const r = await sql.query(
@@ -191,10 +191,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid action' })
   }
 
-  if (!second && req.method === 'PATCH') { // village settings, owner only
-    if (v.role !== 'owner') return res.status(403).json({ error: 'owner_only' })
-    if (typeof req.body?.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' })
-    await sql.query(`update village set settings = settings || jsonb_build_object('library_auto_focus', $2::boolean) where id = $1`, [v.id, req.body.libraryAutoFocus])
+  if (!second && req.method === 'PATCH') { // village settings: owner and admins
+    if (!can(v.role, 'changeSettings')) return res.status(403).json({ error: 'forbidden' })
+    const b = req.body || {}, patch = {}
+    if (b.libraryAutoFocus !== undefined) { if (typeof b.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' }); patch.library_auto_focus = b.libraryAutoFocus }
+    if (b.whoCanInvite !== undefined) { if (!['admins', 'everyone'].includes(b.whoCanInvite)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_invite = b.whoCanInvite }
+    if (b.defaultSharing !== undefined) { if (!['basic', 'full'].includes(b.defaultSharing)) return res.status(400).json({ error: 'Invalid' }); patch.default_status_sharing = b.defaultSharing }
+    if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to change' })
+    await sql.query('update village set settings = settings || $2::jsonb where id = $1', [v.id, JSON.stringify(patch)])
     return res.json({ ok: true })
   }
 

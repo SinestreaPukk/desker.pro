@@ -16,7 +16,7 @@ export default function Privacy({ slug, me, libraryAutoFocus }: { slug: string; 
         </select>
       </label>
       <label><input type="checkbox" checked={deadlines} onChange={(e) => { setDeadlines(e.target.checked); run(patchMe(slug, { shareDeadlines: e.target.checked })) }} /> Share my deadlines with this village</label>
-      {me.role === 'owner' && <label><input type="checkbox" checked={auto} onChange={(e) => { setAuto(e.target.checked); run(patchVillage(slug, { libraryAutoFocus: e.target.checked })) }} /> Entering the Library turns Focus on (everyone, after a reload)</label>}
+      {(me.role === 'owner' || me.role === 'admin') && <label><input type="checkbox" checked={auto} onChange={(e) => { setAuto(e.target.checked); run(patchVillage(slug, { libraryAutoFocus: e.target.checked })) }} /> Entering the Library turns Focus on (everyone, after a reload)</label>}
       {err && <p role="alert">Couldn't save that. Try again.</p>}
     </fieldset>
   )

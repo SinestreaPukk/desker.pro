@@ -9,12 +9,16 @@ import Privacy from './Privacy.tsx'
 import Members from './Members.tsx'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
+import InvitePanel from './InvitePanel.tsx'
+import Manage from './Manage.tsx'
+import { can } from '@desker/shared'
+import { leaveVillage, closeVillage } from './api.ts'
 import { Bridge } from './game/bridge.ts'
 import { isTouchUi } from './game/touch.ts'
 
 const PILL: Record<Status, string> = {
   connecting: 'Connecting…', online: '', reconnecting: 'Reconnecting…', failed: "Can't reach the village right now.",
-  refresh: 'Kodama Village was updated. Please refresh the page.', elsewhere: 'Opened in another tab. Close that one or refresh here.',
+  refresh: 'Kodama Village was updated. Please refresh the page.', elsewhere: 'Opened in another tab. Close that one or refresh here.', removed: 'You are no longer in this village.',
 }
 
 /** A soft blip when someone nearby speaks, if the player turned cosy sounds on (SPEC §4.3). */
@@ -45,7 +49,7 @@ export default function World({ slug }: { slug: string }) {
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
-  const touch = isTouchUi(), [more, setMore] = useState(false)
+  const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
   const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
@@ -65,10 +69,12 @@ export default function World({ slug }: { slug: string }) {
     return () => { document.removeEventListener('visibilitychange', vis); window.removeEventListener('pagehide', report); report() }
   }, [data])
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
+  useEffect(() => { const on = (e: KeyboardEvent) => e.key === 'Escape' && setPanel(null); window.addEventListener('keydown', on); return () => window.removeEventListener('keydown', on) }, [])
   useEffect(() => { // just created: say hello once (the Kodama's line, as a toast until the NPC sprite exists)
-    if (!data || new URLSearchParams(location.search).get('new') !== '1') return
+    const q = new URLSearchParams(location.search)
+    if (!data || !(q.has('new') || q.has('first'))) return
     history.replaceState(null, '', location.pathname)
-    toast('Welcome to your village! Invite friends from the ⋯ menu.')
+    toast(q.has('new') ? 'Welcome to your village! Invite friends from the ⋯ menu.' : 'This is the Board. Your desk is waiting in the Library.')
   }, [data])
   useEffect(() => {
     if (!data || !el.current) return
@@ -147,7 +153,8 @@ export default function World({ slug }: { slug: string }) {
   const names = [...new Set([...(data?.members ?? []), ...online].map((m) => m.name))]
   const say = (text: string) => { track(slug, 'bubble_sent', { zoneId: zone, length: [...text].length }); lastText.current = text; send.current({ t: 'say', text }); setTalk(null); setNotice('') }
   const openLog = () => { setLog(null); setLogOpen(true); send.current({ t: 'log' }) }
-  if (err === 'not_member') return <main className="pad"><h1>You're not in this village</h1><p>You need a join link from a member. Ask a friend to send you one.</p><a href="/">Back to your villages</a></main>
+  if (err === 'not_member') return <main className="pad"><h1>You're not in this village</h1><p>You need an invite link from a member. Ask a friend to send you one.</p><a href="/">Back to your villages</a></main>
+  if (err === 'closed') return <main className="pad"><h1>This village was closed</h1><p>The owner closed it.</p><a href="/">Back to your villages</a></main>
   if (err) return <main className="pad"><p role="alert">Couldn't open the village ({err}).</p><a href="/">Back</a></main>
   if (!data) return <p className="pad">Loading the world…</p>
   return (
@@ -157,6 +164,11 @@ export default function World({ slug }: { slug: string }) {
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
+          {more && <>
+            {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
+            {can(data.me.role, 'moderate') && <button onClick={() => { setPanel('manage'); setMore(false) }}><i aria-hidden>🛠</i>Manage</button>}
+            {data.me.role !== 'owner' ? <button onClick={() => { setPanel('leave'); setMore(false) }}><i aria-hidden>🚪</i>Leave</button> : <button onClick={() => { setPanel('close'); setMore(false) }}><i aria-hidden>🗑</i>Close village</button>}
+          </>}
           {more && touch && <>
             <button onClick={() => { setMembersOpen((o) => !o); setMore(false) }}><i aria-hidden>👥</i>Members</button>
             <button onClick={() => { openLog(); setMore(false) }}><i aria-hidden>🗒</i>Chat log</button>
@@ -168,6 +180,7 @@ export default function World({ slug }: { slug: string }) {
           {touch ? <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More"><i aria-hidden>⋯</i>More</button> : <>
             <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
             <button onClick={openLog}>Chat log</button>
+            <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More">⋯</button>
           </>}
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
@@ -175,6 +188,17 @@ export default function World({ slug }: { slug: string }) {
         {boardOpen && <Board items={boardItems} members={data.members} onClose={() => setBoardOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
+        {panel === 'invite' && <InvitePanel slug={slug} name={data.village.name} canGuest={can(data.me.role, 'moderate')} onClose={() => setPanel(null)} />}
+        {panel === 'manage' && <Manage slug={slug} villageName={data.village.name} myRole={data.me.role} me={data.me.userId} onClose={() => setPanel(null)} />}
+        {(panel === 'leave' || panel === 'close') && (
+          <div className="hud-modal" role="dialog" aria-label={panel === 'leave' ? 'Leave village' : 'Close village'} onClick={() => setPanel(null)}>
+            <div className="hud-panel" onClick={(e) => e.stopPropagation()}>
+              <h2>{panel === 'leave' ? `Leave ${data.village.name}?` : `Close ${data.village.name}?`}</h2>
+              <p>{panel === 'leave' ? 'You can come back with a new invite. Your desk is released.' : 'Everyone is sent out. You can undo this from your village list for 7 days.'}</p>
+              <p><button onClick={() => (panel === 'leave' ? leaveVillage(slug) : closeVillage(slug)).then(() => location.assign('/'), () => toast('That did not work. Try again.'))}>{panel === 'leave' ? 'Leave' : 'Close village'}</button> <button onClick={() => setPanel(null)}>Cancel</button></p>
+            </div>
+          </div>
+        )}
         {logOpen && <ChatLog items={log} onClose={() => setLogOpen(false)} />}
       </Hud>
     </div>

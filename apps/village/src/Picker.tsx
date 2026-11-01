@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { mine, type Mine } from './api.ts'
-import { HEX } from './Join.tsx'
+import { mine, restoreVillage, type Mine } from './api.ts'
+import { HEX } from './InviteJoin.tsx'
 
 export default function Picker() {
-  const [list, setList] = useState<Mine[] | null>(null)
+  const [list, setList] = useState<Mine[] | null>(null), [closed, setClosed] = useState<{ slug: string; name: string }[]>([])
   const [err, setErr] = useState('')
-  useEffect(() => { mine().then((r) => setList(r.villages)).catch((e) => setErr(e.message)) }, [])
+  useEffect(() => { mine().then((r) => { setList(r.villages); setClosed(r.closed ?? []) }).catch((e) => setErr(e.message)) }, [])
   return (
     <main className="pad">
       <h1>Your villages</h1>
@@ -21,6 +21,7 @@ export default function Picker() {
             </a>))}
           </div>
           <p><a className="btn" href="/new">+ New village</a></p>
+          {closed.map((c) => <p key={c.slug}>"{c.name}" was closed. <button onClick={() => restoreVillage(c.slug).then(() => location.reload())}>Undo (7 days)</button></p>)}
         </>
       )}
     </main>

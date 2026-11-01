@@ -1,8 +1,9 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
-import { applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
+import { can, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
+import { verifyToken } from '@desker/shared/src/token.js'
 import campus from '../../apps/village/public/maps/snowy_campus.json'
 
 const WORLD = parseMap(campus as never) // the same map file the client draws, so both sides agree on every wall
@@ -15,8 +16,16 @@ const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX 
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
 
 export default {
-  fetch(req: Request, env: Env): Promise<Response> | Response {
-    const vid = ROOM_PATH.exec(new URL(req.url).pathname)?.[1]
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url)
+    // The API tells the room about kicks, bans, role changes and closed villages (signed with the room secret, role 'revoke'), so they take effect now, not when the 10-minute token runs out.
+    const rv = /^\/room\/([0-9a-f-]{36})\/revoke$/.exec(url.pathname)
+    if (rv && req.method === 'POST') {
+      const t = await verifyToken((req.headers.get('authorization') ?? '').replace(/^Bearer /, ''), env.VILLAGE_ROOM_SECRET, rv[1])
+      if (!t.ok || t.claims.role !== 'revoke') return new Response('Forbidden', { status: 403 })
+      return env.ROOM.get(env.ROOM.idFromName(rv[1])).fetch(new Request(`https://room/revoke?uid=${encodeURIComponent(t.claims.sub)}&op=${t.claims.op === 'refresh' ? 'refresh' : 'remove'}`, { method: 'POST' }))
+    }
+    const vid = ROOM_PATH.exec(url.pathname)?.[1]
     if (!vid) return new Response('Not found', { status: 404 })
     if (req.headers.get('upgrade') !== 'websocket') return new Response('Expected a WebSocket', { status: 426 })
     const allowed = (env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
@@ -50,6 +59,11 @@ export class VillageRoom extends DurableObject<Env> {
   }
 
   async fetch(req: Request): Promise<Response> {
+    if (req.method === 'POST') { // revoke (the Worker already checked the signature): close that person's connections; 4004 = gone for good, 4005 = reconnect with a fresh token
+      const q = new URL(req.url).searchParams
+      for (const { ws, att } of this.authed()) if (q.get('uid') === '*' || att.member?.userId === q.get('uid')) ws.close(q.get('op') === 'refresh' ? 4005 : 4004, 'revoked')
+      return new Response('ok')
+    }
     const vid = ROOM_PATH.exec(new URL(req.url).pathname)![1]
     const { 0: client, 1: server } = new WebSocketPair()
     this.ctx.acceptWebSocket(server)
@@ -156,7 +170,7 @@ export class VillageRoom extends DurableObject<Env> {
     }
     if (msg.t === 'claimDesk') { // the API has already recorded it (it is the authority across visits); the room only checks you are really sitting there
       const spot = att.sat && att.sat.spotId === msg.spotId ? WORLD.sitSpots.find((q) => q.id === msg.spotId) : undefined
-      if (spot?.kind === 'desk') this.broadcast({ t: 'deskClaimed', userId: att.member!.userId, spotId: spot.id })
+      if (spot?.kind === 'desk' && can(att.member!.role, 'claimDesk')) this.broadcast({ t: 'deskClaimed', userId: att.member!.userId, spotId: spot.id })
       return
     }
     if (msg.t === 'sit') { // next to a free spot, and not already sitting: the room seats you there

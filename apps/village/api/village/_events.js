@@ -11,6 +11,9 @@ const SPEC = {
   focus_started: { plannedMin: num(600) },
   focus_completed: { plannedMin: num(600), actualMin: num(600), valid: bool },
   board_opened: {},
+  invite_created: {},
+  invite_accepted: {},
+  mod_kick: {}, mod_ban: {}, mod_unban: {}, mod_transfer: {},
   session_minutes: { minutes: num(1440), focusMinutes: num(1440) },
 }
 /** Events a browser may report itself; the rest are recorded by the server when the thing happens. */

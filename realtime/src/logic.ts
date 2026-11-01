@@ -1,5 +1,5 @@
 // Pure room logic, tested without the Workers runtime.
-import { clientMsg, PROTOCOL_VERSION, type ClientMsg } from '@desker/shared'
+import { clientMsg, PROTOCOL_VERSION, ROLES, type ClientMsg } from '@desker/shared'
 import { verifyToken } from '@desker/shared/src/token.js'
 
 export const MAX_MESSAGE_BYTES = 4096
@@ -15,7 +15,8 @@ export type Hello = { ok: true; claims: { sub: string; vid: string; role: string
 export async function checkHello(msg: Extract<ClientMsg, { t: 'hello' }>, villageId: string, secret: string | undefined, now = Date.now()): Promise<Hello> {
   if (msg.v !== PROTOCOL_VERSION) return { ok: false, code: 'version', message: 'Kodama Village was updated. Please refresh the page.' }
   const r = await verifyToken(msg.token, secret, villageId, now)
-  return r.ok ? { ok: true, claims: r.claims } : { ok: false, code: 'auth', message: 'Could not sign you in to this village. Please refresh the page.' }
+  // a 'revoke' token (API -> room) is not a login: only real roles get in
+  return r.ok && ROLES.includes(r.claims.role) ? { ok: true, claims: r.claims } : { ok: false, code: 'auth', message: 'Could not sign you in to this village. Please refresh the page.' }
 }
 
 /** Counts a bad message in a sliding minute. disconnect = true once the limit is hit. */
