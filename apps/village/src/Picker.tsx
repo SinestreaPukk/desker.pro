@@ -8,7 +8,7 @@ export default function Picker() {
   return (
     <main className="pad">
       <h1>Your villages</h1>
-      {err ? <p role="alert">Couldn't load your villages ({err}).</p> : !list ? <p>Loading…</p> : !list.length ? <p>None yet. Ask a friend for a join link.</p> : (
+      {err ? <p role="alert">{/sign in/i.test(err) ? <>Sign in on Desker first, then come back. <a href="https://desker.dev">Open Desker</a></> : <>Couldn't load your villages ({err}).</>}</p> : !list ? <p>Loading…</p> : !list.length ? <p>None yet. Ask a friend for a join link.</p> : (
         <ul className="list">{list.map((v) => <li key={v.slug}><a href={`/v/${v.slug}`}>{v.name}</a> <small>{v.members} {v.members === 1 ? 'member' : 'members'}</small></li>)}</ul>
       )}
     </main>
