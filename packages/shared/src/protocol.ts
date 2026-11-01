@@ -25,7 +25,7 @@ export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('sit'), spotId: id }),
   z.object({ t: z.literal('stand') }),
   z.object({ t: z.literal('status'), status }),
-  z.object({ t: z.literal('presence'), presence: z.enum(['available', 'focusing']) }), // 'dnd' joins in Phase 1
+  z.object({ t: z.literal('presence'), presence: z.enum(['available', 'focusing', 'away']) }), // 'dnd' joins in Phase 1
   z.object({ t: z.literal('focus.start'), taskId: id.optional(), plannedMin: z.number().int().min(1).max(600) }),
   z.object({ t: z.literal('focus.stop') }),
   z.object({ t: z.literal('claimDesk'), spotId: id }),
@@ -48,6 +48,7 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('said'), userId: id, text: z.string().max(BUBBLE_MAX_CHARS).optional(), zoneId: zone.optional(), nearbyOnly: z.literal(true).optional(), mentionsYou: z.literal(true).optional() }),
   z.object({ t: z.literal('sat'), userId: id, spotId: id }),
   z.object({ t: z.literal('stood'), userId: id }),
+  z.object({ t: z.literal('deskClaimed'), userId: id, spotId: id }), // a seated member made this desk theirs (replaces any desk they had)
   z.object({ t: z.literal('statusChanged'), userId: id, status: status.nullable() }),
   z.object({ t: z.literal('presenceChanged'), userId: id, presence }),
   z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.string().datetime().nullable() }),

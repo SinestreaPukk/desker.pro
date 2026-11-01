@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { actionOf, isTyping, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
+import { actionOf, isTyping, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { info, type Info } from './api.ts'
+import { claimDesk, info, type Info } from './api.ts'
+import Members from './Members.tsx'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import { Bridge } from './game/bridge.ts'
@@ -33,6 +34,8 @@ export default function World({ slug }: { slug: string }) {
   const [talk, setTalk] = useState<{ text: string } | null>(null), [shake, setShake] = useState(0), [notice, setNotice] = useState('')
   const [log, setLog] = useState<Extract<ServerMsg, { t: 'log' }>['items'] | null>(null), [logOpen, setLogOpen] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
+  const [membersOpen, setMembersOpen] = useState(false), [presence, setPresence] = useState<Presence>('available')
+  const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
   useEffect(() => {
@@ -46,7 +49,7 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
       else if (m.t === 'error' && m.code === 'slow_down') { setNotice('Slow down a little'); setShake((n) => n + 1); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 2500) } // the box comes back with what you wrote
     }
-    const bridge = new Bridge()
+    const bridge = new Bridge(); bridgeRef.current = bridge
     const net = connect(data.village.id, { message: (m) => { onMsg(m); bridge.fromServer(m) }, status: setStatus })
     bridge.out = net.send; send.current = net.send
     // Even pixel size only: an odd-sized canvas puts tile edges on half pixels at zoom 3 and draws faint seams. (Registered before Phaser's own resize listener.)
@@ -55,12 +58,17 @@ export default function World({ slug }: { slug: string }) {
     let game: { destroy: (b: boolean) => void } | undefined, gone = false
     const name = data.members.find((m) => m.userId === data.me.userId)?.name ?? 'You'
     // the name tags use the pixel font, so it must be loaded before the first tag is drawn
-    Promise.all([import('./game/start.ts'), document.fonts.load('7px VT323')]).then(([{ startGame }]) => { if (!gone) game = startGame(box, { userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: setZone }) })
+    Promise.all([import('./game/start.ts'), document.fonts.load('7px VT323')]).then(([{ startGame }]) => { if (!gone) game = startGame(box, {
+      userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: setZone, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
+      desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
+      claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
+    }) })
     return () => { gone = true; window.removeEventListener('resize', fit); net.close(); game?.destroy(true) }
   }, [data])
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setLogOpen(false); return }
+      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); return }
+      if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
       e.preventDefault(); setNotice(''); setTalk({ text: '' })
     }
@@ -80,9 +88,12 @@ export default function World({ slug }: { slug: string }) {
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
           <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}>Talk<kbd>T</kbd></button>
+          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}>{presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
+          <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
           <button onClick={openLog}>Chat log</button>
         </div>
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
+        {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
         {logOpen && <ChatLog items={log} onClose={() => setLogOpen(false)} />}
       </Hud>
     </div>

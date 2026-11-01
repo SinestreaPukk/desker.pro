@@ -1,6 +1,6 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
-import { applyMove, canSit, cleanBubble, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role } from '@desker/shared'
+import { applyMove, approaches, canSit, cleanBubble, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
 import campus from '../../apps/village/public/maps/snowy_campus.json'
@@ -9,7 +9,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; says?: number[]; queue?: { fromUserId: string; name: string; text: string }[] }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away'; says?: number[]; queue?: { fromUserId: string; name: string; text: string }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -80,11 +80,16 @@ export class VillageRoom extends DurableObject<Env> {
       let pos: Mover | undefined, sat: Att['sat']
       for (const o of this.authed()) if (o.att.member?.userId === me.userId) { pos = o.att.pos; sat = o.att.sat; o.ws.close(4000, 'replaced') } // one connection per person: the newest wins, and keeps the old place
       const sp = spawnFor(WORLD, me.userId)
-      ws.serializeAttachment({ ...att, authed: true, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat })
+      // A member with a claimed desk arrives sitting at it (unless someone is already there), instead of at a spawn point.
+      const desk = !pos && h.claims.d ? WORLD.sitSpots.find((q) => q.id === h.claims.d && q.kind === 'desk') : undefined
+      const free = desk && !this.authed().some((o) => o.att.sat?.spotId === desk.id)
+      const from = free ? approaches(WORLD, desk)[0] : undefined
+      if (free && from) { pos = { ...newMover(desk.x, desk.y, Date.now(), desk.facing) }; sat = { spotId: desk.id, from } }
+      ws.serializeAttachment({ ...att, authed: true, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat, presence: this.authed().find((o) => o.att.member?.userId === me.userId)?.att.presence ?? 'available' })
       const all = this.authed()
       const members = [...new Map(all.map((x) => [x.att.member!.userId, x.att.member!])).values()]
       const positions = Object.fromEntries(all.map((x) => [x.att.member!.userId, { x: x.att.pos!.x, y: x.att.pos!.y, dir: x.att.pos!.dir }]))
-      this.send(ws, { t: 'welcome', self: me, members, positions, presence: {}, statuses: {}, desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: 1 })
+      this.send(ws, { t: 'welcome', self: me, members, positions, presence: Object.fromEntries(all.map((x) => [x.att.member!.userId, x.att.presence ?? 'available'])), statuses: {}, desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: 1 })
       this.broadcast({ t: 'joined', member: me }, ws)
       return
     }
@@ -111,6 +116,15 @@ export class VillageRoom extends DurableObject<Env> {
       }
       return void (await this.wake(HOUR_MS))
     }
+    if (msg.t === 'presence') { // available / focusing / away; everyone sees it
+      ws.serializeAttachment({ ...att, presence: msg.presence })
+      return this.broadcast({ t: 'presenceChanged', userId: att.member!.userId, presence: msg.presence })
+    }
+    if (msg.t === 'claimDesk') { // the API has already recorded it (it is the authority across visits); the room only checks you are really sitting there
+      const spot = att.sat && att.sat.spotId === msg.spotId ? WORLD.sitSpots.find((q) => q.id === msg.spotId) : undefined
+      if (spot?.kind === 'desk') this.broadcast({ t: 'deskClaimed', userId: att.member!.userId, spotId: spot.id })
+      return
+    }
     if (msg.t === 'sit') { // next to a free spot, and not already sitting: the room seats you there
       const taken = new Set(this.authed().flatMap((x) => (x.att.sat ? [x.att.sat.spotId] : [])))
       const spot = att.sat ? null : canSit(WORLD, att.pos!.x, att.pos!.y, msg.spotId, taken)
@@ -123,6 +137,7 @@ export class VillageRoom extends DurableObject<Env> {
       const { from } = att.sat, pos = { ...att.pos!, x: from.x, y: from.y }
       ws.serializeAttachment({ ...att, sat: undefined, pos })
       this.broadcast({ t: 'stood', userId: att.member!.userId })
+      this.send(ws, { t: 'correct', x: from.x, y: from.y }) // tells the stander exactly where they now are (a desk arrival has no remembered tile)
       this.pending.set(att.member!.userId, { userId: att.member!.userId, x: from.x, y: from.y, dir: pos.dir, seq: 0 })
       this.timer ??= setTimeout(() => this.flush(), MOVED_BATCH_MS)
       return
@@ -137,7 +152,7 @@ export class VillageRoom extends DurableObject<Env> {
       this.pending.set(att.member!.userId, { userId: att.member!.userId, x: msg.x, y: msg.y, dir: msg.dir, seq: msg.seq })
       this.timer ??= setTimeout(() => this.flush(), MOVED_BATCH_MS)
     }
-    // say, status, presence, focus, claimDesk: later checkpoints
+    // status, focus: Checkpoint 8
   }
 
   // `moved` goes out in one batch every 50 ms, to everyone except the mover (who predicts their own walking).

@@ -1,12 +1,12 @@
-// Draws the villager avatar as four greyscale layers (body, outfit, face, hair short, hair long), 16x24 frames, 6 columns x 3 rows.
+// Draws the villager avatar as four greyscale layers (body, outfit, face, hair short, hair long), 16x24 frames, 6 columns x 4 rows.
 // The game tints each layer at runtime (skin tone, outfit colour, hair colour), so one set of sheets makes thousands of looks and the
 // customiser in a later phase only has to pick tints and a hair style. An artist can replace the PNGs (same frame order) with no code change.
 import { writeFileSync } from 'node:fs'
 import { Canvas } from './png.ts'
 
-export const AVATAR_FRAMES = { down: [0, 1, 2], up: [3, 4, 5], left: [6, 7, 8], right: [9, 10, 11], idle: [12, 13], sit: { down: 14, up: 15, left: 16, right: 17 } }
+export const AVATAR_FRAMES = { down: [0, 1, 2], up: [3, 4, 5], left: [6, 7, 8], right: [9, 10, 11], idle: [12, 13], sit: { down: 14, up: 15, left: 16, right: 17 }, sleep: 18, book: 19 }
 type Dir = 'down' | 'up' | 'left' | 'right'
-type Look = { dir: Dir; foot?: 0 | 1 | 2; blink?: boolean; sit?: boolean }
+type Look = { dir: Dir; foot?: 0 | 1 | 2; blink?: boolean; sit?: boolean; book?: boolean }
 
 const C = { white: '#ffffff', skin: '#ffffff', skinD: '#dcdcdc', eye: '#2b2440', blush: '#e8a0a8', top: '#ffffff', topD: '#d2d2d2', pants: '#8e8e8e', shoe: '#3b3b3b', hair: '#ffffff', hairD: '#c9c9c9', line: '#2b2440' }
 
@@ -68,6 +68,8 @@ function person(B: Layer, O: Layer, H: Layer, F: Layer, k: Look, long: boolean) 
     F.px(7, y0 + 6, C.blush)
   }
 
+  if (k.book) { F.rect(5, y1 + 2, 6, 5, '#27437a'); F.rect(5, y1 + 2, 6, 1, '#35599a'); F.rect(6, y1 + 3, 4, 3, C.white); F.rect(8, y1 + 2, 1, 5, '#27437a'); F.px(6, y1 + 4, '#b4c6de'); F.px(9, y1 + 4, '#b4c6de') } // reading a book
+
   // ---- hair ----
   if (k.dir === 'down') {
     H.rect(4, y0 - 1, 8, 1, C.hair); H.rect(3, y0, 10, 2, C.hair); H.rect(4, y0 + 1, 8, 1, C.hairD)
@@ -100,10 +102,11 @@ const ORDER: Look[] = [
   ...(['down', 'up', 'left', 'right'] as const).flatMap((dir) => ([0, 1, 2] as const).map((foot) => ({ dir, foot }))),
   { dir: 'down' }, { dir: 'down', blink: true },
   { dir: 'down', sit: true }, { dir: 'up', sit: true }, { dir: 'left', sit: true }, { dir: 'right', sit: true },
+  { dir: 'down', sit: true, blink: true }, { dir: 'down', book: true }, // asleep, reading
 ]
 
 export function writeAvatarSheets(out: string) {
-  const mk = () => new Canvas(6 * 16, 3 * 24)
+  const mk = () => new Canvas(6 * 16, 4 * 24)
   const sheets = { body: mk(), outfit: mk(), face: mk(), 'hair-short': mk(), 'hair-long': mk() }
   const scratch = mk()
   ORDER.forEach((k, i) => {
@@ -112,6 +115,6 @@ export function writeAvatarSheets(out: string) {
     person(L(sheets.body), L(sheets.outfit), L(sheets['hair-short']), L(sheets.face), k, false)
     person(L(scratch), L(mk()), L(sheets['hair-long']), L(mk()), k, true) // body/outfit are identical; only the long hair is kept
   })
-  for (const [name, c] of Object.entries(sheets)) { if (name !== 'face') outline(c, 6, 3); writeFileSync(out + `avatar-${name}.png`, c.toPng()) }
+  for (const [name, c] of Object.entries(sheets)) { if (name !== 'face') outline(c, 6, 4); writeFileSync(out + `avatar-${name}.png`, c.toPng()) }
   return Object.keys(sheets).map((name) => ({ key: `avatar-${name}`, file: `avatar-${name}.png`, frameWidth: 16, frameHeight: 24, animations: AVATAR_FRAMES }))
 }

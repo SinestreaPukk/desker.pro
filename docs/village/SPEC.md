@@ -452,3 +452,10 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - Until Focus exists (Checkpoint 8), "focus ends" means "you left the Library". Blip sound plays when someone nearby speaks, only if cosy sounds are on.
 - Added messages: client `log`; server `log {items}`; `said.mentionsYou`; `queued` items carry `name`.
 
+
+## Checkpoint 7: desks, presence, member list (done)
+- Desks: sit at a `lib-desk-NN` and press X to claim it. The API (`PUT /:slug/desk`, unique index `village_member_desk`) is authoritative and answers 409 `taken`; the room only checks the sender is seated there, then broadcasts `deskClaimed`. A member with a desk arrives sitting at it.
+- Token: new claim `d` (desk spot id) next to `n` and `c`.
+- Presence: available / focusing / away. F toggles focusing; entering the Library auto-focuses. Idle away applies only to `available` until the focus timer exists (Checkpoint 8). Away shows the sleep frame and "z z"; any input wakes. Focusing shows an amber ring and the book frame.
+- Members panel (Tab): online first, then offline with last seen; click to locate.
+- Migration `006_village_desk.sql` is a file only for production; applied to the Neon `village-dev` branch.

@@ -1,4 +1,4 @@
-// Village API: /api/village/mine, /:slug, /:slug/join, /:slug/me. One function (a Vercel project allows 12), same database and login as desker.dev.
+// Village API: /api/village/mine, /:slug, /:slug/join, /:slug/me, /:slug/desk. One function (a Vercel project allows 12), same database and login as desker.dev.
 // Membership is checked on every call; a banned or non-member gets the same answer as a village that does not exist.
 import { userOf } from '../../../../api/_auth.js'
 import { limit } from '../../../../api/_rate.js'
@@ -9,6 +9,8 @@ import { signToken } from '../../../../packages/shared/src/token.js'
 const MAX_MEMBERS = 50 // = VILLAGE_MAX_MEMBERS in packages/shared/src/constants.ts (plain JS here, no TS build step)
 const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in packages/shared/src/types.ts
 const SHARING = ['full', 'basic', 'off']
+// ponytail: desks are recognised by the snowy_campus naming (lib-desk-01..24); a second template would read its desk ids from its own map.
+const DESK = /^lib-desk-(0[1-9]|1\d|2[0-4])$/
 const no = (res) => res.status(403).json({ error: 'not_member' })
 
 const memberOf = async (slug, uid) => (await sql.query(
@@ -33,10 +35,11 @@ export default async function handler(req, res) {
     const vid = req.body?.villageId
     if (typeof vid !== 'string' || !/^[0-9a-f-]{36}$/.test(vid)) return res.status(400).json({ error: 'Invalid village' })
     const m = (await sql.query(
-      `select m.role, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
+      `select m.role, m.desk_spot_id, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
         where m.village_id = $1 and m.user_id = $2 and m.banned_at is null and v.deleted_at is null`, [vid, uid]))[0]
     if (!m) return no(res)
-    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour }, process.env.VILLAGE_ROOM_SECRET, 600)
+    await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [vid, uid]) // "last seen" in the member list: refreshed every time a connection starts or renews
+    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
   if (!first || first === 'mine') return res.status(404).json({ error: 'Not found' })
@@ -63,13 +66,26 @@ export default async function handler(req, res) {
   if (!second && req.method === 'GET') {
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [v.id, uid])
     const members = await sql.query(
-      `select m.user_id as "userId", u.name, coalesce(m.settings->>'colour', 'snow') as colour, m.role
+      `select m.user_id as "userId", u.name, coalesce(m.settings->>'colour', 'snow') as colour, m.role, m.desk_spot_id as "deskSpotId", m.last_seen_at as "lastSeenAt"
          from village_member m join "user" u on u.id = m.user_id where m.village_id = $1 and m.banned_at is null order by m.joined_at`, [v.id])
     return res.json({
       village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false },
       me: { userId: uid, role: v.role, colour: v.mine?.colour ?? 'snow', statusSharing: v.status_sharing, shareDeadlines: v.share_deadlines, deskSpotId: v.desk_spot_id },
       members,
     })
+  }
+
+  if (second === 'desk' && req.method === 'PUT') { // claim a desk (or release with null). One desk per member: claiming a new one frees the old.
+    const spot = req.body?.spotId
+    if (spot === null) { await sql.query('update village_member set desk_spot_id = null where village_id = $1 and user_id = $2', [v.id, uid]); return res.json({ ok: true, spotId: null }) }
+    if (typeof spot !== 'string' || !DESK.test(spot)) return res.status(400).json({ error: 'Invalid desk' })
+    try {
+      const r = await sql.query(
+        `update village_member set desk_spot_id = $3 where village_id = $1 and user_id = $2
+           and not exists (select 1 from village_member where village_id = $1 and desk_spot_id = $3 and user_id <> $2) returning desk_spot_id`, [v.id, uid, spot])
+      if (!r.length) return res.status(409).json({ error: 'taken' })
+    } catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'taken' }); throw e }
+    return res.json({ ok: true, spotId: spot })
   }
 
   if (second === 'me' && req.method === 'PATCH') {

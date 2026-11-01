@@ -1,10 +1,14 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Spot, type ServerMsg, type Snap, type World, type ZoneId } from '@desker/shared'
-import type { Bridge } from './bridge.ts'
+import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Snap, type World, type ZoneId } from '@desker/shared'
+import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
 
-export interface SceneData { userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void }
+export interface SceneData {
+  userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
+  libraryAutoFocus: boolean; desks: { userId: string; spotId: string }[]; names: Record<string, string>
+  claimDesk: (spotId: string) => Promise<boolean>; onPresence?: (p: Presence) => void
+}
 interface Remote { k: Avatar; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number; sat?: Spot; gap: number; delay: number }
 const D = { ground: 0, floor: 1, walls: 2, below: 3, entity: DEPTH.entity, above: DEPTH.above, snow: 200000, tint: 300000, glow: 310000 } // render order
 
@@ -20,6 +24,12 @@ export class WorldScene extends Phaser.Scene {
   private sitting: { spot: Spot; from: { x: number; y: number } } | null = null
   private prompt!: Phaser.GameObjects.Text
   private taken = new Set<string>() // sit spots someone is on
+  private desks = new Map<string, string>() // desk spot id -> the member who made it theirs
+  private plates = new Map<string, Phaser.GameObjects.Text>()
+  private presences = new Map<string, Presence>()
+  private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
+  private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
+  private notice: { text: string; until: number } | null = null
   private bubbles = new Map<string, { box: Phaser.GameObjects.Container; timer: Phaser.Time.TimerEvent }>()
   private tint!: Phaser.GameObjects.Rectangle
   private glows: Phaser.GameObjects.Image[] = []
@@ -57,9 +67,20 @@ export class WorldScene extends Phaser.Scene {
     this.snow(W, H); this.ambience(json); this.steam()
     this.keys = heldKeys(window)
     this.prompt = this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,233,168,0.92)', padding: { x: 2, y: 0 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 1).setVisible(false)
-    const onKey = (e: KeyboardEvent) => { if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && actionOf(e.key, isTyping()) === 'interact') this.interact() }
-    window.addEventListener('keydown', onKey)
-    this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey) })
+    const onKey = (e: KeyboardEvent) => {
+      this.touched()
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const a = actionOf(e.key, isTyping()); if (a === 'interact') this.interact(); else if (a === 'focus') this.toggleFocus()
+    }
+    const touched = () => this.touched()
+    window.addEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.addEventListener(t, touched, { passive: true })
+    this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
+    this.lastInput = this.time.now
+    for (const d of this.data0.desks) this.setDesk(d.userId, d.spotId)
+    const b = this.data0.bridge
+    b.toggleFocus = () => this.toggleFocus()
+    b.locate = (id) => { const t = this.who(id); if (!t || t === this.me) return; const cam = this.cameras.main; cam.startFollow(t.sprite, true, CAMERA_LERP, CAMERA_LERP); this.time.delayedCall(2000, () => cam.startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP)) } // locate only; walking to them comes in Phase 1
+    b.roster = () => this.roster()
     this.sparkle(this.me.x, this.me.y - 8, 0xf2c46d)
     this.data0.bridge.attach((m) => this.onServer(m))
   }
@@ -70,6 +91,8 @@ export class WorldScene extends Phaser.Scene {
 
   update(time: number, delta: number) {
     this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time); this.followBubbles()
+    this.me.tick(time); for (const r of this.remotes.values()) r.k.tick(time)
+    if (this.myPresence === 'available' && time - this.lastInput > this.awayMs) this.setPresence('away') // asleep after 5 quiet minutes; any input wakes you
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
       this.sendMove(); this.lastSend = time; this.dirty = false
     }
@@ -81,7 +104,7 @@ export class WorldScene extends Phaser.Scene {
   private moveMe(time: number, dt: number) {
     const { dx, dy } = this.keys.vec()
     if (this.sitting) { // any walking key stands you up first
-      if (!dx && !dy) { this.me.sit(this.facing); this.hint('X  stand'); return }
+      if (!dx && !dy) { const sp = this.sitting.spot; this.me.sit(this.facing); this.hint(this.notice && this.notice.until > time ? this.notice.text : sp.kind === 'desk' && !this.desks.has(sp.id) ? 'X  make this your desk?' : 'X  stand'); return }
       this.stand()
     }
     if (dx || dy) {
@@ -93,7 +116,7 @@ export class WorldScene extends Phaser.Scene {
       if (moved > 0) {
         const before = zoneAt(this.world, this.tx, this.ty)
         this.fx = to.x; this.fy = to.y; this.dirty = true; this.phase += moved
-        const z = zoneAt(this.world, this.tx, this.ty); if (z !== before || this.lastZone === null) { this.lastZone = z; this.data0.onZone?.(z) }
+        const z = zoneAt(this.world, this.tx, this.ty); if (z !== before || this.lastZone === null) this.enterZone(z)
         this.place(); this.hint('')
         const c = this.phase % 1 // one full stride per tile walked: foot, passing, other foot, passing
         return this.me.walk(this.facing, c < 0.25 ? 1 : c < 0.5 ? 0 : c < 0.75 ? 2 : 0)
@@ -108,9 +131,45 @@ export class WorldScene extends Phaser.Scene {
 
   private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
 
+  private enterZone(z: ZoneId) {
+    const was = this.lastZone; this.lastZone = z; this.data0.onZone?.(z)
+    if (z === 'library' && was !== 'library' && this.data0.libraryAutoFocus && this.myPresence === 'available') { this.autoFocused = true; this.setPresence('focusing') } // the Library is the quiet zone
+    else if (was === 'library' && z !== 'library' && this.autoFocused) { this.autoFocused = false; if (this.myPresence === 'focusing') this.setPresence('available') }
+  }
+
+  // ---- presence: available / focusing / away (SPEC §6.1) ------------------------------------------------------------------
+  private setPresence(p: Presence, tell = true) {
+    if (p === this.myPresence) return
+    this.myPresence = p; this.me.setPresence(p); this.presences.set(this.data0.userId, p); this.data0.onPresence?.(p)
+    if (tell) this.data0.bridge.out({ t: 'presence', presence: p })
+  }
+  private touched() { this.lastInput = this.time.now; if (this.myPresence === 'away') this.setPresence('available') }
+  private toggleFocus() { this.autoFocused = false; if (this.myPresence === 'available') this.setPresence('focusing'); else if (this.myPresence === 'focusing') this.setPresence('available') }
+
+  // ---- desks: a tiny name plate on a claimed desk, even when the owner is offline ---------------------------------------------
+  private setDesk(userId: string, spotId: string) {
+    for (const [sid, uid] of this.desks) if (uid === userId) { this.desks.delete(sid); this.plates.get(sid)?.destroy(); this.plates.delete(sid) } // one desk per member
+    this.desks.set(spotId, userId)
+    const sp = this.world.sitSpots.find((q) => q.id === spotId); if (!sp) return
+    this.plates.get(spotId)?.destroy()
+    const name = this.data0.names[userId] ?? '?', short = [...name].length > 7 ? [...name].slice(0, 6).join('') + '.' : name
+    this.plates.set(spotId, this.add.text(sp.x * TILE_PX + TILE_PX / 2, sp.y * TILE_PX - 1, short, { fontFamily: 'VT323', fontSize: '6px', color: '#14213d', backgroundColor: '#ffe9a8', padding: { x: 1, y: 0 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.entity - 2))
+  }
+  private claimHere(spot: Spot) {
+    this.data0.claimDesk(spot.id).then((ok) => {
+      if (ok) { this.setDesk(this.data0.userId, spot.id); this.data0.bridge.out({ t: 'claimDesk', spotId: spot.id }); this.notice = { text: 'Your desk!', until: this.time.now + 2000 } }
+      else this.notice = { text: 'Someone has this desk', until: this.time.now + 2500 }
+    })
+  }
+
+  private roster(): RosterItem[] {
+    const item = (userId: string, x: number, y: number, seat?: Spot): RosterItem => ({ userId, zone: zoneAt(this.world, Math.round(x), Math.round(y)), atDesk: seat?.kind === 'desk', presence: this.presences.get(userId) ?? 'available' })
+    return [item(this.data0.userId, this.fx, this.fy, this.sitting?.spot), ...[...this.remotes].map(([id, r]) => item(id, r.shown.x, r.shown.y, r.sat))]
+  }
+
   // ---- sitting (X) ------------------------------------------------------------------------------------------------------
   private interact() {
-    if (this.sitting) return this.stand()
+    if (this.sitting) { const sp = this.sitting.spot; return sp.kind === 'desk' && !this.desks.has(sp.id) ? this.claimHere(sp) : this.stand() } // at an unclaimed desk X claims it; walk away to stand
     const spot = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
     if (spot) this.sit(spot, true)
   }
@@ -137,12 +196,15 @@ export class WorldScene extends Phaser.Scene {
       for (const r of this.remotes.values()) r.k.destroy()
       this.remotes.clear()
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
+      for (const [uid, p] of Object.entries(m.presence)) { this.presences.set(uid, p); this.remotes.get(uid)?.k.setPresence(p) }
+      const mineP = m.presence[this.data0.userId]; if (mineP) this.setPresence(mineP, false)
       this.taken = new Set(Object.values(m.sitting)); this.seated = new Map(Object.entries(m.sitting))
       for (const [uid, spotId] of this.seated) this.seat(uid, spotId, true)
       const mine = m.sitting[this.data0.userId], p = m.positions[this.data0.userId]
       if (this.sitting && !mine) this.stand(false)
       if (mine && !this.sitting) { const sp = this.world.sitSpots.find((q) => q.id === mine); if (sp) { this.fx = p?.x ?? this.fx; this.fy = p?.y ?? this.fy; this.sit(sp, false) } }
       else if (!mine && p && (p.x !== this.tx || p.y !== this.ty)) this.snapMe(p.x, p.y)
+      const zNow = zoneAt(this.world, this.tx, this.ty); if (zNow !== this.lastZone) this.enterZone(zNow) // arriving at a desk in the Library counts as entering it
     } else if (m.t === 'joined') { if (m.member.userId !== this.data0.userId) this.addRemote(m.member, undefined, now, true) }
     else if (m.t === 'left') {
       const r = this.remotes.get(m.userId); if (!r) return
@@ -160,6 +222,8 @@ export class WorldScene extends Phaser.Scene {
         r.buf.push({ t: now, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
       }
     } else if (m.t === 'said') this.bubble(m.userId, m.text, !!m.nearbyOnly, !!m.mentionsYou)
+    else if (m.t === 'presenceChanged') { if (m.userId !== this.data0.userId) { this.presences.set(m.userId, m.presence); this.remotes.get(m.userId)?.k.setPresence(m.presence) } }
+    else if (m.t === 'deskClaimed') { if (m.userId !== this.data0.userId) this.setDesk(m.userId, m.spotId) }
     else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
     else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
     else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are

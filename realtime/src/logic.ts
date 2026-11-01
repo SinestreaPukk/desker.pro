@@ -11,7 +11,7 @@ export function parseClient(raw: string | ArrayBuffer): ClientMsg | null {
   try { const r = clientMsg.safeParse(JSON.parse(raw)); return r.success ? r.data : null } catch { return null }
 }
 
-export type Hello = { ok: true; claims: { sub: string; vid: string; role: string; n?: string; c?: string } } | { ok: false; code: 'version' | 'auth'; message: string }
+export type Hello = { ok: true; claims: { sub: string; vid: string; role: string; n?: string; c?: string; d?: string } } | { ok: false; code: 'version' | 'auth'; message: string }
 export async function checkHello(msg: Extract<ClientMsg, { t: 'hello' }>, villageId: string, secret: string | undefined, now = Date.now()): Promise<Hello> {
   if (msg.v !== PROTOCOL_VERSION) return { ok: false, code: 'version', message: 'Kodama Village was updated. Please refresh the page.' }
   const r = await verifyToken(msg.token, secret, villageId, now)
