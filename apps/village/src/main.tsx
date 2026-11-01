@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { authClient, signIn } from './auth.ts'
 import Picker from './Picker.tsx'
 import Join from './Join.tsx'
+import '@fontsource/vt323'
 import './index.css'
 
 const World = lazy(() => import('./World.tsx')) // Phaser stays out of the picker's bundle

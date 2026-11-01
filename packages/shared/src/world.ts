@@ -47,3 +47,5 @@ export function reachable(w: World, x: number, y: number): Set<number> {
 }
 /** Walkable tiles next to a sit spot, from which a kodama may sit on it. */
 export const approaches = (w: World, s: Spot) => (Object.keys(DELTA) as Dir[]).map((d) => ({ x: s.x + DELTA[d][0], y: s.y + DELTA[d][1] })).filter((t) => walkable(w, t.x, t.y))
+/** Where a person appears: one of the 8 spawn points around the Board, stable per person (so server and client agree without talking). */
+export const spawnFor = (w: World, userId: string) => w.spawns[[...userId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % w.spawns.length]

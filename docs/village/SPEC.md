@@ -429,3 +429,10 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - HUD in React: village name, zone, help overlay (?), first-visit hint, settings (sound prefs; sounds themselves come with bubbles).
 - Fixed: faint seams at zoom 3 came from an odd-height canvas, so the canvas is always snapped to even pixels.
 - Simplified / not yet: snow near indoor windows, the Garden bird, sounds, pixel font for names (Checkpoint 5), integer zoom on non-integer-DPR displays.
+### Checkpoint 5: multiplayer movement (done, awaiting owner's feel test)
+- Client sends `move` at most MOVE_SEND_MAX_HZ (10/s) and only after something changed; local walking is predicted and never waits for the room.
+- Room validates each update (shared `applyMove`): reachable by walking within a token budget that refills at run speed +20% (burst 3), else `correct` with the true tile. Batches `moved` every 50 ms, to everyone except the mover. Tested live: teleport refused, speed hack refused, legit steps delivered.
+- Remote kodamas: drawn REMOTE_INTERP_DELAY_MS behind, walks scheduled to start on arrival and last as long as the real steps (smooth, never faster than running), snap with a dust puff if more than 3 tiles behind. Measured: no frame faster than run speed, 0 room corrections while running/walking ~35 tiles.
+- Name tags in VT323 (own tag highlighted amber), soft sparkle + fade-in on arrival, fade-out on leave. `spawnFor(userId)` is shared so room and client agree where people appear.
+- Fixed on the way: a closed connection could still open a socket after its token loaded and kick the live one out ("Opened in another tab").
+- Not yet: `joined` carries no position (a new person appears at their spawn point; the next `moved` fixes any difference), sounds.

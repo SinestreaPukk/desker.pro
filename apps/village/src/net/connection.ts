@@ -20,7 +20,9 @@ export function connect(villageId: string, on: { message: (m: ServerMsg) => void
   async function open() {
     if (stopped) return
     try {
-      const t = await getToken(); scheduleRefresh()
+      const t = await getToken()
+      if (stopped) return // closed while the token was loading: do not open a socket, it would kick the live one out ("replaced")
+      scheduleRefresh()
       const sock = ws = new WebSocket(`${URL_}/room/${villageId}`)
       sock.onopen = () => sock.send(JSON.stringify({ t: 'hello', v: PROTOCOL_VERSION, token: t }))
       sock.onmessage = (e) => {
