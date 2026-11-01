@@ -7,10 +7,10 @@ export default function RhythmCard({ data, onOpen }) {
   const p = profile(data)
   const sunday = new Date().getDay() === 0
   const learned = sunday && !p.off ? learnedThisWeek(data) : []
-  const last = accuracyByWeek(p.visible.outcomes).at(-1)
+  const last = accuracyByWeek(p.visible.outcomes).filter((w) => w.n).at(-1)
   const line = p.off ? 'Learning is switched off.'
     : p.dur.n < 3 ? 'Desker is still guessing how long things take you. Tick tasks off and say how long they took, or use the timer.'
-    : last?.planErr != null ? `Plans were off by ${last.planErr}% on average the last week you timed tasks. Your own estimates were off by ${last.estErr}%.`
+    : last?.planErr != null ? `Plans were off by about ${last.planErr} min on average the last week you timed tasks. Your own estimates were off by about ${last.estErr} min.`
     : `Your work takes about ${p.dur.overall}x what you estimate.`
   return (
     <section className={`${panel} !p-3 lg:!p-4`} aria-label="Your rhythm">

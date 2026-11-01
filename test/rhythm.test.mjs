@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   classify, typeOf, durationModel, energyCurve, focusLength, startLag, addOutcome, rhythmOf, profile, plannerOf, realityCheck,
-  accuracyByWeek, learnedThisWeek, isExcluded, resetRhythm, withPrefs, summaryForAI, PRIOR_MULT,
+  accuracyByWeek, learnedThisWeek, isExcluded, resetRhythm, withPrefs, summaryForAI, PRIOR_MULT, isValidTimingSample, invalidReason, markInvalid,
 } from '../src/rhythm.js'
 import { schedule, withSlot, lengthOf, planWeek } from '../src/schedule.js'
 
@@ -24,8 +24,8 @@ test('classify guesses the type from the title and a set type wins', () => {
 
 test('with no data the multiplier is the prior; it moves toward the data as samples arrive', () => {
   assert.equal(durationModel([]).overall, PRIOR_MULT)
-  const some = durationModel(Array.from({ length: 5 }, () => out('Reading', 1, 2))).byType.Reading // observed 2.0x, n = 5: overall 1.65, then the type moves halfway again toward 2.0
-  assert.ok(Math.abs(some.mult - 1.83) < 0.02, `got ${some.mult}`)
+  const some = durationModel(Array.from({ length: 5 }, () => out('Reading', 1, 2))).byType.Reading // (1.3*3 + 5*2) / 8
+  assert.equal(some.mult, 1.74)
   const many = durationModel(Array.from({ length: 50 }, () => out('Reading', 1, 2))).byType.Reading
   assert.ok(many.mult > 1.9, `got ${many.mult}`)
   assert.equal(durationModel([out('Reading', 1, 1)]).byType.Reading.n, 1)
@@ -33,8 +33,8 @@ test('with no data the multiplier is the prior; it moves toward the data as samp
 
 test('a type with no data falls back to the overall multiplier, and one wild sample cannot swing it', () => {
   const m = durationModel([...Array.from({ length: 6 }, () => out('Reading', 1, 1.5)), out('Writing', 1, 9)])
-  assert.equal(m.multFor('Lab report'), m.overall)
-  assert.ok(m.byType.Writing.mult < 2.2, `one 9x sample should be squashed, got ${m.byType.Writing.mult}`)
+  assert.equal(m.multFor('Lab report'), PRIOR_MULT)
+  assert.equal(m.byType.Writing, undefined) // 9x the estimate is a forgotten timer: not a sample
   assert.equal(durationModel([out('Reading', 1, 40)]).n, 0) // a forgotten timer is not a sample
 })
 
@@ -97,7 +97,7 @@ test('weekly accuracy compares the user estimate with Desker\'s plan', () => {
   const w = accuracyByWeek([out('Reading', 1, 2, { pred: 1.9 }), out('Reading', 1, 2, { pred: 2.1 }), out('Reading', 2, 2, { pred: 2 })])
   assert.equal(w.length, 1)
   assert.equal(w[0].n, 3)
-  assert.equal(w[0].estErr, 50)
+  assert.equal(w[0].estErr, 40) // minutes: (60 + 60 + 0) / 3
   assert.ok(w[0].planErr < w[0].estErr)
 })
 
@@ -171,4 +171,38 @@ test('a best-energy slot never breaks a deadline or a calendar event', () => {
 test('planWeek forwards the planner (scale and padding)', () => {
   const r = planWeek({ tasks: [task(1)], busy: [], deadlines: [], freeHours: 4, now: NOW, scale: () => 1, pad: 15 })
   assert.equal(r.plan[0].len, 75)
+})
+
+test('a 4-second completion never affects any number', () => {
+  const four = out('Problem set', 1, 4 / 3600, { src: 'timer', pred: 1.5 })
+  assert.equal(isValidTimingSample(four), false)
+  assert.equal(durationModel([four]).n, 0)
+  assert.equal(durationModel([four]).byType['Problem set'], undefined)
+  const w = accuracyByWeek([four])
+  assert.equal(w[0].n, 0); assert.equal(w[0].estErr, null)
+  assert.equal(profile({ rhythm: { outcomes: [four] } }).dur.overall, PRIOR_MULT)
+})
+
+test('sample validity: short, under 15%, over 6x, ignored period, checkbox', () => {
+  assert.equal(isValidTimingSample(out('Reading', 1, 0.05)), false) // 3 min
+  assert.equal(isValidTimingSample(out('Reading', 4, 0.5)), false) // under 15% of the estimate
+  assert.equal(isValidTimingSample(out('Reading', 1, 6.5)), false)
+  assert.equal(isValidTimingSample(out('Reading', 1, 1, { src: 'done' })), false)
+  assert.equal(isValidTimingSample(out('Reading', 1, 1)), true)
+  const day = new Date(NOW).toLocaleDateString('sv')
+  assert.equal(isValidTimingSample(out('Reading', 1, 1), { excluded: [{ from: day, to: day }] }), false)
+  assert.equal(invalidReason(out('Reading', 1, 0.05)), 'short')
+})
+
+test('no percentage can blow up: the accuracy is minutes, bounded by the samples', () => {
+  const w = accuracyByWeek([out('Reading', 1, 1.2, { pred: 1.5 }), out('Reading', 1, 0.0011, { pred: 1.5 })])
+  assert.equal(w[0].n, 1)
+  assert.ok(w[0].estErr <= 600 && w[0].planErr <= 600)
+})
+
+test('markInvalid stamps stored bad samples and is idempotent', () => {
+  const r = { outcomes: [out('Reading', 1, 0.001), out('Reading', 1, 1)], archive: {}, sessions: [], signals: [], prefs: {} }
+  const m = markInvalid(r)
+  assert.equal(m.outcomes[0].bad, 'short'); assert.equal(m.outcomes[1].bad, undefined)
+  assert.equal(markInvalid(m), m)
 })

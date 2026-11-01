@@ -5,11 +5,10 @@
 //   signal   { k: 'resched'|'accept'|'skip'|'done', at, task? }
 //   archive  { [type]: { n, est, act } }   old outcomes folded into sums so the document stays small without forgetting
 //   prefs    { off?: true, excluded: [{ from, to }] }   learning switched off / date ranges to ignore (exam week, illness)
-// Every learned number starts from a prior and moves toward the data as it arrives: weight n / (n + K).
+// Every learned number starts from a prior and moves toward the data as it arrives: weight n / (n + K), K = 3.
 
 export const TYPES = ['Reading', 'Problem set', 'Writing', 'Revision', 'Lab report', 'Group work', 'Admin', 'Other']
 export const PRIOR_MULT = 1.3 // people underestimate: until we have data, plan 30% more than they said
-export const K = 5
 const CAPS = { outcomes: 300, sessions: 150, signals: 150 }
 
 // ---- task type ----------------------------------------------------------------------------------------------
@@ -37,14 +36,24 @@ export const mayAsk = (data) => !isOff(data) && !data?.rhythm?.prefs?.noAsk
 const dateOf = (ms) => new Date(ms).toLocaleDateString('sv')
 export const isExcluded = (prefs, ms) => (prefs?.excluded || []).some((x) => x.from && x.to && dateOf(ms) >= x.from && dateOf(ms) <= x.to)
 
-// The sample that goes into the multiplier: hours estimated vs hours it took. Absurd values (a forgotten timer) are ignored.
-const usable = (o) => o && o.est > 0 && o.actual > 0 && o.actual <= 10 && o.est <= 10
-const squash = (o) => Math.min(o.est * 4, Math.max(o.est * 0.25, o.actual)) // one wild sample cannot swing the average
+// The one rule for what may teach Desker anything (multipliers, accuracy, "learned this week"). est/actual are hours.
+// Returns null when the sample is fine, else the reason: 'short' (a few seconds is not a timing), 'wild' (a forgotten timer), 'ignored', 'checkbox'.
+export function invalidReason(o, prefs) {
+  if (!o || !(o.est > 0) || !(o.actual >= 0)) return 'short'
+  if (o.src !== 'timer' && o.src !== 'tap') return 'checkbox' // ticked off with no timer and no duration typed by the user
+  if (o.actual * 60 < 5 || o.actual < o.est * 0.15) return 'short'
+  if (o.actual > o.est * 6 || o.actual > 10 || o.est > 10) return 'wild'
+  if (prefs && isExcluded(prefs, o.at)) return 'ignored'
+  return null
+}
+export const isValidTimingSample = (o, prefs) => invalidReason(o, prefs) === null
+export const INVALID_TEXT = { short: 'too short to learn from', wild: 'far longer than planned, likely a forgotten timer', ignored: 'in an ignored period', checkbox: 'no timer and no time entered' }
+const usable = (o) => isValidTimingSample(o)
 
 function fold(archive, o) {
   if (!usable(o)) return archive
   const a = archive[o.type] || { n: 0, est: 0, act: 0 }
-  return { ...archive, [o.type]: { n: a.n + 1, est: Math.round((a.est + o.est) * 1000) / 1000, act: Math.round((a.act + squash(o)) * 1000) / 1000 } }
+  return { ...archive, [o.type]: { n: a.n + 1, est: Math.round((a.est + o.est) * 1000) / 1000, act: Math.round((a.act + o.actual) * 1000) / 1000 } }
 }
 // Oldest records beyond the cap are folded into `archive`, so the model keeps what they taught it.
 export function addOutcome(r, o) {
@@ -80,22 +89,23 @@ function visible(data) {
 }
 
 // ---- duration multiplier ------------------------------------------------------------------------------------
+export const K = 3 // the prior counts as this many samples
 const clampM = (m) => Math.round(Math.min(3, Math.max(0.6, m)) * 100) / 100
-// prior moves toward observed (sum actual / sum estimate) with weight n / (n + K)
-const shrink = (prior, n, est, act) => (n > 0 && est > 0 ? prior + (act / est - prior) * (n / (n + K)) : prior)
+// (prior * K + sum of actual/estimate over valid samples) / (K + n)
+const shrink = (prior, n, ratios) => (prior * K + ratios) / (K + n)
 
 export function durationModel(outcomes = [], archive = {}, prior = PRIOR_MULT) {
-  const sums = {}
-  for (const [type, a] of Object.entries(archive)) sums[type] = { n: a.n, est: a.est, act: a.act }
+  const sums = {} // type -> { n, ratios } (the archive keeps sum act / sum est, so it counts as n samples at that ratio)
+  for (const [type, a] of Object.entries(archive)) sums[type] = { n: a.n, ratios: a.est > 0 ? (a.n * a.act) / a.est : 0 }
   for (const o of outcomes) {
     if (!usable(o)) continue
-    const s = (sums[o.type] ||= { n: 0, est: 0, act: 0 })
-    s.n++; s.est += o.est; s.act += squash(o)
+    const s = (sums[o.type] ||= { n: 0, ratios: 0 })
+    s.n++; s.ratios += o.actual / o.est
   }
-  const all = Object.values(sums).reduce((a, s) => ({ n: a.n + s.n, est: a.est + s.est, act: a.act + s.act }), { n: 0, est: 0, act: 0 })
-  const overall = shrink(prior, all.n, all.est, all.act)
-  const byType = Object.fromEntries(Object.entries(sums).map(([type, s]) => [type, { n: s.n, mult: clampM(shrink(overall, s.n, s.est, s.act)), raw: s.est > 0 ? Math.round((s.act / s.est) * 100) / 100 : null }]))
-  return { prior, n: all.n, overall: clampM(overall), byType, multFor: (type) => byType[type]?.mult ?? clampM(overall) }
+  const all = Object.values(sums).reduce((a, s) => ({ n: a.n + s.n, ratios: a.ratios + s.ratios }), { n: 0, ratios: 0 })
+  const overall = shrink(prior, all.n, all.ratios)
+  const byType = Object.fromEntries(Object.entries(sums).map(([type, s]) => [type, { n: s.n, mult: clampM(shrink(prior, s.n, s.ratios)), raw: s.n ? Math.round((s.ratios / s.n) * 100) / 100 : null }]))
+  return { prior, n: all.n, overall: clampM(overall), byType, multFor: (type) => byType[type]?.mult ?? clampM(prior) }
 }
 
 // ---- day-one guess ----------------------------------------------------------------------------------------
@@ -151,7 +161,7 @@ export function startLag(sessions = []) {
 }
 
 // ---- one profile for the whole app --------------------------------------------------------------------------
-export const confidenceOf = (n) => { const c = n / (n + K); return { score: Math.round(c * 100) / 100, label: n === 0 ? 'Just starting' : c < 0.4 ? 'Early days' : c < 0.6 ? 'Getting to know you' : 'Confident' } }
+export const confidenceOf = (n) => { const c = n / (n + 5); return { score: Math.round(c * 100) / 100, label: n === 0 ? 'Just starting' : c < 0.4 ? 'Early days' : c < 0.6 ? 'Getting to know you' : 'Confident' } }
 
 const slowPriorOf = (data) => ({ Rarely: 1.0, Sometimes: 1.3, 'Almost always': 1.6 })[data?.onboarding?.slow] ?? PRIOR_MULT
 // Only the duration part of the profile (cheap): what getTaskTime in taskTime.js needs.
@@ -195,15 +205,20 @@ export function realityCheck(tasks, planner, date, freeHours) {
 
 // ---- weekly accuracy ----------------------------------------------------------------------------------------
 const mondayOf = (ms) => { const d = new Date(ms); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dateOf(d.getTime()) }
-// Per week: how far off the user's own estimate was, and how far off Desker's adjusted plan was (median % error).
-export function accuracyByWeek(outcomes = []) {
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length
+// Per week: on average how many minutes off the user's own estimate was, and Desker's reserved time was. Only valid samples count;
+// a week with none has n = 0 and the page says "Not enough timed tasks yet". Minutes, not percentages, so one odd task cannot blow it up.
+export function accuracyByWeek(outcomes = [], prefs) {
   const weeks = new Map()
-  for (const o of outcomes) if (usable(o)) { const k = mondayOf(o.at); (weeks.get(k) || weeks.set(k, []).get(k)).push(o) }
-  return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([week, list]) => ({
-    week, n: list.length,
-    estErr: Math.round(median(list.map((o) => Math.abs(o.est - o.actual) / o.actual)) * 100),
-    planErr: list.some((o) => o.pred > 0) ? Math.round(median(list.filter((o) => o.pred > 0).map((o) => Math.abs(o.pred - o.actual) / o.actual)) * 100) : null,
-  }))
+  for (const o of outcomes) { const k = mondayOf(o.at); (weeks.get(k) || weeks.set(k, []).get(k)).push(o) }
+  return [...weeks.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([week, all]) => {
+    const list = all.filter((o) => isValidTimingSample(o, prefs)), pl = list.filter((o) => o.pred > 0)
+    return {
+      week, n: list.length,
+      estErr: list.length ? Math.round(mean(list.map((o) => Math.abs(o.est - o.actual))) * 60) : null,
+      planErr: pl.length ? Math.round(mean(pl.map((o) => Math.abs(o.pred - o.actual))) * 60) : null,
+    }
+  })
 }
 
 // ---- "This week Desker learned" -----------------------------------------------------------------------------
@@ -240,4 +255,12 @@ export function summaryForAI(data) {
   const types = Object.entries(p.dur.byType).filter(([, x]) => x.n >= 3).map(([t, x]) => `${t} ${x.mult}x`)
   return [`Tasks take ${p.dur.overall}x the user's estimate overall${types.length ? ` (${types.join(', ')})` : ''}.`,
     p.focus && `Typical focus session: ${p.focus} min.`, p.energy.confident && `High energy hours: ${hoursText(p.energy.hours('high')) || 'unclear'}.`].filter(Boolean).join(' ')
+}
+
+// One-off cleanup, safe to run any time: stamps `bad` (the reason) on stored outcomes that may not teach anything, so lists can say so.
+// The numbers themselves never depend on the stamp: they are recomputed from the samples on every read.
+export function markInvalid(r) {
+  let changed = false
+  const outcomes = r.outcomes.map((o) => { const bad = invalidReason(o) || undefined; if (bad === o.bad) return o; changed = true; const { bad: _, ...rest } = o; return bad ? { ...rest, bad } : rest })
+  return changed ? { ...r, outcomes } : r
 }

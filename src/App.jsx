@@ -9,7 +9,7 @@ import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
 import { Icon } from './icons.jsx'
 import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
-import { record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile, mayAsk } from './rhythm.js'
+import { markInvalid, rhythmOf, record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile, mayAsk } from './rhythm.js'
 import { logEnergy } from './energy.js'
 import EnergyAsk from './components/EnergyAsk.jsx'
 import NamePrompt from './components/NamePrompt.jsx'
@@ -100,6 +100,11 @@ export default function App() {
       const k = d.kodama || {}
       return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(legacyXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
     })
+  }, [loaded])
+  // One-off cleanup: stamp stored timings that cannot teach anything (a few seconds, a forgotten timer). Numbers are recomputed on read regardless.
+  useEffect(() => {
+    if (!loaded) return
+    setData((d) => { const r = d.rhythm && markInvalid(rhythmOf(d)); return r && r !== undefined && r.outcomes !== d.rhythm.outcomes ? { ...d, rhythm: { ...d.rhythm, outcomes: r.outcomes } } : d })
   }, [loaded])
   // Growing into the next stage is announced once per device, quietly.
   const stage = data?.kodama?.legacy !== undefined ? growthOf(data).index : -1 // not before the one-time XP migration has run

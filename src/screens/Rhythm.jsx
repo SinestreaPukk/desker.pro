@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { track } from '../analytics.js'
 import { btn, ghost, panel, input, DANGER } from '../ui.js'
 import {
-  profile, rhythmOf, TYPES, startingGrid, accuracyByWeek, learnedThisWeek, rangesText, withPrefs, resetRhythm, MIN_CHECKINS,
+  profile, rhythmOf, TYPES, invalidReason, INVALID_TEXT, addOutcome, startingGrid, accuracyByWeek, learnedThisWeek, rangesText, withPrefs, resetRhythm, MIN_CHECKINS,
 } from '../rhythm.js'
 import { recap } from '../insights.js'
 import { fmtDate } from '../shared.jsx'
@@ -39,7 +39,7 @@ function Heatmap({ curve, sharpest }) {
   )
 }
 
-const Pct = ({ v }) => (v == null ? 'n/a' : `${v}%`)
+const Off = ({ v }) => (v == null ? 'n/a' : `~${v} min`)
 
 // "Your rhythm": what Desker has learned about how long your work takes and when you focus best, and every control over it.
 export default function Rhythm({ data, setData, onReplan }) {
@@ -48,7 +48,7 @@ export default function Rhythm({ data, setData, onReplan }) {
   const r = rhythmOf(data)
   const [sure, setSure] = useState('')
   const [range, setRange] = useState({ from: '', to: '' })
-  const weeks = accuracyByWeek(p.visible.outcomes).slice(-8)
+  const weeks = accuracyByWeek(r.outcomes, r.prefs).slice(-8)
   const week = recap(data)
   const learned = learnedThisWeek(data)
   const types = TYPES.map((type) => [type, { n: p.dur.byType[type]?.n || 0, mult: p.dur.multFor(type) }]).sort((a, b) => b[1].n - a[1].n) // every kind of work: the ones without timings yet show the starting guess
@@ -96,11 +96,11 @@ export default function Rhythm({ data, setData, onReplan }) {
         ) : null}
         {p.dur.n === 0 && <p className="mt-2 text-base text-slate-700">When you tick a task off, Desker asks how long it took. Use the timer and it knows without asking.</p>}
         <h3 className="mt-4 font-semibold">How close the plans were</h3>
-        <p className="text-base text-slate-700">How far off, on average, each week's time guesses were: your own estimate against what Desker reserved. Smaller is better.</p>
+        <p className="text-base text-slate-700">On average, how many minutes each week's plans were off from the time it really took: your own estimate against what Desker planned. Smaller is better.</p>
         {weeks.length ? (
           <table className="mt-1 w-full text-left text-base">
             <thead><tr className="text-slate-700"><th className="py-1 font-normal">Week of</th><th className="font-normal">Tasks</th><th className="font-normal">Your guess</th><th className="font-normal">Desker</th></tr></thead>
-            <tbody>{weeks.map((w) => <tr key={w.week} className="border-t border-line"><td className="whitespace-nowrap py-1 pr-2">{fmtDate(w.week).replace(/^\w+, /, '')}</td><td>{w.n}</td><td><Pct v={w.estErr} /></td><td><Pct v={w.planErr} /></td></tr>)}</tbody>
+            <tbody>{weeks.map((w) => <tr key={w.week} className="border-t border-line"><td className="whitespace-nowrap py-1 pr-2">{fmtDate(w.week).replace(/^\w+, /, '')}</td>{w.n ? <><td>{w.n}</td><td><Off v={w.estErr} /></td><td><Off v={w.planErr} /></td></> : <td colSpan={3} className="text-slate-700">Not enough timed tasks yet</td>}</tr>)}</tbody>
           </table>
         ) : <p className="mt-1 text-slate-700">Shows up once you have finished a few timed tasks, and should shrink over the weeks.</p>}
       </section>
@@ -125,7 +125,8 @@ export default function Rhythm({ data, setData, onReplan }) {
               return (
                 <li key={`${o.task}-${o.src}-${o.at}`} className="flex flex-wrap items-center gap-2 border-t border-line py-1">
                   <span className="min-w-0 flex-1 break-words">{t?.title || 'Deleted task'}</span>
-                  <span className="text-slate-700">{Math.round(o.est * 60)} min planned, {Math.round(o.actual * 60)} min taken</span>
+                  <span className="text-slate-700">{Math.round(o.est * 60)} min planned, {Math.round(o.actual * 60)} min taken{invalidReason(o, r.prefs) && <> <b className="font-normal">Not used: {INVALID_TEXT[invalidReason(o, r.prefs)]}.</b></>}</span>
+                  {invalidReason(o, r.prefs) && <label className="flex items-center gap-1">Real minutes<input type="number" min="5" max="600" className={`${input} w-20`} aria-label={`Real minutes for ${t?.title || 'this task'}`} onKeyDown={(e) => { if (e.key === 'Enter') { const m = +e.currentTarget.value; if (m >= 5) set((x) => addOutcome({ ...x, outcomes: x.outcomes.filter((y) => y !== o) }, { ...o, src: 'tap', actual: m / 60, bad: undefined, at: Date.now() })) } }} placeholder="Enter" /></label>}
                   <select className={`${input} text-base`} aria-label={`Kind of work for ${t?.title || 'this task'}`} value={o.type} onChange={(e) => setType(o.task, e.target.value)}>
                     {TYPES.map((x) => <option key={x}>{x}</option>)}
                   </select>
