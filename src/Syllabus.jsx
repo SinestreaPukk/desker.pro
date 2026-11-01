@@ -36,7 +36,7 @@ export default function Syllabus({ deadlines, setDeadlines, tasks, setTasks, rat
     const blocks = chosen.flatMap((i, k) => spreadBlocks({ title: i.title.trim(), date: i.date, hours: i.hours }).map((b) => ({ ...b, deadlineId: base + k })))
     setDeadlines([...deadlines, ...dls])
     setTasks(addTasks(tasks, blocks, 'import')); track('syllabus_imported', { count: blocks.length })
-    setMade(`Added ${dls.length} deadline${dls.length === 1 ? '' : 's'} and ${blocks.length} study blocks. Rank them in Tasks.`)
+    setMade(`Added ${dls.length} deadline${dls.length === 1 ? '' : 's'} and ${blocks.length} study blocks. Rank them in the list below.`)
     setItems(null); setText('')
   }
   return (

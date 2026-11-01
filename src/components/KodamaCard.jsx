@@ -7,7 +7,7 @@ export default function KodamaCard({ goals, className = '', onlyNews }) {
   const { mood, happy, lucky } = kodamaMood(goals)
   if (onlyNews && !happy && !lucky) return null
   const any = goals.some((g) => msOf(g).length)
-  const [title, sub] = !goals.length ? ['No goals yet.', 'Add a first goal on Goals (or take the 10-minute guide), and the kodama cheers for each milestone.'] : happy ? ['Milestone reached.', lucky ? 'Tomorrow is lucky again.' : 'Tomorrow is a lucky day.']
+  const [title, sub] = !goals.length ? ['No goals yet.', 'Add your first goal below, or take the 10-minute guide. Your kodama cheers for each milestone.'] : happy ? ['Milestone reached.', lucky ? 'Tomorrow is lucky again.' : 'Tomorrow is a lucky day.']
     : lucky ? ['A lucky day.', "Yesterday's milestone brought luck."]
     : any ? ['No milestone yet today.', 'Reach one and tomorrow is lucky.']
     : ['Add a milestone to a goal.', 'The kodama cheers for each one.']
