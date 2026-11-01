@@ -162,7 +162,7 @@ export default function Calendar({ goals, tasks, setTasks, freeHours, freeToday,
     for (const t of tasks) {
       if (dateKey(t) !== k) continue
       const hm = HM.exec(t.start || ''), cls = `${shade(t)} ${sel === t.id ? 'ring-2 ring-ink' : ''}`
-      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + getTaskTime(t, rhythm).plannedMinutes), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
+      if (hm) { const s = +hm[1] * 60 + +hm[2]; blocks.push({ id: `t${t.id}`, label: t.title, s, e: Math.min(1440, s + getTaskTime(t, rhythm).slotMinutes), cls, title: `${t.start} ${t.title}`, onClick: () => setSel(t.id) }) }
       else allDay.push({ id: `t${t.id}`, label: t.title, cls, onClick: () => setSel(t.id) })
     }
     for (const x of deadlines) {

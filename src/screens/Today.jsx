@@ -62,7 +62,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const doFirst = open.filter((t) => quadrant(t) === 0)
   const missed = tasks.filter((t) => isMissed(t))
   const stats = doneStats(tasks)
-  const clashes = overlaps(tasks, data.busy || []).length // planned times that overlap (older plans, or edits by hand)
+  const planner = plannerOf(data)
+  const clashes = overlaps(tasks, data.busy || [], planner?.scale ?? 1, planner?.pad ?? 0).length // planned times that overlap (older plans, or edits by hand)
   const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
   const soon = [
     ...deadlines.filter((d) => !d.done).map((d) => {

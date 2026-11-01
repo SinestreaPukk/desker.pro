@@ -16,19 +16,18 @@ const TIME = /^(\d\d):(\d\d)$/
 const mins = (s) => { const m = TIME.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null }
 const hm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const up = (m) => Math.ceil(m / STEP) * STEP
-// Block length in minutes. A task with no hours gets 1h (and is reported as assumed).
-// scale: a number or (task) => number (the learned "it takes you 1.4x" multiplier). With no scale, a block Desker
-// reserved earlier (task.block, valid while task.hours is still what it was computed from) is used, else the estimate.
-export const lengthOf = (t, scale) => {
-  if (scale === undefined && t.block > 0 && t.blockOf === t.hours) return t.block
-  const k = typeof scale === 'function' ? scale(t) : scale ?? 1
-  return Math.max(STEP, up(Math.round((t.hours > 0 ? t.hours : 1) * 60 * k)))
+// Planned length in minutes: the estimate (1h when there is none) x the learned multiplier, to the nearest 5 minutes, never under 15.
+// scale: a number or (task) => number. Nothing is stored on the task: the length is always worked out from the current estimate and
+// multiplier, so a changed multiplier can never leave a stale block behind. (Older tasks may carry block/blockOf; they are ignored.)
+export const lengthOf = (t, scale = 1) => {
+  const k = typeof scale === 'function' ? scale(t) : scale
+  return Math.max(STEP, Math.round(((t.hours > 0 ? t.hours : 1) * 60 * k) / 5) * 5)
 }
-// The task with a planned slot written onto it, plus the length Desker reserved when that differs from the estimate.
-export const withSlot = (t, p) => {
-  const raw = lengthOf({ ...t, block: undefined })
-  return { ...t, when: p.when, start: p.start, ...(p.len && p.len !== raw ? { block: p.len, blockOf: t.hours } : { block: undefined, blockOf: undefined }) }
-}
+// What a task occupies on the calendar: its planned length plus the buffer (pad) for starting late. Everything that places or
+// draws a task uses this one number.
+export const slotLength = (t, scale = 1, pad = 0) => lengthOf(t, scale) + pad
+// The task with a planned slot written onto it. `pin`: the user chose the time by hand, so planners leave it alone.
+export const withSlot = (t, p, pin) => ({ ...t, when: p.when, start: p.start, block: undefined, blockOf: undefined, ...(pin !== undefined && { pinned: pin || undefined }) })
 const hoursText = (m) => `${Math.round((m / 60) * 4) / 4}h`
 
 // Imported events ({ t, s, e } in epoch ms; all-day { d } never blocks) -> Map(date -> [{ s, e, title }]) in minutes.
@@ -64,7 +63,7 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
   for (const [date, list] of busyDays(busy)) list.forEach(({ s, e }) => block(date, s, e))
   for (const t of fixed) {
     if (t.done || !t.when) continue
-    const d = lengthOf(t), s = mins(t.start)
+    const d = slotLength(t, scale, pad), s = mins(t.start)
     if (s != null) block(t.when, s, s + d)
     if (!t.fun) used.set(t.when, (used.get(t.when) || 0) + d)
   }
@@ -96,9 +95,9 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
 
   const plan = [], problems = []
   const order = [...tasks].filter((t) => !t.done).sort((a, b) =>
-    (lastDayOf(a) || '9999').localeCompare(lastDayOf(b) || '9999') || (b.important ? 1 : 0) - (a.important ? 1 : 0) || lengthOf(b) - lengthOf(a))
+    (lastDayOf(a) || '9999').localeCompare(lastDayOf(b) || '9999') || (b.important ? 1 : 0) - (a.important ? 1 : 0) || lengthOf(b, scale) - lengthOf(a, scale))
   for (const t of order) {
-    const d = lengthOf(t, scale) + pad, last = lastDayOf(t), assumed = !(t.hours > 0)
+    const d = slotLength(t, scale, pad), last = lastDayOf(t), assumed = !(t.hours > 0)
     if (!t.fun && d > freeHours * 60) { // longer than any day's free time: it can never fit as one block
       problems.push({ id: t.id, title: t.title, short: (d - freeHours * 60) / 60, why: freeHours > 0 ? `${t.title} needs ${hoursText(d)}, more than your ${hoursText(freeHours * 60)} of free time in a day. Split it into smaller tasks.` : `${t.title} cannot be planned: free time per day is 0.` })
       continue
@@ -145,20 +144,20 @@ export function schedule({ tasks, fixed = [], busy = [], deadlines = [], freeHou
       if (s != null) { place(date, s, true); end = true }
     }
     problems.push({ id: t.id, title: t.title, short: short / 60, why: last
-      ? `Can't fit ${t.title} before its deadline: ${hoursText(short)} short${end ? '' : '. No free time found in the next two months'}`
+      ? `${t.title} doesn't fit before ${new Date(`${last}T12:00:00`).toLocaleDateString('en', { weekday: 'short' })}${last < today ? '' : ` (${hoursText(short)} short)`}. Want to free up time?${end ? '' : ' There is no free time in the next two months.'}`
       : `No free time for ${t.title} in the next ${horizon} days${end ? '' : ' or after'}` })
   }
   return { plan, problems }
 }
 
 // Planned tasks that overlap each other or a timed calendar event, as [{ a, b, date }] where a is a task and b a task or { title }.
-export function overlaps(tasks, busy = []) {
+export function overlaps(tasks, busy = [], scale = 1, pad = 0) {
   const byDate = new Map()
   const push = (date, item) => { if (!byDate.has(date)) byDate.set(date, []); byDate.get(date).push(item) }
   for (const t of tasks) {
     const s = mins(t.start)
     if (t.done || !t.when || s == null) continue
-    push(t.when, { s, e: s + lengthOf(t), task: t })
+    push(t.when, { s, e: s + slotLength(t, scale, pad), task: t })
   }
   for (const [date, list] of busyDays(busy)) list.forEach((x) => push(date, { s: x.s, e: x.e, event: { title: x.title } }))
   const out = []
@@ -175,9 +174,10 @@ export function overlaps(tasks, busy = []) {
 // A whole-week plan: every open work task gets a slot. aiPlan ([{ id, when, start }], optional) is honoured where it is valid.
 export function planWeek({ tasks, busy, deadlines, freeHours, freeToday, aiPlan, scale, pad, energy, now, dayStart, dayEnd }) {
   const open = tasks.filter((t) => !t.done)
+  const pinned = open.filter((t) => t.pinned && t.when && t.start && !t.fun) // times the user set by hand stay where they are
   // a task keeps its current slot when that is still valid; the AI's proposal, where there is one, wins over it
   const prefer = Object.fromEntries([...open.filter((t) => t.when).map((t) => [t.id, { when: t.when, start: t.start }]), ...(aiPlan || []).map((p) => [p.id, p])])
-  return schedule({ tasks: open.filter((t) => !t.fun), fixed: open.filter((t) => t.fun), busy, deadlines, freeHours, freeToday, prefer, scale, pad, energy, now, dayStart, dayEnd })
+  return schedule({ tasks: open.filter((t) => !t.fun && !pinned.includes(t)), fixed: [...open.filter((t) => t.fun), ...pinned], busy, deadlines, freeHours, freeToday, prefer, scale, pad, energy, now, dayStart, dayEnd })
 }
 
 // Check a handful of tasks whose time was just set by someone else (the chat agent). `changed` = ids to verify; the rest stay put.
@@ -188,5 +188,5 @@ export function repair({ tasks, changed, busy, deadlines, freeHours, freeToday, 
   const prefer = Object.fromEntries(mine.filter((t) => t.when).map((t) => [t.id, { when: t.when, start: t.start }]))
   const { plan, problems } = schedule({ tasks: mine, fixed: tasks.filter((t) => !set.has(t.id) && !t.done), busy, deadlines, freeHours, freeToday, prefer, now, scale, pad, energy })
   const by = new Map(plan.map((p) => [p.id, p]))
-  return { tasks: tasks.map((t) => (by.has(t.id) ? withSlot(t, by.get(t.id)) : t)), problems }
+  return { tasks: tasks.map((t) => (by.has(t.id) ? withSlot(t, by.get(t.id), false) : t)), problems }
 }

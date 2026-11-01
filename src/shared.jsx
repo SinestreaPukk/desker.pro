@@ -1,5 +1,5 @@
 import { post } from './api.js'
-import { isMissed, timeRatio } from './tasks.js'
+import { isMissed } from './tasks.js'
 import { profile, plannerOf } from './rhythm.js'
 import { repair } from './schedule.js'
 import { encodeFile } from './files.js'
@@ -54,10 +54,10 @@ export async function importCalendar(body) {
 export const REPEATS = [['', 'Never'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', 'Weekly'], ['monthly', 'Monthly']]
 export const patternOf = (d) => { const e = profile(d).energy; const high = e.confident ? e.hours('high') : [], low = e.confident ? e.hours('low') : []; return high.length || low.length ? { high, low } : undefined }
 // How much longer than estimated this person's work takes. The rhythm model's number once it has 3+ finished tasks to go on
-// (App publishes it with setLiveRatio each render, so the six screens that ask the AI to break work down do not need it passed in), else the old timer-based ratio.
+// (App publishes it with setLiveRatio each render, so the six screens that ask the AI to break work down do not need it passed in), nothing before that.
 let live
 export const setLiveRatio = (r) => { live = r }
-export const ratioOf = (tasks) => live ?? timeRatio(tasks)?.ratio
+export const ratioOf = () => live // the rhythm model's overall number only: one source, same as the Rhythm page
 // scheduler options from what Desker has learned (nothing when the user switched learning off)
 export const plannerArgs = (d) => { const p = plannerOf(d); return p ? { scale: p.scale, pad: p.pad, energy: p.energy } : {} }
 export const todayStr = () => new Date().toLocaleDateString('sv')

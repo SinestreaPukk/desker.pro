@@ -2,9 +2,11 @@
 // lists and matrix, the calendar, deadline and project headers, the AI's context, replanning) asks here, so the numbers always agree.
 //
 //   userEstimate    minutes the user guessed, or null when they gave none
-//   plannedMinutes  what Desker plans for: the guess x the learned multiplier, up to the next 15 minutes, or the slot Desker already
-//                   reserved on the calendar (task.block) while that is still valid. 60 x multiplier when there is no guess.
-//   multiplier      planned / guess (1 when learning is off or the guess only went up to a 15-minute slot)
+//   plannedMinutes  what Desker plans for: the guess x the learned multiplier, to the nearest 5 minutes (60 x multiplier when there is
+//                   no guess). Always worked out now from the current model; nothing reserved earlier is read back.
+//   bufferMinutes   slack added after it because you tend to start late (0 when unknown); slotMinutes = planned + buffer is what a
+//                   block occupies on the calendar, for the planner and the calendar alike
+//   multiplier      the learned multiplier for this kind of work: exactly the number the Rhythm page shows
 //   confidence      { label, guessing } from how many timings of this kind of task Desker has
 //   reason          one plain sentence for a tooltip
 // `rhythm` is timeProfile(data) from rhythm.js (null / learning off means: use the user's own guess).
@@ -20,9 +22,9 @@ export function getTaskTime(task, rhythm) {
   const type = typeOf(task)
   const m = off ? 1 : rhythm.dur.multFor(type)
   const n = off ? 0 : rhythm.dur.byType[type]?.n ?? 0
-  const reserved = task?.block > 0 && task.blockOf === task.hours ? task.block : null
-  const plannedMinutes = reserved ?? lengthOf(task || {}, m)
-  const multiplier = reserved && userEstimate ? round2(plannedMinutes / userEstimate) : round2(m) // the slot Desker already reserved may carry slack
+  const plannedMinutes = lengthOf(task || {}, m)
+  const bufferMinutes = off ? 0 : rhythm.pad || 0
+  const multiplier = round2(m)
   const adjusted = off ? false : !!userEstimate && plannedMinutes > userEstimate
   const conf = confidenceOf(n)
   const guessing = !off && n < 3
@@ -33,7 +35,7 @@ export function getTaskTime(task, rhythm) {
     : n === 0 ? `Starting guess: people usually need about ${k} what they plan. Desker will adjust it as it times your ${type.toLowerCase()} tasks.`
     : guessing ? `Early days: ${n} timing${n === 1 ? '' : 's'} of ${type.toLowerCase()} tasks so far suggest about ${k} your guess.`
     : `Your ${type.toLowerCase()} tasks have taken about ${k} your guess (from ${n} timings).`
-  return { userEstimate, plannedMinutes, multiplier, adjusted, confidence, reason, type, assumed: !userEstimate }
+  return { userEstimate, plannedMinutes, bufferMinutes, slotMinutes: plannedMinutes + bufferMinutes, multiplier, adjusted, confidence, reason, type, assumed: !userEstimate }
 }
 
 // "45 min", "1h", "1h 30m"
@@ -52,9 +54,10 @@ export function timeLabel(tt) {
 
 // The full sentence for Right now: "Your guess 1h → Desker plans 1h 30m (~1.3x, still guessing)".
 export function timeSentence(tt) {
-  if (tt.assumed) return `No estimate yet. Desker plans ${fmtMin(tt.plannedMinutes)}.`
-  if (!tt.adjusted) return `Your guess ${fmtMin(tt.userEstimate)}.`
-  return `Your guess ${fmtMin(tt.userEstimate)} → Desker plans ${fmtMin(tt.plannedMinutes)} (~${Math.round(tt.multiplier * 10) / 10}x, ${tt.confidence.label}).`
+  const buf = tt.bufferMinutes ? ` + ${fmtMin(tt.bufferMinutes)} buffer` : ''
+  if (tt.assumed) return `No estimate yet. Desker plans ${fmtMin(tt.plannedMinutes)}${buf}.`
+  if (!tt.adjusted) return `Your guess ${fmtMin(tt.userEstimate)}${buf}.`
+  return `Your guess ${fmtMin(tt.userEstimate)} → Desker plans ${fmtMin(tt.plannedMinutes)} (${tt.multiplier}x, ${tt.confidence.label})${buf}.`
 }
 
 // "Work left" for a group of tasks (a deadline, a project): Desker's planned time for what is not done, minus time already focused,
@@ -78,3 +81,7 @@ export function workLeftText(w) {
 
 // Tasks as the AI should see them: the user's own hours plus plannedMinutes, which already includes the learned multiplier.
 export const withPlanned = (tasks, rhythm) => tasks.map((t) => (t.hours > 0 || !t.fun ? { ...t, plannedMinutes: getTaskTime(t, rhythm).plannedMinutes } : t))
+
+// The two questions every page asks, by name.
+export const getMultiplier = (task, rhythm) => getTaskTime(task, rhythm).multiplier
+export const getPlannedMinutes = (task, rhythm) => getTaskTime(task, rhythm).plannedMinutes

@@ -71,7 +71,7 @@ export const record = (d, fn) => (isOff(d) ? d : { ...d, rhythm: fn(rhythmOf(d),
 export function outcomeFor(t, d, actual, src, at = Date.now()) {
   const est = t.hours > 0 ? t.hours : 1
   const pl = plannerOf(d)
-  const pred = t.block > 0 && t.blockOf === t.hours ? t.block / 60 : pl ? est * pl.scale(t) : undefined
+  const pred = pl ? est * pl.scale(t) : undefined
   return { task: t.id, at, type: typeOf(t), est, actual: Math.round(actual * 1000) / 1000, src, ...(pred && { pred: Math.round(pred * 100) / 100 }) }
 }
 export const withPrefs = (r, p) => ({ ...r, prefs: { ...r.prefs, ...p } })
@@ -167,8 +167,10 @@ const slowPriorOf = (data) => ({ Rarely: 1.0, Sometimes: 1.3, 'Almost always': 1
 // Only the duration part of the profile (cheap): what getTaskTime in taskTime.js needs.
 export function timeProfile(data) {
   const v = visible(data)
-  return { off: !!v.prefs.off, dur: durationModel(v.outcomes, v.archive, slowPriorOf(data)) }
+  return { off: !!v.prefs.off, dur: durationModel(v.outcomes, v.archive, slowPriorOf(data)), pad: padOf(startLag(v.sessions)) }
 }
+// Minutes of buffer added to every block: you tend to start late, so leave slack at the end. Shown next to the planned time, never hidden in it.
+const padOf = (lag) => (lag != null && lag >= 10 ? Math.min(30, Math.round(lag / 15) * 15) : 0)
 
 export function profile(data) {
   const v = visible(data)
@@ -176,14 +178,14 @@ export function profile(data) {
   const dur = durationModel(v.outcomes, v.archive, slowPriorOf(data))
   const energy = energyCurve(v.energy, v.tasks, sharpest)
   const lag = startLag(v.sessions)
-  return { off: !!v.prefs.off, dur, energy, focus: focusLength(v.sessions), lag, confidence: confidenceOf(dur.n), prefs: v.prefs, visible: v }
+  return { off: !!v.prefs.off, dur, energy, focus: focusLength(v.sessions), lag, pad: padOf(lag), confidence: confidenceOf(dur.n), prefs: v.prefs, visible: v }
 }
 
 // Hand these to the scheduler. null when learning is off, so planning falls back to the user's own numbers.
 export function plannerOf(data) {
   const p = profile(data)
   if (p.off) return null
-  const pad = p.lag != null && p.lag >= 10 ? Math.min(30, Math.round(p.lag / 15) * 15) : 0 // you tend to start late: leave slack at the end of the block
+  const pad = padOf(p.lag)
   return {
     scale: (t) => p.dur.multFor(typeOf(t)),
     pad,

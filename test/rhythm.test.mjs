@@ -128,13 +128,12 @@ test('summary for the AI is empty until there is data and never contains task ti
 // ---- scheduler hooks ----
 const task = (id, extra = {}) => ({ id, title: `T${id}`, hours: 1, ...extra })
 
-test('the scheduler reserves the learned time and the length is remembered on the task', () => {
+test('the scheduler reserves the learned time and stores nothing on the task', () => {
   const { plan } = schedule({ tasks: [task(1, { hours: 1 })], freeHours: 4, now: NOW, scale: () => 1.5 })
   assert.equal(plan[0].len, 90)
   const t = withSlot(task(1), plan[0])
-  assert.equal(lengthOf(t), 90)
-  assert.equal(lengthOf({ ...t, hours: 2 }), 120, 'editing the estimate drops the old reservation')
-  assert.equal(withSlot(task(1), { when: '2026-10-31', start: '10:00', len: 60 }).block, undefined)
+  assert.equal(t.block, undefined); assert.equal(t.blockOf, undefined)
+  assert.equal(lengthOf(t, 1.5), 90); assert.equal(lengthOf({ ...t, hours: 2 }, 1.5), 180) // always from the current estimate and multiplier
 })
 
 test('blocks that are longer than the estimate still never overlap each other', () => {

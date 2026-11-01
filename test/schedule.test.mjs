@@ -42,7 +42,7 @@ test('a deadline that cannot be met is reported, never silently overlapped', () 
   const tasks = [task(1, { hours: 1, due: '2026-10-31' }), task(2, { hours: 1, due: '2026-10-31' })]
   const { plan, problems } = schedule({ tasks, freeHours: 1, now: NOW })
   assert.equal(problems.length, 1)
-  assert.match(problems[0].why, /Can't fit .* before its deadline: 1h short/)
+  assert.match(problems[0].why, /T2 doesn't fit before Sat \(1h short\)\. Want to free up time\?/)
   assert.equal(plan.length, 2) // still given a free slot, after the deadline
   assert.ok(plan.find((p) => p.late).when > '2026-10-31')
   clean(plan, tasks)
