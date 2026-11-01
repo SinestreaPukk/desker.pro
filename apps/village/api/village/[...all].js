@@ -13,6 +13,7 @@ import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { keyMatches } from '../../../../packages/db/keys.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
+import { cleanCreate, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
 
 const MAX_MEMBERS = 50 // = VILLAGE_MAX_MEMBERS in packages/shared/src/constants.ts (plain JS here, no TS build step)
 const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in packages/shared/src/types.ts
@@ -20,6 +21,12 @@ const SHARING = ['full', 'basic', 'off']
 // ponytail: desks are recognised by the snowy_campus naming (lib-desk-01..24); a second template would read its desk ids from its own map.
 const DESK = /^lib-desk-(0[1-9]|1\d|2[0-4])$/
 const ev = (villageId, uid, name, props) => sql.query('insert into village_event (village_id, user_id, name, props) values ($1, $2, $3, $4)', [villageId, uid, name, cleanEvent(name, props) ?? {}]).catch(() => {}) // analytics never breaks the request
+// Shared deadlines of members who opted in, for the given villages. ponytail: Desker stores dates without a time zone; Thai universities are all UTC+7, so due times are read as Bangkok time. Per-user zones if Desker ever has them.
+const boardRows = async (villageIds) => (await sql.query(
+  `select m.village_id as vid, d.user_id as "userId", d.title, d.due_date::text as date, d.due_time as time, d.context
+     from deadlines d join village_member m on m.user_id = d.user_id
+    where m.village_id = any($1::uuid[]) and m.share_deadlines and m.banned_at is null and d.due_date >= current_date - 2 and d.due_date <= current_date + 70`, [villageIds]))
+  .map((r) => ({ vid: r.vid, userId: r.userId, title: String(r.title).slice(0, 120), dueAt: Date.parse(`${r.date}T${/^\d\d:\d\d$/.test(r.time ?? '') ? r.time : '23:59'}:00+07:00`), courseCode: courseOf(`${r.title} ${r.context ?? ''}`) }))
 const no = (res) => res.status(403).json({ error: 'not_member' })
 
 const memberOf = async (slug, uid) => (await sql.query(
@@ -34,10 +41,45 @@ export default async function handler(req, res) {
 
   if (first === 'mine' && !second && req.method === 'GET') {
     const rows = await sql.query(
-      `select v.slug, v.name, m.role, (select count(*)::int from village_member where village_id = v.id and banned_at is null) as members
+      `select v.id, v.slug, v.name, v.course_tags, m.role,
+              (select count(*)::int from village_member where village_id = v.id and banned_at is null) as members,
+              coalesce((select json_agg(coalesce(x.settings->>'colour', 'snow')) from (select settings from village_member where village_id = v.id and banned_at is null and last_seen_at > now() - interval '10 minutes' order by last_seen_at desc limit 8) x), '[]') as dots,
+              (select count(distinct user_id)::int from village_focus_session where village_id = v.id and ended_at is null and started_at > now() - interval '3 hours') as studying
          from village v join village_member m on m.village_id = v.id
         where m.user_id = $1 and m.banned_at is null and v.deleted_at is null order by m.last_seen_at desc`, [uid])
-    return res.json({ villages: rows })
+    const byVillage = new Map(), all = rows.length ? await boardRows(rows.map((r) => r.id)) : []
+    for (const r of all) (byVillage.get(r.vid) ?? byVillage.set(r.vid, []).get(r.vid)).push(r)
+    const now = Date.now()
+    return res.json({ villages: rows.map(({ id, course_tags, ...r }) => {
+      const next = buildBoard(byVillage.get(id) ?? [], course_tags ?? [], now).filter((e) => e.dueAt > now).sort((a, b) => a.dueAt - b.dueAt)[0]
+      return { ...r, next: next ? { title: next.title, courseCode: next.courseCode, dueAt: next.dueAt } : null }
+    }) })
+  }
+  if (first === 'courses' && !second && req.method === 'GET') { // chip suggestions for /new: course codes found in my own deadlines and tasks
+    const rows = await sql.query(
+      `select title, context from deadlines where user_id = $1 and due_date >= current_date - 120
+       union all select title, null from tasks where user_id = $1 and (due_date is null or due_date >= current_date - 120)`, [uid])
+    const n = new Map()
+    for (const r of rows) { const c = courseOf(`${r.title} ${r.context ?? ''}`); if (c) n.set(c, (n.get(c) ?? 0) + 1) }
+    return res.json({ courses: [...n].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([c]) => c) })
+  }
+  if (!first && req.method === 'POST') { // create a village: me as owner. Limits are counted here, the unique slug is the database's call.
+    if (!(await limit(req, res, { scope: 'village-create', max: 10, id: uid }))) return
+    const c = cleanCreate(req.body)
+    if (!c.ok) return res.status(400).json({ error: c.error })
+    const { name, slug, courses, settings } = c.value
+    const [n] = await sql.query(
+      `select (select count(*)::int from village where owner_id = $1 and deleted_at is null) as owned,
+              (select count(*)::int from village_member m join village v on v.id = m.village_id where m.user_id = $1 and m.banned_at is null and v.deleted_at is null) as joined`, [uid])
+    if (n.owned >= MAX_OWNED_VILLAGES) return res.status(409).json({ error: 'too_many_owned' })
+    if (n.joined >= MAX_JOINED_VILLAGES) return res.status(409).json({ error: 'too_many_joined' })
+    try {
+      const [row] = await sql.query(
+        `with v as (insert into village (slug, name, owner_id, course_tags, settings) values ($1, $2, $3, $4, $5) returning id),
+              m as (insert into village_member (village_id, user_id, role, status_sharing) select id, $3, 'owner', $6 from v)
+         select id from v`, [slug, name, uid, courses, JSON.stringify(settings), settings.default_status_sharing])
+      return res.json({ ok: true, slug })
+    } catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'slug_taken' }); throw e }
   }
   if (first === 'token' && !second && req.method === 'POST') { // SPEC §3.4: a 10-minute room token, only for a member who is not banned
     if (!(await limit(req, res, { scope: 'village-token', max: 120, id: uid }))) return
@@ -51,7 +93,7 @@ export default async function handler(req, res) {
     const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
-  if (!first || first === 'mine') return res.status(404).json({ error: 'Not found' })
+  if (!first || first === 'mine' || first === 'courses') return res.status(404).json({ error: 'Not found' })
   const slug = first.slice(0, 64)
 
   if (second === 'join' && req.method === 'POST') {
@@ -63,8 +105,8 @@ export default async function handler(req, res) {
     if (mine) return res.json({ ok: true, joined: false })
     // Insert only while there is room, in one statement, so two people joining at once cannot pass the limit.
     const ins = await sql.query(
-      `insert into village_member (village_id, user_id) select $1, $2
-        where (select count(*) from village_member where village_id = $1 and banned_at is null) < $3 on conflict do nothing returning user_id`, [v.id, uid, MAX_MEMBERS])
+      `insert into village_member (village_id, user_id, status_sharing) select $1, $2, $4
+        where (select count(*) from village_member where village_id = $1 and banned_at is null) < $3 on conflict do nothing returning user_id`, [v.id, uid, MAX_MEMBERS, v.settings?.default_status_sharing === 'full' ? 'full' : 'basic'])
     if (!ins.length) return res.status(409).json({ error: 'full' })
     await ev(v.id, uid, 'village_joined', { via: 'link' })
     return res.json({ ok: true, joined: true })
@@ -100,12 +142,7 @@ export default async function handler(req, res) {
   }
 
   if (second === 'board' && req.method === 'GET') { // Phase 0 Board: deadlines of members who share them, for this village's courses (polled by the client every 5 minutes)
-    const rows = await sql.query(
-      `select d.user_id as "userId", d.title, d.due_date::text as date, d.due_time as time, d.context
-         from deadlines d join village_member m on m.user_id = d.user_id
-        where m.village_id = $1 and m.share_deadlines and m.banned_at is null and d.due_date >= current_date - 2 and d.due_date <= current_date + 70`, [v.id])
-    // ponytail: Desker stores dates without a time zone; Thai universities are all UTC+7, so due times are read as Bangkok time. Per-user zones if Desker ever has them.
-    const items = rows.map((r) => ({ userId: r.userId, title: String(r.title).slice(0, 120), dueAt: Date.parse(`${r.date}T${/^\d\d:\d\d$/.test(r.time ?? '') ? r.time : '23:59'}:00+07:00`), courseCode: courseOf(`${r.title} ${r.context ?? ''}`) }))
+    const items = await boardRows([v.id])
     return res.json({ items: buildBoard(items, v.course_tags ?? [], Date.now()) })
   }
 

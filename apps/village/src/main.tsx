@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { authClient, signIn } from './auth.ts'
 import Picker from './Picker.tsx'
 import Join from './Join.tsx'
+import New from './New.tsx'
 import { mine } from './api.ts'
 import '@fontsource/vt323'
 import './index.css'
@@ -26,6 +27,7 @@ function App() {
   const path = location.pathname.replace(/\/$/, '')
   const [, kind, slug] = path.match(/^\/(v|join)\/([\w-]+)$/) ?? []
   if (path === '/go') return <Go />
+  if (path === '/new') return <New />
   return (
     <>
       {!kind && <header className="bar"><b>Kodama Village</b><span>{user.name}</span></header>}

@@ -1,5 +1,5 @@
 // The village's own API (same origin as the app; the login cookie is on the shared parent domain).
-export type Mine = { slug: string; name: string; role: string; members: number }
+export type Mine = { slug: string; name: string; role: string; members: number; dots: string[]; studying: number; next: { title: string; courseCode: string | null; dueAt: number } | null }
 export type Info = {
   village: { id: string; slug: string; name: string; courseTags: string[]; libraryAutoFocus: boolean }
   me: { userId: string; role: string; colour: string; statusSharing: string; shareDeadlines: boolean; deskSpotId: string | null }
@@ -31,3 +31,6 @@ export function track(slug: string, name: string, props: Record<string, unknown>
   if (beacon && navigator.sendBeacon) return void navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
   fetch(url, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {})
 }
+export type NewVillage = { name: string; slug: string; courses: string[]; whoCanInvite: 'admins' | 'everyone'; libraryAutoFocus: boolean; defaultSharing: 'basic' | 'full' }
+export const createVillage = (b: NewVillage) => call<{ slug: string }>('', { method: 'POST', body: JSON.stringify(b) })
+export const myCourses = () => call<{ courses: string[] }>('courses')

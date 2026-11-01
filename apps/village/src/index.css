@@ -81,3 +81,12 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
   .toasts { bottom: 76px } .hud-online { display: none }
   .hud-card { font-size: 13px; padding: 4px 8px } .hud-card span { display: none }
 }
+
+/* village picker and /new (Phase 1) */
+.new { max-width: 520px; display: grid; gap: 12px } .new label { display: grid; gap: 4px } .new input[type=text], .new input:not([type]) { padding: 8px; border: 2px solid #35599a; border-radius: 6px; font-size: 16px }
+.new fieldset { border: 1px solid #b4caf0; border-radius: 6px } .new fieldset label { display: flex; gap: 6px; align-items: center }
+.new .row { display: flex; gap: 8px } .new button, .btn { padding: 8px 14px; border-radius: 6px; border: 2px solid #35599a; background: #fff; font-size: 15px; cursor: pointer; text-decoration: none; color: inherit }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px } .card { border: 2px solid #b4caf0; border-radius: 6px; padding: 10px; display: grid; gap: 4px } .card.on { border-color: #35599a; background: #eef4ff } .card.off { opacity: .55 }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.vcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px } .vcard { border: 2px solid #35599a; border-radius: 8px; background: #fff; padding: 12px; display: grid; gap: 4px; text-decoration: none; color: inherit }
+.dots { display: flex; gap: 3px; min-height: 12px } .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #35599a }

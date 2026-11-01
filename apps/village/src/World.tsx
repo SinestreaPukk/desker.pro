@@ -65,6 +65,11 @@ export default function World({ slug }: { slug: string }) {
     return () => { document.removeEventListener('visibilitychange', vis); window.removeEventListener('pagehide', report); report() }
   }, [data])
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
+  useEffect(() => { // just created: say hello once (the Kodama's line, as a toast until the NPC sprite exists)
+    if (!data || new URLSearchParams(location.search).get('new') !== '1') return
+    history.replaceState(null, '', location.pathname)
+    toast('Welcome to your village! Invite friends from the ⋯ menu.')
+  }, [data])
   useEffect(() => {
     if (!data || !el.current) return
     const onMsg = (m: ServerMsg) => {
