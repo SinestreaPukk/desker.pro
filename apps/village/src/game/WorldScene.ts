@@ -234,7 +234,7 @@ export class WorldScene extends Phaser.Scene {
     else if (m.t === 'presenceChanged') { if (m.userId !== this.data0.userId) { this.presences.set(m.userId, m.presence); this.remotes.get(m.userId)?.k.setPresence(m.presence) } }
     else if (m.t === 'statusChanged') this.setStatus(m.userId, m.status)
     else if (m.t === 'focusChanged') {
-      this.who(m.userId)?.setFocus(m.endsAt && m.startedAt ? { startedAt: m.startedAt, endsAt: m.endsAt } : null)
+      this.who(m.userId)?.setFocus(m.endsAt && m.startedAt ? { startedAt: m.startedAt, endsAt: m.endsAt, pausedAt: m.pausedAt } : null)
       if (m.userId === this.data0.userId && m.endsAt) { this.autoFocused = false; this.setPresence('focusing', false) } // my own timer, also after a reconnect
     }
     else if (m.t === 'deskClaimed') { if (m.userId !== this.data0.userId) this.setDesk(m.userId, m.spotId) }

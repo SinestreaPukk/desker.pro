@@ -53,3 +53,4 @@ kbd { border: 1px solid #5b6b86; border-bottom-width: 3px; border-radius: 4px; p
 .picker { width: min(440px, calc(100vw - 24px)); max-height: 80vh; overflow: auto } .picker ul { list-style: none; padding: 0; margin: 0 } .picker li label { margin: 6px 0 } .picker small { color: #5b6b86 }
 .hud-panel .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap } .hud-panel .row input, .hud-panel .row select { height: 30px; font: inherit }
 .privacy { margin: 12px 0 0; border: 1px solid #dfe6ef; border-radius: 6px } .privacy legend { font-size: 13px; color: #5b6b86; padding: 0 4px }
+.timer b.paused { opacity: .55 }

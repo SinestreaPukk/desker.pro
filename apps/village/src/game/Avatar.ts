@@ -16,7 +16,7 @@ export class Avatar {
   private zz: Phaser.GameObjects.Text // and 'zz' over someone who is away
   private arc: Phaser.GameObjects.Graphics // the timer ring: what is left of a focus timer, so friends can see how long they have
   private icon: Phaser.GameObjects.Text // what they are working on
-  focus: { startedAt: number; endsAt: number } | null = null
+  focus: { startedAt: number; endsAt: number; pausedAt?: number } | null = null
   presence: Presence = 'available'
   private arcAt = 0
   private nextBlink = 0
@@ -45,10 +45,10 @@ export class Avatar {
     this.ring.setPosition(this.x, this.y - 40); this.arc.setPosition(this.x, this.y - 40); this.icon.setPosition(this.x, this.y - 46); this.zz.setPosition(this.x + 5, this.y - 29)
   }
   setPresence(p: Presence) { this.presence = p; this.ring.setVisible(p === 'focusing' && !this.focus); this.zz.setVisible(p === 'away') }
-  setFocus(f: { startedAt: number; endsAt: number } | null) { this.focus = f; this.arcAt = 0; this.arc.setVisible(!!f); this.ring.setVisible(this.presence === 'focusing' && !f); if (!f) this.arc.clear() }
+  setFocus(f: { startedAt: number; endsAt: number; pausedAt?: number } | null) { this.focus = f; this.arcAt = 0; this.arc.setVisible(!!f); this.ring.setVisible(this.presence === 'focusing' && !f); if (!f) this.arc.clear() }
   setStatus(activity: string | null) { this.icon.setText(activity ? ICON[activity] ?? ICON.other : '').setVisible(!!activity) }
   private drawArc() {
-    const f = this.focus!, left = Math.min(1, Math.max(0, (f.endsAt - Date.now()) / (f.endsAt - f.startedAt)))
+    const f = this.focus!, left = Math.min(1, Math.max(0, (f.endsAt - (f.pausedAt ?? Date.now())) / (f.endsAt - f.startedAt)))
     this.arc.clear().lineStyle(1.5, 0xffffff, 0.35).strokeCircle(0, 0, 3.5).lineStyle(1.5, 0xd89b3a, 1)
     if (left > 0) this.arc.beginPath().arc(0, 0, 3.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left).strokePath()
   }

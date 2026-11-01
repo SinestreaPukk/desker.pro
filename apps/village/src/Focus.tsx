@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { ACTIVITIES, type Activity } from '@desker/shared'
 import { todaysTasks, type PickTask } from './api.ts'
 
-export interface Timer { sessionId: string; startedAt: number; endsAt: number; plannedMin: number; taskId?: string; title: string; courseCode?: string; activity: Activity }
+export interface Timer { sessionId: string; startedAt: number; endsAt: number; plannedMin: number; pausedAt?: number; pausedMs?: number; pauses?: number; taskId?: string; title: string; courseCode?: string; activity: Activity }
 export const LABEL: Record<Activity, string> = { reading: 'Reading', practising: 'Practising', writing: 'Writing', revising: 'Revising', lab_report: 'Lab report', group_work: 'Group work', admin: 'Admin', other: 'Other' }
 export type Pick = { taskId?: string; title: string; courseCode?: string; activity: Activity; minutes: number }
 /** A task called "DTIP 122 read chapter 3" already says its course: show the course once. */
@@ -48,14 +48,14 @@ export function TaskPicker({ slug, onPick, onClose }: { slug: string; onPick: (p
 const mmss = (ms: number) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
 
 /** The timer card, and (once it ends or time is up) the one question Desker asks: was the task finished? */
-export function TimerHud({ timer, now, ask, onStop, onAnswer, onKeep }: { timer: Timer; now: number; ask: boolean; onStop: () => void; onAnswer: (done: boolean) => void; onKeep: () => void }) {
-  const left = timer.endsAt - now, up = left <= 0
+export function TimerHud({ timer, now, ask, onStop, onPause, onAnswer, onKeep }: { timer: Timer; now: number; ask: boolean; onStop: () => void; onPause: () => void; onAnswer: (done: boolean) => void; onKeep: () => void }) {
+  const left = timer.endsAt - (timer.pausedAt ?? now), up = left <= 0 && !timer.pausedAt
   return (
     <>
       <div className="timer" role="timer" aria-label="Focus timer">
         <span className="t-act">{timer.courseCode ? `${timer.courseCode} · ` : ''}{plain(timer.title, timer.courseCode)}</span>
-        <b>{mmss(left)}</b>
-        {!ask && <button onClick={onStop}>Stop<kbd>F</kbd></button>}
+        <b className={timer.pausedAt ? 'paused' : ''}>{mmss(left)}</b>
+        {!ask && <><button onClick={onPause}>{timer.pausedAt ? 'Resume' : 'Pause'}</button><button onClick={onStop}>Stop<kbd>F</kbd></button></>}
       </div>
       {ask && (
         <div className="hud-modal" role="dialog" aria-label={up ? "Time's up" : 'End the timer'}>

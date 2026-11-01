@@ -20,6 +20,6 @@ export const claimDesk = (slug: string, spotId: string | null) => call<{ ok: tru
 export type PickTask = { id: string; title: string; hours: number; courseCode?: string; activity: string; repeat: boolean }
 export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug}/tasks?date=${new Date().toLocaleDateString('sv')}`)
 export const focusStart = (slug: string) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start' }) })
-export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; done: boolean; taskId?: string }) =>
+export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
 export const patchVillage = (slug: string, body: { libraryAutoFocus: boolean }) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })

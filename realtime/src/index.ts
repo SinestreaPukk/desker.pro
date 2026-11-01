@@ -9,7 +9,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number }; says?: number[]; queue?: { fromUserId: string; name: string; text: string }[] }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; queue?: { fromUserId: string; name: string; text: string }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -137,6 +137,12 @@ export class VillageRoom extends DurableObject<Env> {
       ws.serializeAttachment({ ...att, focus, presence: 'focusing' })
       this.broadcast({ t: 'presenceChanged', userId: me, presence: 'focusing' })
       return this.broadcast({ t: 'focusChanged', userId: me, endsAt: focus.endsAt, startedAt: focus.startedAt })
+    }
+    if (msg.t === 'focus.pause' || msg.t === 'focus.resume') { // a paused timer keeps its ring frozen; resuming pushes both ends forward by the pause
+      const f = att.focus, now = Date.now(); if (!f || (msg.t === 'focus.pause') === !!f.pausedAt) return
+      const next: NonNullable<Att['focus']> = msg.t === 'focus.pause' ? { ...f, pausedAt: now } : { startedAt: f.startedAt + (now - f.pausedAt!), endsAt: f.endsAt + (now - f.pausedAt!) }
+      ws.serializeAttachment({ ...att, focus: next })
+      return this.broadcast({ t: 'focusChanged', userId: att.member!.userId, endsAt: next.endsAt, startedAt: next.startedAt, ...(next.pausedAt && { pausedAt: next.pausedAt }) })
     }
     if (msg.t === 'focus.stop') {
       if (!att.focus) return

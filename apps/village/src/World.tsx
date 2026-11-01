@@ -84,15 +84,21 @@ export default function World({ slug }: { slug: string }) {
   }, [])
   // Tell the room about my timer: the ring for friends, the activity icon, and quiet mode. Also after every reconnect, since the room forgets me when the connection drops.
   const announce = (t: Timer) => {
-    send.current({ t: 'focus.start', plannedMin: Math.min(600, Math.max(1, Math.ceil((t.endsAt - Date.now()) / 60000))), ...(t.taskId && { taskId: t.taskId.slice(0, 64) }) })
+    send.current({ t: 'focus.start', plannedMin: Math.min(600, Math.max(1, Math.ceil((t.endsAt - (t.pausedAt ?? Date.now())) / 60000))), ...(t.taskId && { taskId: t.taskId.slice(0, 64) }) })
     send.current({ t: 'status', status: { activity: t.activity, ...(t.courseCode && { courseCode: t.courseCode.slice(0, 16) }), ...(t.taskId && { taskId: t.taskId.slice(0, 64) }), taskTitle: t.title.slice(0, 120), endsAt: new Date(t.endsAt).toISOString() } })
+    if (t.pausedAt) send.current({ t: 'focus.pause' })
     bridgeRef.current?.timer(true)
+  }
+  const pauseTimer = () => { // freeze the countdown (and friends' ring); resuming pushes the end forward by however long it was paused
+    const t = timerRef.current; if (!t) return
+    if (!t.pausedAt) { send.current({ t: 'focus.pause' }); setTimer({ ...t, pausedAt: Date.now(), pauses: (t.pauses ?? 0) + 1 }) }
+    else { const d = Date.now() - t.pausedAt; send.current({ t: 'focus.resume' }); setTimer({ ...t, pausedAt: undefined, endsAt: t.endsAt + d, pausedMs: (t.pausedMs ?? 0) + d }); setNow(Date.now()) }
   }
   const startTimer = async (p: Pick) => {
     setPick(false)
     try {
       const r = await focusStart(slug), at = Date.now()
-      const t: Timer = { sessionId: r.sessionId, startedAt: at, endsAt: at + p.minutes * 60_000, plannedMin: p.minutes, taskId: p.taskId, title: p.title, courseCode: p.courseCode, activity: p.activity }
+      const t: Timer = { sessionId: r.sessionId, startedAt: at, endsAt: at + p.minutes * 60_000, plannedMin: p.minutes, pausedMs: 0, pauses: 0, taskId: p.taskId, title: p.title, courseCode: p.courseCode, activity: p.activity }
       chimed.current = false; setTimer(t); setNow(at); announce(t)
     } catch { toast("Couldn't start the timer. Try again.") }
   }
@@ -100,14 +106,14 @@ export default function World({ slug }: { slug: string }) {
   const endTimer = (done: boolean) => {
     const t = timerRef.current; if (!t) return
     send.current({ t: 'focus.stop' }); bridgeRef.current?.timer(false); setTimer(null); setAsk(false)
-    const activeMin = Math.round((Math.min(Date.now(), t.endsAt) - t.startedAt) / 60000)
-    focusEnd(slug, { sessionId: t.sessionId, activeMin, done, taskId: t.taskId }).then(
+    const activeMin = Math.max(0, Math.round((Math.min(t.pausedAt ?? Date.now(), t.endsAt) - t.startedAt - (t.pausedMs ?? 0)) / 60000)) // paused time is not focus time
+    focusEnd(slug, { sessionId: t.sessionId, activeMin, pauses: t.pauses ?? 0, done, taskId: t.taskId }).then(
       (r) => toast(r.again ? 'Already saved.' : r.reason && r.reason !== 'no_outcome' ? `Logged ${activeMin} min in Desker. Too short or long to teach it your pace.` : `Logged ${activeMin} min in Desker${done && t.taskId ? '. Task done!' : '.'}`),
       () => toast("Couldn't save that session to Desker."))
   }
   useEffect(() => { // count down, chime once at zero and ask the one question
     if (!timer) return
-    const tick = () => { setNow(Date.now()); if (Date.now() >= timer.endsAt && !chimed.current) { chimed.current = true; blip(523, 784); setAsk(true) } }
+    const tick = () => { setNow(Date.now()); if (!timer.pausedAt && Date.now() >= timer.endsAt && !chimed.current) { chimed.current = true; blip(523, 784); setAsk(true) } }
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
   }, [timer])
   const names = [...new Set([...(data?.members ?? []), ...online].map((m) => m.name))]
@@ -128,7 +134,7 @@ export default function World({ slug }: { slug: string }) {
           <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
           <button onClick={openLog}>Chat log</button>
         </div>
-        {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
+        {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
