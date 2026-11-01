@@ -2,7 +2,7 @@
 // /api/auth/providers is ours: which social sign-in buttons the login screen shows (only providers whose keys are set).
 // Short aliases for scripts and other clients (vercel.json routes them here): the request is re-addressed to the Better Auth path,
 // so every hook and rate limit applies exactly as for the app itself.
-import { auth, socialProviders } from '../_auth.js'
+import { auth, socialProviders, villageOrigins } from '../_auth.js'
 
 const ALIAS = { // name: [method, Better Auth path]
   signup: ['POST', '/sign-up/email'],
@@ -28,9 +28,20 @@ async function alias(req, [method, path]) {
   return auth.handler(new Request(`${url.origin}/api/auth${path}`, { method: method === 'DELETE' ? 'POST' : method, headers, body: body && JSON.stringify(body) }))
 }
 
-const handle = (req) => {
+// The village (another origin on the same domain) calls these routes with the session cookie, so it needs CORS with credentials. Only listed origins.
+const cors = (req, res) => {
+  const origin = req.headers.get('origin')
+  if (!origin || !villageOrigins.includes(origin)) return res
+  const headers = new Headers(res.headers)
+  headers.set('access-control-allow-origin', origin); headers.set('access-control-allow-credentials', 'true'); headers.append('vary', 'Origin')
+  headers.set('access-control-allow-headers', 'content-type'); headers.set('access-control-allow-methods', 'GET, POST, DELETE, OPTIONS')
+  return new Response(req.method === 'OPTIONS' ? null : res.body, { status: req.method === 'OPTIONS' ? 204 : res.status, headers })
+}
+
+const handle = async (req) => cors(req, req.method === 'OPTIONS' ? new Response(null) : await route(req))
+const route = (req) => {
   const name = new URL(req.url).pathname.replace(/^\/api\//, '')
   if (name === 'auth/providers') return Response.json(socialProviders, { headers: { 'cache-control': 'public, max-age=300' } })
   return ALIAS[name] ? alias(req, ALIAS[name]) : auth.handler(req)
 }
-export { handle as GET, handle as POST, handle as DELETE }
+export { handle as GET, handle as POST, handle as DELETE, handle as OPTIONS }

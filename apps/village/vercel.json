@@ -1,0 +1,1 @@
+{ "rewrites": [{ "source": "/((?!assets/|maps/|api/).*)", "destination": "/index.html" }] }

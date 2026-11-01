@@ -6,12 +6,21 @@ import Landing from './Landing.jsx'
 import Legal from './Legal.jsx'
 import { useSession } from './auth.js'
 import { Avatar } from './px.jsx'
+import { safeRedirect } from '../packages/shared/src/redirect.ts'
+
+// /login?redirect=<village url>: remembered here because the sign-in screen rewrites the address. Used once signed in. Only *.desker.dev.
+const want = safeRedirect(new URLSearchParams(location.search).get('redirect'))
+if (want) sessionStorage.redirect = want
 
 export default function Gate() {
   const { data, isPending } = useSession()
   const user = data?.user
   const [loaded, setLoaded] = useState(false) // "Loading" only before the first answer: later refetches (after sign-up, say) must not unmount the sign-in screen and lose its state
   useEffect(() => { if (!isPending) setLoaded(true) }, [isPending])
+  useEffect(() => {
+    const to = user && safeRedirect(sessionStorage.redirect)
+    if (to) { sessionStorage.removeItem('redirect'); location.replace(to) }
+  }, [user])
   useEffect(() => {
     const old = localStorage.uid // data saved in this browser before accounts existed: move it into the account, once
     if (user && old) fetch('/api/state', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ claim: old }) }).then((r) => r.ok && localStorage.removeItem('uid')).catch(() => {})

@@ -1,0 +1,7 @@
+html, body, #root { margin: 0; height: 100%; font-family: system-ui, sans-serif; color: #14213d; background: #f3f6fc; }
+canvas { image-rendering: pixelated; }
+.bar { display: flex; justify-content: space-between; padding: 8px 12px; background: #fff; border-bottom: 1px solid #b4caf0; }
+.pad { padding: 16px; }
+.list { padding-left: 18px; line-height: 1.8 }
+.swatches { display: flex; gap: 12px; margin-top: 16px }
+.swatches button { width: 56px; height: 56px; border-radius: 50%; border: 2px solid #35599a; cursor: pointer }

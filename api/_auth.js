@@ -52,12 +52,17 @@ const keyOf = (ctx) => (BY_EMAIL[ctx.path] && typeof (ctx.body?.email ?? ctx.bod
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL?.replace('sslmode=require', 'sslmode=verify-full'), max: 1 }) // same behaviour as 'require' in pg 8, without its warning
 
+export const villageOrigins = (process.env.VILLAGE_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean)
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
   database: pool,
   // The account id doubles as the API key, which expects a uuid. Vercel overwrites x-vercel-forwarded-for, so a client cannot spoof its IP to dodge the limits.
-  advanced: { database: { generateId: () => crypto.randomUUID() }, ipAddress: { ipAddressHeaders: ['x-vercel-forwarded-for', 'x-forwarded-for'] } },
+  // COOKIE_DOMAIN (".desker.dev") shares the sign-in with village.desker.dev; unset = host-only cookie, as before. VILLAGE_ORIGINS: comma-separated origins allowed to call this API with the cookie.
+  advanced: { database: { generateId: () => crypto.randomUUID() }, ipAddress: { ipAddressHeaders: ['x-vercel-forwarded-for', 'x-forwarded-for'] },
+    ...(process.env.COOKIE_DOMAIN && { crossSubDomainCookies: { enabled: true, domain: process.env.COOKIE_DOMAIN } }) },
+  trustedOrigins: villageOrigins,
   socialProviders: SOCIAL,
   user: {
     deleteUser: {

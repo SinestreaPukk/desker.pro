@@ -4,3 +4,7 @@ tests
 test-results
 art
 playwright.config.ts
+apps
+realtime
+docs
+CLAUDE.md
