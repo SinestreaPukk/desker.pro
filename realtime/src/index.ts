@@ -1,6 +1,6 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
-import { can, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
+import { can, emoteVisible, knockResult, EMOTE_RATE_LIMIT, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
 import { verifyToken } from '@desker/shared/src/token.js'
@@ -10,7 +10,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; queue?: { fromUserId: string; name: string; text: string }[] }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -38,6 +38,7 @@ export default {
 export class VillageRoom extends DurableObject<Env> {
   private pending = new Map<string, { userId: string; x: number; y: number; dir: Dir; seq: number }>()
   private timer: ReturnType<typeof setTimeout> | null = null
+  private knocks = new Map<string, number>() // 'from>to' -> last knock time. ponytail: lives in memory, so a room restart forgets it (a knock may slip through early); persist it if that ever matters
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
@@ -53,8 +54,8 @@ export class VillageRoom extends DurableObject<Env> {
   private shown(att: Att) { return att.status ? maskStatus(att.status, att.share ?? 'basic') : null } // what friends may see of this member's status
   // Queued @mentions are handed over when the member is no longer studying: out of the Library and no timer running.
   private release(ws: WebSocket, att: Att) {
-    if (!att.queue?.length) return att
-    this.send(ws, { t: 'queued', items: att.queue.map((q) => ({ kind: 'mention' as const, ...q })) })
+    if (!att.queue?.length || att.presence === 'dnd') return att // in Do Not Disturb everything is held until it ends
+    this.send(ws, { t: 'queued', items: att.queue.map(({ k, ...q }) => ({ kind: k ?? ('mention' as const), ...q })) })
     const next = { ...att, queue: [] }; ws.serializeAttachment(next); return next
   }
 
@@ -128,7 +129,7 @@ export class VillageRoom extends DurableObject<Env> {
       const mentioned = new Set(parseMentions(text, room.map((o) => o.att.member!.name)))
       for (const { ws: w, att: a } of room) {
         const self = a.member!.userId === me.userId, hit = !self && mentioned.has(a.member!.name)
-        const v = self ? 'full' : visibility(from, this.partyOf(a), hit)
+        const v = self ? 'full' : a.presence === 'dnd' ? (hit ? 'queued' : 'none') : visibility(from, this.partyOf(a), hit) // Do Not Disturb: nothing is delivered, mentions are kept for the "while you were away" card
         if (v === 'full') {
           this.send(w, { t: 'said', userId: me.userId, text, zoneId: from.zone, ...(hit && { mentionsYou: true as const }) })
           this.ctx.storage.sql.exec('insert into chat (uid, zone, sid, name, text, at) values (?, ?, ?, ?, ?, ?)', a.member!.userId, from.zone, me.userId, me.name, text, now)
@@ -137,10 +138,21 @@ export class VillageRoom extends DurableObject<Env> {
       }
       return void (await this.wake(HOUR_MS))
     }
-    if (msg.t === 'presence') { // available / focusing / away; everyone sees it
-      if (att.focus && msg.presence !== 'focusing') return // a running timer is Focusing; stop the timer first
+    if (msg.t === 'presence') { // available / focusing / away / dnd; everyone sees it
+      const me = att.member!.userId
+      if (att.presence === 'dnd') { // only leaving Do Not Disturb is allowed from inside it
+        if (msg.presence !== 'available') return
+        const next = { ...att, presence: att.focus ? 'focusing' as const : 'available' as const, queue: [] }
+        ws.serializeAttachment(next)
+        this.broadcast({ t: 'presenceChanged', userId: me, presence: next.presence })
+        if (att.queue?.length) this.send(ws, { t: 'away', items: att.queue.map(({ k, ...q }) => ({ kind: k ?? ('mention' as const), ...q })) })
+        return
+      }
+      if (att.focus && msg.presence !== 'focusing' && msg.presence !== 'dnd') return // a running timer is Focusing; stop the timer first
       ws.serializeAttachment({ ...att, presence: msg.presence })
-      return this.broadcast({ t: 'presenceChanged', userId: att.member!.userId, presence: msg.presence })
+      this.broadcast({ t: 'presenceChanged', userId: me, presence: msg.presence })
+      if (msg.presence === 'available' && !att.focus && zoneAt(WORLD, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, { ...att, presence: 'available' })
+      return
     }
     if (msg.t === 'status') { // what I am working on; friends get it masked by my sharing choice (SPEC §6.2)
       ws.serializeAttachment({ ...att, status: msg.status })
@@ -148,8 +160,8 @@ export class VillageRoom extends DurableObject<Env> {
     }
     if (msg.t === 'focus.start') { // the API holds the lasting record; the room just shows the ring and goes quiet for this member
       const now = Date.now(), focus = { startedAt: now, endsAt: now + msg.plannedMin * 60_000 }, me = att.member!.userId
-      ws.serializeAttachment({ ...att, focus, presence: 'focusing' })
-      this.broadcast({ t: 'presenceChanged', userId: me, presence: 'focusing' })
+      ws.serializeAttachment({ ...att, focus, presence: att.presence === 'dnd' ? 'dnd' : 'focusing' })
+      if (att.presence !== 'dnd') this.broadcast({ t: 'presenceChanged', userId: me, presence: 'focusing' })
       return this.broadcast({ t: 'focusChanged', userId: me, endsAt: focus.endsAt, startedAt: focus.startedAt })
     }
     if (msg.t === 'focus.pause' || msg.t === 'focus.resume') { // a paused timer keeps its ring frozen; resuming pushes both ends forward by the pause
@@ -160,13 +172,36 @@ export class VillageRoom extends DurableObject<Env> {
     }
     if (msg.t === 'focus.stop') {
       if (!att.focus) return
-      const me = att.member!.userId, next = { ...att, focus: undefined, status: undefined, presence: 'available' as const }
+      const me = att.member!.userId, next = { ...att, focus: undefined, status: undefined, presence: att.presence === 'dnd' ? 'dnd' as const : 'available' as const }
       ws.serializeAttachment(next)
       this.broadcast({ t: 'focusChanged', userId: me, endsAt: null })
-      this.broadcast({ t: 'presenceChanged', userId: me, presence: 'available' })
+      if (att.presence !== 'dnd') this.broadcast({ t: 'presenceChanged', userId: me, presence: 'available' })
       this.broadcast({ t: 'statusChanged', userId: me, status: null })
       if (zoneAt(WORLD, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, next)
       return
+    }
+    if (msg.t === 'emote') { // silent, so it shows in the Library too; same reach as bubbles (table, then distance); not to people in Do Not Disturb
+      const now = Date.now(), rate = rateCheck(att.emo ?? [], now, EMOTE_RATE_LIMIT)
+      if (!rate.ok) return
+      ws.serializeAttachment({ ...att, emo: rate.times })
+      const me = att.member!.userId, from = this.partyOf(att)
+      for (const { ws: w, att: a } of this.authed()) {
+        const self = a.member!.userId === me
+        if (self || emoteVisible(from, this.partyOf(a), { receiverDnd: a.presence === 'dnd', aimedAtReceiver: msg.to === a.member!.userId })) this.send(w, { t: 'emoted', userId: me, id: msg.id, ...(msg.to && { to: msg.to }) })
+      }
+      return
+    }
+    if (msg.t === 'knock') { // a gentle "chat when free?": delivered now, held while the target is focusing, dropped in Do Not Disturb (and the knocker is told)
+      const me = att.member!, now = Date.now(), target = this.authed().find((x) => x.att.member!.userId === msg.userId && x.ws !== ws)
+      const key = `${me.userId}>${msg.userId}`
+      const r = knockResult({ present: !!target, dnd: target?.att.presence === 'dnd', focusing: !!target && (!!target.att.focus || target.att.presence === 'focusing') }, this.knocks.get(key), now)
+      if (r === 'gone') return this.send(ws, { t: 'error', code: 'knock_gone', message: 'They are not here right now' })
+      if (r === 'slow') return this.send(ws, { t: 'error', code: 'knock_slow', message: `You knocked ${target!.att.member!.name} a moment ago` })
+      if (r === 'dnd') return this.send(ws, { t: 'error', code: 'knock_dnd', message: `${target!.att.member!.name} is in Do Not Disturb` })
+      this.knocks.set(key, now)
+      if (r === 'queue') target!.ws.serializeAttachment({ ...target!.att, queue: [...(target!.att.queue ?? []), { fromUserId: me.userId, name: me.name, text: 'knocked: chat when you are free?', k: 'knock' as const }].slice(-QUEUE_MAX) })
+      else this.send(target!.ws, { t: 'knocked', fromUserId: me.userId, name: me.name })
+      return this.send(ws, { t: 'error', code: 'knock_sent', message: `Knocked ${target!.att.member!.name}${r === 'queue' ? '. They are focusing, so they will see it after.' : '.'}` }) // the knocker's confirmation (shown as a toast)
     }
     if (msg.t === 'claimDesk') { // the API has already recorded it (it is the authority across visits); the room only checks you are really sitting there
       const spot = att.sat && att.sat.spotId === msg.spotId ? WORLD.sitSpots.find((q) => q.id === msg.spotId) : undefined
@@ -193,9 +228,9 @@ export class VillageRoom extends DurableObject<Env> {
     if (msg.t === 'move') {
       if (att.sat) return // sitting: stand first (the client always does) // validate loosely (SPEC §3.5): reachable within the walking budget, else tell the client where it really is
       const r = applyMove(WORLD, att.pos!, msg, Date.now())
-      const leaving = r.ok && !att.focus && att.queue?.length && zoneAt(WORLD, att.pos!.x, att.pos!.y) === 'library' && zoneAt(WORLD, r.mover.x, r.mover.y) !== 'library'
+      const leaving = r.ok && !att.focus && att.presence !== 'dnd' && att.queue?.length && zoneAt(WORLD, att.pos!.x, att.pos!.y) === 'library' && zoneAt(WORLD, r.mover.x, r.mover.y) !== 'library'
       ws.serializeAttachment({ ...att, pos: r.mover, ...(leaving && { queue: [] }) })
-      if (leaving) this.send(ws, { t: 'queued', items: att.queue!.map((q) => ({ kind: 'mention' as const, ...q })) }) // what you missed while studying (until Focus arrives in Checkpoint 8, leaving the Library ends it)
+      if (leaving) this.send(ws, { t: 'queued', items: att.queue!.map(({ k, ...q }) => ({ kind: k ?? ('mention' as const), ...q })) }) // what you missed while studying (until Focus arrives in Checkpoint 8, leaving the Library ends it)
       if (!r.ok) return this.send(ws, { t: 'correct', x: r.mover.x, y: r.mover.y })
       this.pending.set(att.member!.userId, { userId: att.member!.userId, x: msg.x, y: msg.y, dir: msg.dir, seq: msg.seq })
       this.timer ??= setTimeout(() => this.flush(), MOVED_BATCH_MS)

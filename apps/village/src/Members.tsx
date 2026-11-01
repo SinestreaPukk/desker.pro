@@ -15,7 +15,10 @@ const doing = (r: RosterItem) => { // what they are studying, as far as their sh
 }
 const ago = (iso: string) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 2 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
 
-export default function Members({ members, me, roster, onLocate, onClose }: { members: Info['members']; me: string; roster: () => RosterItem[]; onLocate: (id: string) => void; onClose: () => void }) {
+export type Act = 'locate' | 'walk' | 'follow' | 'wave' | 'knock'
+export default function Members({ members, me, roster, onLocate, onAct, open, onClose }: { members: Info['members']; me: string; roster: () => RosterItem[]; onLocate: (id: string) => void; onAct: (a: Act, id: string) => void; open?: string | null; onClose: () => void }) {
+  const [acts, setActs] = useState<string | null>(open ?? null)
+  useEffect(() => { if (open) setActs(open) }, [open])
   const [now, setNow] = useState<RosterItem[]>(roster)
   useEffect(() => { const t = setInterval(() => setNow(roster()), 1000); return () => clearInterval(t) }, [roster])
   const here = new Map(now.map((r) => [r.userId, r]))
@@ -26,10 +29,13 @@ export default function Members({ members, me, roster, onLocate, onClose }: { me
     return (
       <li key={m.userId} className={r ? '' : 'off'}>
         <i style={{ background: hex(m.colour) }} aria-hidden />
-        <button disabled={!r || m.userId === me} onClick={() => onLocate(m.userId)} title={r && m.userId !== me ? 'Find them' : ''}>{m.name}{m.userId === me ? ' (you)' : ''}</button>
+        <button disabled={!r || m.userId === me} onClick={() => setActs(acts === m.userId ? null : m.userId)} title={r && m.userId !== me ? 'Do something: find, walk to, follow, wave, knock' : ''}>{m.name}{m.userId === me ? ' (you)' : ''}</button>
         <span className="pres" title={r?.presence ?? 'offline'}>{r ? ICON[r.presence] : ''}</span>
         <span className="where">{r ? (r.atDesk ? 'at their desk' : ZONE[r.zone]) : `last seen ${ago(m.lastSeenAt)}`}</span>
         {r && doing(r) && <span className="what">{doing(r)}</span>}
+        {r && acts === m.userId && m.userId !== me && <span className="acts">
+          <button onClick={() => onLocate(m.userId)}>Locate</button><button onClick={() => onAct('walk', m.userId)}>Walk to</button><button onClick={() => onAct('follow', m.userId)}>Follow</button>
+          <button onClick={() => onAct('wave', m.userId)}>Wave</button><button onClick={() => onAct('knock', m.userId)}>Knock</button></span>}
       </li>
     )
   }

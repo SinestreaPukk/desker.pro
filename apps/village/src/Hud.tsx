@@ -24,7 +24,7 @@ export default function Hud({ name, zone, pill, settingsExtra, children }: { nam
     window.addEventListener('keydown', on); return () => window.removeEventListener('keydown', on)
   }, [])
   const dismiss = () => { setHint(false); localStorage.setItem('village.hintDismissed', 'true') }
-  const phase0 = KEYBINDINGS.filter((k) => k.phase === 0)
+  const phase0 = KEYBINDINGS.filter((k) => k.phase === 0 || ['dnd', 'emote'].includes(k.action)) // Phase 1 keys appear as they are built
   const rows = [...new Map(phase0.map((k) => [k.label, phase0.filter((x) => x.label === k.label).flatMap((x) => x.keys)])).entries()]
   return (
     <div className="hud">

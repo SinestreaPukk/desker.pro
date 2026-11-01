@@ -28,3 +28,7 @@ export const BODY_HALF_W = 0.28 // tiles
 export const BODY_HALF_H = 0.2
 export const WALK_TILES_PER_MS = 1 / WALK_MS_PER_TILE
 export const RUN_TILES_PER_MS = 1 / RUN_MS_PER_TILE
+// Phase 1 CP3
+export const EMOTE_VISIBLE_MS = 3000
+export const KNOCK_COOLDOWN_MS = 120_000 // 1 knock per target per 2 min (SPEC §12)
+export const EMOTE_RATE_LIMIT = { count: 6, perMs: 10_000 }

@@ -1,6 +1,6 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tapRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
+import { EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tapRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
 import { isTouchUi } from './touch.ts'
@@ -10,6 +10,7 @@ export interface SceneData {
   libraryAutoFocus: boolean; desks: { userId: string; spotId: string }[]; names: Record<string, string>
   claimDesk: (spotId: string) => Promise<boolean>; onPresence?: (p: Presence) => void
   openBoard: () => void
+  onEmoteKey?: () => void; onFollow?: (name: string | null) => void; onAvatar?: (userId: string) => void; onNote?: (text: string) => void
   focusKey: (atDesk: boolean) => boolean // F: React handles it when a timer is running or I am at a desk (true = handled)
 }
 interface Remote { k: Avatar; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number; sat?: Spot; gap: number; delay: number }
@@ -43,6 +44,8 @@ export class WorldScene extends Phaser.Scene {
   private glows: Phaser.GameObjects.Image[] = []
   private lastZone: ZoneId | null = null
   private data0!: SceneData
+  private followId: string | null = null; private followOnce = false; private followAt = 0
+  private emotes = new Map<string, { t: Phaser.GameObjects.Text; timer: Phaser.Time.TimerEvent }>()
 
   constructor() { super('world') }
   init(d: SceneData) { this.data0 = d }
@@ -78,15 +81,19 @@ export class WorldScene extends Phaser.Scene {
     const onKey = (e: KeyboardEvent) => {
       this.touched()
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
-      const a = actionOf(e.key, isTyping()); if (a === 'interact') this.interact(); else if (a === 'focus') this.toggleFocus()
+      if (e.key === 'Escape') this.setFollow(null)
+      const a = actionOf(e.key, isTyping(), 1); if (a === 'interact') this.interact(); else if (a === 'focus') this.toggleFocus(); else if (a === 'dnd') this.toggleDnd(); else if (a === 'emote') this.data0.onEmoteKey?.()
     }
     const touched = () => this.touched()
     window.addEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.addEventListener(t, touched, { passive: true })
     this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
     this.lastInput = this.time.now
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.hover(p))
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a tap (not a drag or a long press) on a tile: walk there
-      if (!(p.wasTouch || this.touchUi) || p.getDistance() > 12 || p.getDuration() > 500) return
+    this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a click or tap on a person opens what you can do about them; a tap on a tile walks there
+      if (p.getDistance() > 12 || p.getDuration() > 500) return
+      const who = this.avatarAt(p); if (who && who !== this.data0.userId) return this.data0.onAvatar?.(who)
+      if (!(p.wasTouch || this.touchUi)) return
+      this.setFollow(null)
       const w = this.cameras.main.getWorldPoint(p.x, p.y), tx = Math.floor(w.x / TILE_PX), ty = Math.floor(w.y / TILE_PX)
       if (this.sitting) this.stand()
       this.route = tapRoute(this.world, this.tx, this.ty, tx, ty)
@@ -99,6 +106,7 @@ export class WorldScene extends Phaser.Scene {
     this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
     b.boardPin = (on) => { this.pin?.setVisible(on) }
     b.interact = () => this.interact()
+    b.toggleDnd = () => this.toggleDnd(); b.follow = (id, once) => this.setFollow(id, !!once); b.stopFollow = () => this.setFollow(null)
     b.roster = () => this.roster()
     b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
       if (on) { this.autoFocused = false; this.setPresence('focusing', false) }
@@ -117,7 +125,7 @@ export class WorldScene extends Phaser.Scene {
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
   update(time: number, delta: number) {
-    this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time); this.followBubbles()
+    this.tickFollow(time); this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time); this.followBubbles()
     this.me.tick(time); for (const r of this.remotes.values()) r.k.tick(time)
     if (this.myPresence === 'available' && time - this.lastInput > this.awayMs) this.setPresence('away') // asleep after 5 quiet minutes; any input wakes you
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
@@ -130,7 +138,7 @@ export class WorldScene extends Phaser.Scene {
   // and a small box around the feet slides along walls. No waiting for tile boundaries, no waiting for the room: it answers the instant a key goes down.
   private moveMe(time: number, dt: number) {
     let { dx, dy } = this.keys.vec()
-    if (dx || dy) this.route = [] // a key press takes over from a tap
+    if (dx || dy) { this.route = []; this.setFollow(null) } // a key press takes over from a tap, and ends following
     else if (this.route.length && !this.sitting) { // steer toward the next tile centre (the route is straight lines, so one axis at a time)
       let t = this.route[0]
       while (t && Math.hypot(t.x - this.fx, t.y - this.fy) < 0.2) { this.route.shift(); t = this.route[0] }
@@ -170,14 +178,17 @@ export class WorldScene extends Phaser.Scene {
   /** Hover over someone to see their name and what they are doing (as far as their sharing choice allows). */
   private hover(p: Phaser.Input.Pointer) {
     if (this.touchUi) return
-    const w = this.cameras.main.getWorldPoint(p.x, p.y)
-    const all: [string, Avatar][] = [[this.data0.userId, this.me], ...[...this.remotes].map(([id, r]) => [id, r.k] as [string, Avatar])]
-    const hit = all.find(([, a]) => Math.abs(w.x - a.x) < 8 && w.y < a.y + 2 && w.y > a.y - 26)
-    if (!hit) return void this.tip?.setVisible(false)
-    const [id, a] = hit, s = this.statuses.get(id), name = this.data0.names[id] ?? this.data0.name
-    const what = s ? (s.taskTitle ? `${s.courseCode ? s.courseCode + ' · ' : ''}${s.taskTitle}` : 'Studying') : a.presence === 'away' ? 'Away' : a.presence === 'focusing' ? 'Focusing' : ''
+    const id = this.avatarAt(p), a = id ? this.who(id) : undefined
+    if (!id || !a) return void this.tip?.setVisible(false)
+    const s = this.statuses.get(id), name = this.data0.names[id] ?? this.data0.name
+    const what = s ? (s.taskTitle ? `${s.courseCode ? s.courseCode + ' · ' : ''}${s.taskTitle}` : 'Studying') : a.presence === 'away' ? 'Away' : a.presence === 'focusing' ? 'Focusing' : a.presence === 'dnd' ? 'Do Not Disturb' : ''
     this.tip ??= this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,255,255,0.95)', padding: { x: 3, y: 1 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 2)
     this.tip.setText(what ? `${name}\n${what}` : name).setPosition(a.x, a.y - 52).setVisible(true)
+  }
+  private avatarAt(p: Phaser.Input.Pointer): string | null {
+    const w = this.cameras.main.getWorldPoint(p.x, p.y)
+    const all: [string, Avatar][] = [[this.data0.userId, this.me], ...[...this.remotes].map(([id, r]) => [id, r.k] as [string, Avatar])]
+    return all.find(([, a]) => Math.abs(w.x - a.x) < 8 && w.y < a.y + 2 && w.y > a.y - 26)?.[0] ?? null
   }
   private kx(touch: string, keys: string) { return this.touchUi ? touch : keys } // the prompt names the button on a phone, the key on a keyboard
   private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
@@ -189,8 +200,8 @@ export class WorldScene extends Phaser.Scene {
   }
 
   // ---- presence: available / focusing / away (SPEC §6.1) ------------------------------------------------------------------
-  private setPresence(p: Presence, tell = true) {
-    if (p === this.myPresence) return
+  private setPresence(p: Presence, tell = true, force = false) {
+    if (p === this.myPresence || (this.myPresence === 'dnd' && !force)) return // Do Not Disturb holds until you turn it off (G)
     this.myPresence = p; this.me.setPresence(p); this.presences.set(this.data0.userId, p); this.data0.onPresence?.(p)
     if (tell) this.data0.bridge.out({ t: 'presence', presence: p })
   }
@@ -198,6 +209,39 @@ export class WorldScene extends Phaser.Scene {
   private toggleFocus() {
     if (this.data0.focusKey(this.sitting?.spot.kind === 'desk')) return // a running timer or a desk: the timer panel decides
     this.autoFocused = false; if (this.myPresence === 'available') this.setPresence('focusing'); else if (this.myPresence === 'focusing') this.setPresence('available') }
+
+  /** G: Do Not Disturb. Nothing reaches you until you turn it off; the room holds @mentions for the "while you were away" card. */
+  private toggleDnd() {
+    if (this.myPresence !== 'dnd') { this.autoFocused = false; return this.setPresence('dnd') }
+    this.myPresence = 'available'; this.me.setPresence('available'); this.presences.set(this.data0.userId, 'available'); this.data0.onPresence?.('available')
+    this.data0.bridge.out({ t: 'presence', presence: 'available' }) // the room puts you back to Focusing itself if a timer is running
+    if (!this.me.focus && this.lastZone === 'library' && this.data0.libraryAutoFocus) { this.autoFocused = true; this.setPresence('focusing') } else if (this.me.focus) this.setPresence('focusing', false)
+  }
+
+  // ---- doing something about another person: follow (keep walking to them), walk to (go once) -------------------------------------
+  private setFollow(id: string | null, once = false) {
+    if (id === this.followId && once === this.followOnce) return
+    this.followId = id; this.followOnce = once; this.followAt = 0
+    if (!id) this.route = []
+    this.data0.onFollow?.(id && !once ? this.data0.names[id] ?? 'them' : null)
+  }
+  private tickFollow(time: number) {
+    if (!this.followId) return
+    const t = this.remotes.get(this.followId); if (!t) return this.setFollow(null)
+    if (Math.hypot(t.shown.x - this.fx, t.shown.y - this.fy) < 1.6) { this.route = []; if (this.followOnce) this.setFollow(null); return } // beside them
+    if (time - this.followAt > 400) { this.followAt = time; if (this.sitting) this.stand(); this.route = tapRoute(this.world, this.tx, this.ty, Math.round(t.shown.x), Math.round(t.shown.y)) }
+  }
+
+  // ---- emotes: a glyph above the head for 3 s with a little hop --------------------------------------------------------
+  private emote(userId: string, glyph: string, to?: string) {
+    const who = this.who(userId); if (!who) return
+    this.emotes.get(userId)?.timer.remove(); this.emotes.get(userId)?.t.destroy()
+    const t = this.add.text(who.x, who.y - 44, glyph, { fontSize: '11px' }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 3)
+    this.tweens.add({ targets: t, y: '-=4', duration: 140, yoyo: true, repeat: 1, ease: 'Sine.Out' })
+    const timer = this.time.delayedCall(EMOTE_VISIBLE_MS, () => this.tweens.add({ targets: t, alpha: 0, duration: 250, onComplete: () => { t.destroy(); if (this.emotes.get(userId)?.t === t) this.emotes.delete(userId) } }))
+    this.emotes.set(userId, { t, timer })
+    if (to === this.data0.userId && userId !== this.data0.userId) this.data0.onNote?.(`${this.data0.names[userId] ?? 'Someone'} ${glyph === '👋' ? 'waved at you' : 'sent you ' + glyph}`)
+  }
 
   // ---- desks: a tiny name plate on a claimed desk, even when the owner is offline ---------------------------------------------
   private setDesk(userId: string, spotId: string) {
@@ -252,7 +296,7 @@ export class WorldScene extends Phaser.Scene {
       this.remotes.clear()
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
       for (const [uid, p] of Object.entries(m.presence)) { this.presences.set(uid, p); this.remotes.get(uid)?.k.setPresence(p) }
-      const mineP = m.presence[this.data0.userId]; if (mineP) this.setPresence(mineP, false)
+      const mineP = m.presence[this.data0.userId]; if (mineP) this.setPresence(mineP, false, true)
       this.statuses.clear(); for (const uid of [...this.remotes.keys(), this.data0.userId]) { this.setStatus(uid, m.statuses[uid] ?? null); this.who(uid)?.setFocus(m.focus[uid] ?? null) }
       this.taken = new Set(Object.values(m.sitting)); this.seated = new Map(Object.entries(m.sitting))
       for (const [uid, spotId] of this.seated) this.seat(uid, spotId, true)
@@ -278,6 +322,7 @@ export class WorldScene extends Phaser.Scene {
         r.buf.push({ t: now, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
       }
     } else if (m.t === 'said') this.bubble(m.userId, m.text, !!m.nearbyOnly, !!m.mentionsYou)
+    else if (m.t === 'emoted') this.emote(m.userId, EMOTES.find((e) => e.id === m.id)?.glyph ?? '', m.to)
     else if (m.t === 'presenceChanged') { if (m.userId !== this.data0.userId) { this.presences.set(m.userId, m.presence); this.remotes.get(m.userId)?.k.setPresence(m.presence) } }
     else if (m.t === 'statusChanged') this.setStatus(m.userId, m.status)
     else if (m.t === 'focusChanged') {
@@ -351,7 +396,10 @@ export class WorldScene extends Phaser.Scene {
     const timer = this.time.delayedCall(hint ? 2500 : 8000, () => this.tweens.add({ targets: box, alpha: 0, duration: 300, onComplete: () => { box.destroy(); if (this.bubbles.get(userId)?.box === box) this.bubbles.delete(userId) } }))
     this.bubbles.set(userId, { box, timer })
   }
-  private followBubbles() { for (const [id, b] of this.bubbles) { const w = this.who(id); if (w) b.box.setPosition(w.x, w.y - 37) } }
+  private followBubbles() {
+    for (const [id, b] of this.bubbles) { const w = this.who(id); if (w) b.box.setPosition(w.x, w.y - 37) }
+    for (const [id, e] of this.emotes) { const w = this.who(id); if (w) e.t.setX(w.x) }
+  }
 
   /** A small burst of specks: amber sparkle where someone appears, pale dust when someone snaps into place. */
   private sparkle(x: number, y: number, tint: number) {

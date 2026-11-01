@@ -6,7 +6,8 @@ import { track, board as fetchBoard, claimDesk, focusEnd, focusStart, info, type
 import Board from './Board.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
-import Members from './Members.tsx'
+import Members, { type Act } from './Members.tsx'
+import EmoteWheel from './EmoteWheel.tsx'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
@@ -50,6 +51,7 @@ export default function World({ slug }: { slug: string }) {
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
   const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
+  const [wheel, setWheel] = useState(false), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
   const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
@@ -85,6 +87,9 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'log') setLog(m.items)
       else if (m.t === 'said' && m.text && m.userId !== data.me.userId) blip()
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
+      else if (m.t === 'knocked') { setKnock({ from: m.fromUserId, name: m.name }); blip(240, 180) }
+      else if (m.t === 'away') setAwayCard(m.items)
+      else if (m.t === 'error' && m.code.startsWith('knock_')) toast(m.message)
       else if (m.t === 'error' && m.code === 'slow_down') { setNotice('Slow down a little'); setShake((n) => n + 1); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 2500) } // the box comes back with what you wrote
     }
     const bridge = new Bridge(); bridgeRef.current = bridge
@@ -101,6 +106,7 @@ export default function World({ slug }: { slug: string }) {
       desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
       claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
       openBoard: () => setBoardOpen(true),
+      onEmoteKey: () => setWheel(true), onFollow: setFollowing, onNote: (t) => toast(t), onAvatar: (id) => { setActFor(id); setMembersOpen(true) },
       focusKey: (atDesk) => { if (timerRef.current) { setAsk(true); return true } if (atDesk) { setPick(true); return true } return false },
     }) })
     return () => { gone = true; window.removeEventListener('resize', fit); net.close(); game?.destroy(true) }
@@ -135,6 +141,13 @@ export default function World({ slug }: { slug: string }) {
       chimed.current = false; setTimer(t); setNow(at); announce(t)
     } catch { toast("Couldn't start the timer. Try again.") }
   }
+  const act = (a: Act, id: string) => {
+    const b = bridgeRef.current; if (!b) return
+    if (a === 'walk') b.follow(id, true); else if (a === 'follow') b.follow(id, false)
+    else if (a === 'wave') send.current({ t: 'emote', id: 1, to: id })
+    else if (a === 'knock') send.current({ t: 'knock', userId: id })
+    if (a === 'walk' || a === 'follow') setMembersOpen(false)
+  }
   const toast = (text: string) => { const id = Math.random(); setToasts((t) => [...t, { id, text }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000) }
   const endTimer = (done: boolean) => {
     const t = timerRef.current; if (!t) return
@@ -165,6 +178,8 @@ export default function World({ slug }: { slug: string }) {
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
           {more && <>
+            <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>Emote<kbd>E</kbd></button>
+            <button onClick={() => { bridgeRef.current?.toggleDnd(); setMore(false) }} aria-pressed={presence === 'dnd'}><i aria-hidden>🎧</i>{presence === 'dnd' ? 'DND on' : 'DND'}<kbd>G</kbd></button>
             {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
             {can(data.me.role, 'moderate') && <button onClick={() => { setPanel('manage'); setMore(false) }}><i aria-hidden>🛠</i>Manage</button>}
             {data.me.role !== 'owner' ? <button onClick={() => { setPanel('leave'); setMore(false) }}><i aria-hidden>🚪</i>Leave</button> : <button onClick={() => { setPanel('close'); setMore(false) }}><i aria-hidden>🗑</i>Close village</button>}
@@ -187,7 +202,11 @@ export default function World({ slug }: { slug: string }) {
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
         {boardOpen && <Board items={boardItems} members={data.members} onClose={() => setBoardOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
-        {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
+        {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
+        {wheel && <EmoteWheel onPick={(id) => { send.current({ t: 'emote', id }); setWheel(false) }} onClose={() => setWheel(false)} />}
+        {knock && <div className="knock-card" role="alert"><span><b>{knock.name}</b> knocked: chat when you're free?</span><span className="row"><button onClick={() => { bridgeRef.current?.follow(knock.from, true); setKnock(null) }}>Walk over</button><button onClick={() => setKnock(null)}>Later</button></span></div>}
+        {awayCard && <div className="away-card" role="dialog" aria-label="While you were away"><b>While you were away</b>{awayCard.length ? awayCard.map((q, i) => <span key={i}>{q.name ?? 'Someone'}: {q.text}</span>) : <span>Nothing missed.</span>}<span className="row"><button onClick={() => setAwayCard(null)}>OK</button></span></div>}
+        {following && <div className="follow-pill" role="status">Following {following} · Esc to stop <button onClick={() => bridgeRef.current?.stopFollow()}>Stop</button></div>}
         {panel === 'invite' && <InvitePanel slug={slug} name={data.village.name} canGuest={can(data.me.role, 'moderate')} onClose={() => setPanel(null)} />}
         {panel === 'manage' && <Manage slug={slug} villageName={data.village.name} myRole={data.me.role} me={data.me.userId} onClose={() => setPanel(null)} />}
         {(panel === 'leave' || panel === 'close') && (

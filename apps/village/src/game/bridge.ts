@@ -17,6 +17,10 @@ export class Bridge {
   timer: (on: boolean) => void = () => {}
   /** A red pin on the Board in the world while something is due within 24 hours. */
   boardPin: (on: boolean) => void = () => {}
+  /** Phase 1 CP3: Do Not Disturb, and what you can do about another person (all set by the scene). */
+  toggleDnd: () => void = () => {}
+  follow: (userId: string, once?: boolean) => void = () => {} // once = walk over and stop ("Walk to"); otherwise keep following until a movement key or Esc
+  stopFollow: () => void = () => {}
   fromServer(m: ServerMsg) { if (this.handler) this.handler(m); else this.held.push(m) }
   attach(h: (m: ServerMsg) => void) { this.handler = h; this.held.splice(0).forEach(h) }
 }

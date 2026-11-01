@@ -25,7 +25,9 @@ export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('sit'), spotId: id }),
   z.object({ t: z.literal('stand') }),
   z.object({ t: z.literal('status'), status }),
-  z.object({ t: z.literal('presence'), presence: z.enum(['available', 'focusing', 'away']) }), // 'dnd' joins in Phase 1
+  z.object({ t: z.literal('presence'), presence: z.enum(['available', 'focusing', 'away', 'dnd']) }),
+  z.object({ t: z.literal('emote'), id: z.number().int().min(1).max(8), to: id.optional() }),
+  z.object({ t: z.literal('knock'), userId: id }),
   z.object({ t: z.literal('focus.start'), taskId: id.optional(), plannedMin: z.number().int().min(1).max(600) }),
   z.object({ t: z.literal('focus.stop') }),
   z.object({ t: z.literal('focus.pause') }), z.object({ t: z.literal('focus.resume') }),
@@ -55,6 +57,9 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.number().nullable(), startedAt: z.number().optional(), pausedAt: z.number().optional() }), // epoch ms; startedAt lets friends draw the ring's progress (extension to SPEC §10)
   z.object({ t: z.literal('board'), items: z.array(boardItem) }),
   z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
+  z.object({ t: z.literal('emoted'), userId: id, id: z.number().int().min(1).max(8), to: id.optional() }),
+  z.object({ t: z.literal('knocked'), fromUserId: id, name: z.string().max(60) }),
+  z.object({ t: z.literal('away'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }), // what you missed while in Do Not Disturb
   z.object({ t: z.literal('log'), items: z.array(z.object({ zoneId: zone, userId: id, name: z.string().max(60), text: z.string().max(BUBBLE_MAX_CHARS), at: z.number() })) }),
   z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
   z.object({ t: z.literal('pong'), ts: z.number() }),
