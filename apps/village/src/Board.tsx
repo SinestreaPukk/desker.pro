@@ -1,6 +1,7 @@
 // The Board panel (SPEC §7, read-only in Phase 0): a side panel, a bottom sheet on phones. Items come from deadlines members chose to share.
 import { OUTFIT_TINTS, urgency, type Colour } from '@desker/shared'
 import type { BoardItem, Info } from './api.ts'
+import Questions from './Questions.tsx'
 
 const hex = (c: string) => '#' + (OUTFIT_TINTS[c as Colour] ?? 0xf2f5fa).toString(16).padStart(6, '0')
 const when = (ms: number, now: number) => {
@@ -12,7 +13,7 @@ const when = (ms: number, now: number) => {
 }
 const day = (ms: number) => new Date(ms).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' })
 
-export default function Board({ items, members, onClose }: { items: BoardItem[] | null; members: Info['members']; onClose: () => void }) {
+export default function Board({ items, members, slug, me, role, rev, onClose }: { items: BoardItem[] | null; members: Info['members']; slug: string; me: string; role: string; rev: number; onClose: () => void }) {
   const now = Date.now(), by = new Map(members.map((m) => [m.userId, m]))
   const col = (kind: 'due' | 'exam', title: string) => {
     const list = (items ?? []).filter((i) => i.kind === kind)
@@ -36,6 +37,7 @@ export default function Board({ items, members, onClose }: { items: BoardItem[] 
       {items === null && <p>Reading the Board…</p>}
       {items && items.length === 0 && <p className="hint">Share your deadlines in Settings so the village can see what's coming.</p>}
       {items && <div className="cols">{col('due', 'Due this week')}{col('exam', 'Exams')}</div>}
+      <Questions slug={slug} me={me} role={role} rev={rev} />
     </aside>
   )
 }

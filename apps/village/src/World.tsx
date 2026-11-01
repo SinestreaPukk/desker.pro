@@ -4,6 +4,7 @@ import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
 import { track, board as fetchBoard, claimDesk, focusEnd, focusStart, info, type BoardItem, type Info } from './api.ts'
 import Board from './Board.tsx'
+import { AskBox } from './Questions.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
 import Members, { type Act } from './Members.tsx'
@@ -48,7 +49,7 @@ export default function World({ slug }: { slug: string }) {
   const [membersOpen, setMembersOpen] = useState(false), [presence, setPresence] = useState<Presence>('available')
   const timerKey = `village.timer.${slug}`
   const [timer, setTimerState] = useState<Timer | null>(() => { try { const t = JSON.parse(localStorage.getItem(timerKey) ?? 'null') as Timer | null; return t && Date.now() < t.endsAt + 3_600_000 ? t : null } catch { return null } }) // a timer survives a reload
-  const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [now, setNow] = useState(Date.now())
+  const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [qOpen, setQOpen] = useState(false), [qRev, setQRev] = useState(0), [now, setNow] = useState(Date.now())
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
@@ -90,6 +91,8 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'log') setLog(m.items)
       else if (m.t === 'said' && m.text && m.userId !== data.me.userId) blip()
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
+      else if (m.t === 'qupdate' || m.t === 'asked') setQRev((n) => n + 1)
+      else if (m.t === 'answered') { setQRev((n) => n + 1); toast(`${m.name} answered your question`); blip() }
       else if (m.t === 'knocked') { setKnock({ from: m.fromUserId, name: m.name }); blip(240, 180) }
       else if (m.t === 'away') setAwayCard(m.items)
       else if (m.t === 'error' && m.code.startsWith('knock_')) toast(m.message)
@@ -116,9 +119,10 @@ export default function World({ slug }: { slug: string }) {
   }, [data])
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); setPick(false); setBoardOpen(false); return }
+      if (e.key === 'Escape') { setQOpen(false); setLogOpen(false); setMembersOpen(false); setPick(false); setBoardOpen(false); return }
       if ((e.key === 'm' || e.key === 'M') && !isTyping() && !e.ctrlKey && !e.metaKey && !e.altKey) { setMapOn((o) => !o); return } // M = minimap
       if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
+      if (actionOf(e.key, isTyping(), 1) === 'ask' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setQOpen(true); return } // Q = ask the village
       if (actionOf(e.key, isTyping()) === 'board' && !e.ctrlKey && !e.metaKey && !e.altKey) { setBoardOpen((o) => !o); return } // B anywhere
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
       e.preventDefault(); setNotice(''); setTalk({ text: '' })
@@ -196,6 +200,7 @@ export default function World({ slug }: { slug: string }) {
           <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}><i aria-hidden>💬</i>Talk<kbd>T</kbd></button>
           <button onClick={() => bridgeRef.current?.interact()}><i aria-hidden>🪑</i>Sit<kbd>X</kbd></button>
           <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}><i aria-hidden>📖</i>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
+          <button onClick={() => setQOpen(true)}><i aria-hidden>❓</i>Ask<kbd>Q</kbd></button>
           <button onClick={() => setBoardOpen((o) => !o)}><i aria-hidden>📌</i>Board<kbd>B</kbd></button>
           {touch ? <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More"><i aria-hidden>⋯</i>More</button> : <>
             <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
@@ -205,7 +210,8 @@ export default function World({ slug }: { slug: string }) {
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
-        {boardOpen && <Board items={boardItems} members={data.members} onClose={() => setBoardOpen(false)} />}
+        {boardOpen && <Board items={boardItems} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} rev={qRev} onClose={() => setBoardOpen(false)} />}
+        {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.') }} onClose={() => setQOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
         {mapOn && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}

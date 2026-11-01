@@ -10,7 +10,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' }[] }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -24,6 +24,13 @@ export default {
       const t = await verifyToken((req.headers.get('authorization') ?? '').replace(/^Bearer /, ''), env.VILLAGE_ROOM_SECRET, rv[1])
       if (!t.ok || t.claims.role !== 'revoke') return new Response('Forbidden', { status: 403 })
       return env.ROOM.get(env.ROOM.idFromName(rv[1])).fetch(new Request(`https://room/revoke?uid=${encodeURIComponent(t.claims.sub)}&op=${t.claims.op === 'refresh' ? 'refresh' : 'remove'}`, { method: 'POST' }))
+    }
+    // The API also tells the room about questions and answers (same signature, role 'notify'); the body says what happened.
+    const nv = /^\/room\/([0-9a-f-]{36})\/notify$/.exec(url.pathname)
+    if (nv && req.method === 'POST') {
+      const t = await verifyToken((req.headers.get('authorization') ?? '').replace(/^Bearer /, ''), env.VILLAGE_ROOM_SECRET, nv[1])
+      if (!t.ok || t.claims.role !== 'notify') return new Response('Forbidden', { status: 403 })
+      return env.ROOM.get(env.ROOM.idFromName(nv[1])).fetch(new Request('https://room/notify', { method: 'POST', body: await req.text() }))
     }
     const vid = ROOM_PATH.exec(url.pathname)?.[1]
     if (!vid) return new Response('Not found', { status: 404 })
@@ -60,6 +67,7 @@ export class VillageRoom extends DurableObject<Env> {
   }
 
   async fetch(req: Request): Promise<Response> {
+    if (req.method === 'POST' && new URL(req.url).pathname === '/notify') return this.notify(await req.json().catch(() => null) as never)
     if (req.method === 'POST') { // revoke (the Worker already checked the signature): close that person's connections; 4004 = gone for good, 4005 = reconnect with a fresh token
       const q = new URL(req.url).searchParams
       for (const { ws, att } of this.authed()) if (q.get('uid') === '*' || att.member?.userId === q.get('uid')) ws.close(q.get('op') === 'refresh' ? 4005 : 4004, 'revoked')
@@ -71,6 +79,30 @@ export class VillageRoom extends DurableObject<Env> {
     server.serializeAttachment({ vid, authed: false, bad: 0, badAt: 0 } satisfies Att)
     await this.wake(HELLO_TIMEOUT_MS)
     return new Response(null, { status: 101, webSocket: client })
+  }
+
+  /** A question was asked or answered (the API stored it). Bubbles follow the usual reach; the asker hears about answers by their state: now, after Focus, or on the "while you were away" card. */
+  private notify(b: { kind?: string; qid?: string; userId?: string; name?: string; text?: string; by?: string } | null) {
+    if (!b || typeof b.qid !== 'string' || typeof b.userId !== 'string') return new Response('bad', { status: 400 })
+    const room = this.authed(), asker = room.find((x) => x.att.member!.userId === b.userId)
+    if (b.kind === 'asked' && asker) {
+      const from = this.partyOf(asker.att), text = String(b.text ?? '').slice(0, 200)
+      for (const { ws, att } of room) {
+        const v = att.member!.userId === b.userId ? 'full' : att.presence === 'dnd' ? 'none' : visibility(from, this.partyOf(att), false)
+        if (v === 'full') this.send(ws, { t: 'asked', qid: b.qid, userId: b.userId, text })
+        else if (v === 'hint') this.send(ws, { t: 'asked', qid: b.qid, userId: b.userId, nearbyOnly: true })
+        else this.send(ws, { t: 'qupdate', qid: b.qid }) // too far or quiet: no bubble, but an open Board refreshes
+      }
+    } else if (b.kind === 'answered') {
+      const by = String(b.name ?? 'Someone').slice(0, 60)
+      for (const { ws, att } of room) {
+        if (att.member!.userId !== b.userId) { this.send(ws, { t: 'qupdate', qid: b.qid }); continue } // userId is the asker; by is who answered
+        const quiet = att.presence === 'dnd' || att.presence === 'focusing' || !!att.focus
+        if (!quiet) this.send(ws, { t: 'answered', qid: b.qid, byUserId: String(b.by ?? ''), name: by })
+        else ws.serializeAttachment({ ...att, queue: [...(att.queue ?? []), { fromUserId: String(b.by ?? ''), name: by, text: 'answered your question', k: 'answer' as const }].slice(-QUEUE_MAX) })
+      }
+    } else if (b.kind === 'update') for (const { ws } of room) this.send(ws, { t: 'qupdate', qid: b.qid })
+    return new Response('ok')
   }
 
   // Sockets that never said hello are closed (they cost memory and could be probing).

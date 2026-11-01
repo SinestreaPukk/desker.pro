@@ -49,3 +49,12 @@ export const transfer = (slug: string, userId: string, confirm: string) => call<
 export const leaveVillage = (slug: string) => call<{ ok: true }>(`${slug}/leave`, { method: 'POST', body: '{}' })
 export const closeVillage = (slug: string) => call<{ ok: true }>(slug, { method: 'DELETE' })
 export const restoreVillage = (slug: string) => call<{ ok: true }>(`${slug}/restore`, { method: 'POST', body: '{}' })
+
+export type Question = { id: string; text: string; courseCode: string | null; askerId: string; askerName: string; createdAt: string; resolved: boolean; answers: number; helped: boolean }
+export type Answer = { id: string; userId: string; name: string; text: string; helpful: boolean; createdAt: string }
+export const questions = (slug: string) => call<{ questions: Question[] }>(`${slug}/questions`)
+export const ask = (slug: string, text: string, courseCode?: string) => call<{ id: string }>(`${slug}/questions`, { method: 'POST', body: JSON.stringify({ text, courseCode }) })
+export const thread = (slug: string, id: string) => call<{ question: Question; answers: Answer[] }>(`${slug}/questions/${id}`)
+export const answer = (slug: string, id: string, text: string) => call<{ id: string }>(`${slug}/questions/${id}/answers`, { method: 'POST', body: JSON.stringify({ text }) })
+export const resolveQuestion = (slug: string, id: string, resolved: boolean) => call<{ ok: true }>(`${slug}/questions/${id}/resolve`, { method: 'POST', body: JSON.stringify({ resolved }) })
+export const markHelpful = (slug: string, answerId: string) => call<{ ok: true }>(`${slug}/answers/${answerId}/helpful`, { method: 'POST', body: '{}' })

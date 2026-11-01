@@ -1,7 +1,7 @@
 // Everything about bubbles that can be decided without a network (SPEC §6.3). The room calls these; the tests pin the rules down.
 import { BUBBLE_HINT_RADIUS_TILES, BUBBLE_MAX_CHARS, BUBBLE_RADIUS_TILES, BUBBLE_RATE_LIMIT } from './constants.ts'
 import type { ZoneId } from './types.ts'
-import { maskBadWords } from './wordfilter.ts'
+import { maskBadWords } from './wordfilter.js'
 
 const INVISIBLE = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u2028-\\u202e\\u2066-\\u2069]', 'g') // control, zero-width and direction-override characters
 /** Plain text only: control characters out, whitespace tidied, capped, bad words masked. Empty string means "nothing to say". */

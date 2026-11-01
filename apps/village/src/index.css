@@ -105,3 +105,13 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .world.mm .members { top: 184px }
 .zone-note { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); background: rgba(20,33,61,.82); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 14px; pointer-events: none; z-index: 6 }
 @media (max-width: 640px) { .minimap { top: 56px; width: 128px; height: 90px } .world.mm .members { top: auto } }
+
+/* Questions (CP5) */
+.askbox { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); background: #fff; border: 2px solid #35599a; border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; pointer-events: auto; z-index: 6; bottom: calc(84px + var(--kb, 0px)) }
+.askbox input { flex: 1 1 200px; font: inherit; padding: 6px 8px; border: 1px solid #b4c6de; border-radius: 6px } .askbox .count { font-size: 12px; color: #5b6b86 }
+.askbox .chips { display: flex; gap: 4px; flex-wrap: wrap; width: 100% } .askbox .chips button { border: 1px solid #b4c6de; background: #eef2f8; border-radius: 12px; padding: 1px 8px; font-size: 12px; cursor: pointer } .askbox .chips .on { background: #35599a; color: #fff }
+.askbox em { color: #b3261e; width: 100%; font-size: 13px }
+.board .questions { margin-top: 14px } .board .qrow { all: unset; display: block; width: 100%; cursor: pointer; box-sizing: border-box } .board .qrow .meta { display: block }
+.board .questions li.done { opacity: .6 } .board .thread .q { margin: 6px 0 2px } .board .thread button { cursor: pointer }
+.board .reply { display: flex; gap: 6px; margin-top: 8px } .board .reply input { flex: 1; font: inherit; padding: 6px 8px; border: 1px solid #b4c6de; border-radius: 6px } .board .thread em { color: #b3261e; font-size: 13px }
+.board .thread li { display: flex; flex-direction: column; gap: 2px } .board .thread li button { margin-left: 8px; font-size: 12px }

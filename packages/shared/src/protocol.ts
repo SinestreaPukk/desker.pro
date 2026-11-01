@@ -56,10 +56,14 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('presenceChanged'), userId: id, presence }),
   z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.number().nullable(), startedAt: z.number().optional(), pausedAt: z.number().optional() }), // epoch ms; startedAt lets friends draw the ring's progress (extension to SPEC §10)
   z.object({ t: z.literal('board'), items: z.array(boardItem) }),
-  z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
+  z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock', 'answer']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
   z.object({ t: z.literal('emoted'), userId: id, id: z.number().int().min(1).max(8), to: id.optional() }),
+  // questions (CP5): the API stores them and tells the room. `text` is present only for people who could see a bubble from the asker.
+  z.object({ t: z.literal('asked'), qid: id, userId: id, text: z.string().max(200).optional(), nearbyOnly: z.literal(true).optional() }),
+  z.object({ t: z.literal('answered'), qid: id, byUserId: id, name: z.string().max(60) }),
+  z.object({ t: z.literal('qupdate'), qid: id }),
   z.object({ t: z.literal('knocked'), fromUserId: id, name: z.string().max(60) }),
-  z.object({ t: z.literal('away'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }), // what you missed while in Do Not Disturb
+  z.object({ t: z.literal('away'), items: z.array(z.object({ kind: z.enum(['mention', 'knock', 'answer']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }), // what you missed while in Do Not Disturb
   z.object({ t: z.literal('log'), items: z.array(z.object({ zoneId: zone, userId: id, name: z.string().max(60), text: z.string().max(BUBBLE_MAX_CHARS), at: z.number() })) }),
   z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
   z.object({ t: z.literal('pong'), ts: z.number() }),

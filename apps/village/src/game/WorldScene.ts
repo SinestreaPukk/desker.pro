@@ -345,6 +345,7 @@ export class WorldScene extends Phaser.Scene {
         r.buf.push({ t: now, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
       }
     } else if (m.t === 'said') this.bubble(m.userId, m.text, !!m.nearbyOnly, !!m.mentionsYou)
+    else if (m.t === 'asked') this.bubble(m.userId, m.text ? `? ${m.text}` : undefined, !!m.nearbyOnly, false)
     else if (m.t === 'emoted') this.emote(m.userId, EMOTES.find((e) => e.id === m.id)?.glyph ?? '', m.to)
     else if (m.t === 'presenceChanged') { if (m.userId !== this.data0.userId) { this.presences.set(m.userId, m.presence); this.remotes.get(m.userId)?.k.setPresence(m.presence) } }
     else if (m.t === 'statusChanged') this.setStatus(m.userId, m.status)

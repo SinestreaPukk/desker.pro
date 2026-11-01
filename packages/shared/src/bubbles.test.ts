@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { cleanBubble, parseMentions, visibility, rateCheck, type Party } from './bubbles.ts'
-import { maskBadWords } from './wordfilter.ts'
+import { maskBadWords } from './wordfilter.js'
 
 const at = (x: number, y: number, zone: Party['zone'] = 'plaza', table: number | null = null): Party => ({ x, y, zone, table })
 

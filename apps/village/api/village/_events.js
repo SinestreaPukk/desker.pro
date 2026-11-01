@@ -11,6 +11,7 @@ const SPEC = {
   focus_started: { plannedMin: num(600) },
   focus_completed: { plannedMin: num(600), actualMin: num(600), valid: bool },
   board_opened: {},
+  question_asked: {}, question_answered: {}, question_resolved: {},
   invite_created: {},
   invite_accepted: {},
   mod_kick: {}, mod_ban: {}, mod_unban: {}, mod_transfer: {},

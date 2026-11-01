@@ -12,6 +12,7 @@ import { finishSession, todaysTasks } from './_session.js'
 import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { inviteRoutes, manage, closeVillage } from './_manage.js'
+import { qa } from './_qa.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { cleanCreate, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
@@ -113,6 +114,7 @@ export default async function handler(req, res) {
   }
   if (!second && req.method === 'DELETE') return closeVillage({ res, uid, v })
   if (await manage({ req, res, uid, v, parts: parts.slice(1), ev })) return
+  if (await qa({ req, res, uid, v, parts: parts.slice(1), ev })) return
 
   if (!second && req.method === 'GET') {
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [v.id, uid])
