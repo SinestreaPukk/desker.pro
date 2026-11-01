@@ -24,17 +24,7 @@ const memberOf = async (slug, uid) => (await sql.query(
 
 export default async function handler(req, res) {
   const uid = await userOf(req)
-  if (!uid) {
-    let inDb = null, host = null
-    try {
-      host = new URL(process.env.DATABASE_URL).host
-      const raw = decodeURIComponent(((req.headers.cookie || '').match(/__Secure-better-auth\.session_token=([^;]+)/) || [])[1] || '')
-      const [row] = await sql.query('select count(*)::int n from session where token = $1', [raw.split('.')[0]])
-      inDb = row.n > 0
-    } catch (e) { inDb = 'err:' + String(e.message).slice(0, 60) } // TEMP DEBUG
-    return res.status(401).json({ error: 'Sign in first', dbg2: { inDb, host } })
-  }
-  if (false) return res.status(401).json({ error: 'Sign in first', dbg: { cookies: (req.headers.cookie || '').split(';').map((c) => c.split('=')[0].trim()).filter(Boolean), baseURL: process.env.BETTER_AUTH_URL, cookieDomain: process.env.COOKIE_DOMAIN, hasSecret: !!process.env.BETTER_AUTH_SECRET } }) // TEMP DEBUG
+  if (!uid) return res.status(401).json({ error: 'Sign in first', dbg: { cookies: (req.headers.cookie || '').split(';').map((c) => c.split('=')[0].trim()).filter(Boolean), baseURL: process.env.BETTER_AUTH_URL, cookieDomain: process.env.COOKIE_DOMAIN, hasSecret: !!process.env.BETTER_AUTH_SECRET } }) // TEMP DEBUG
   const [first, second] = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
 
   if (first === 'mine' && !second && req.method === 'GET') {
