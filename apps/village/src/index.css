@@ -54,3 +54,13 @@ kbd { border: 1px solid #5b6b86; border-bottom-width: 3px; border-radius: 4px; p
 .hud-panel .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap } .hud-panel .row input, .hud-panel .row select { height: 30px; font: inherit }
 .privacy { margin: 12px 0 0; border: 1px solid #dfe6ef; border-radius: 6px } .privacy legend { font-size: 13px; color: #5b6b86; padding: 0 4px }
 .timer b.paused { opacity: .55 }
+
+/* Checkpoint 9: the Board */
+.board { position: absolute; right: 0; top: 0; bottom: 0; width: min(420px, 100vw); overflow: auto; pointer-events: auto; background: #fff; border-left: 2px solid #35599a; padding: 14px 16px; z-index: 5 }
+.board h2 { margin: 0 0 8px; display: flex; justify-content: space-between } .board .x { border: 0; background: none; font-size: 22px; cursor: pointer }
+.board .hint, .board .none { color: #5b6b86; font-size: 14px } .board h3 { margin: 14px 0 6px; font-size: 14px; color: #5b6b86; text-transform: uppercase; letter-spacing: .04em }
+.board ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px } .board li { border: 2px solid #b4c6de; border-left-width: 6px; border-radius: 6px; padding: 6px 8px; font-size: 14px }
+.board li.u-amber { border-color: #d89b3a; background: #fff8e8 } .board li.u-red { border-color: #d9443a; background: #fff0ee } .board li.u-blue { border-color: #35599a }
+.board .chip { background: #eef2f8; border-radius: 4px; padding: 0 5px; font-size: 12px; font-weight: 600 } .board .meta { font-size: 12px; color: #5b6b86; margin: 2px 0 } .board .who { display: flex; gap: 3px }
+.board .who i { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #35599a; display: grid; place-items: center; font-size: 11px; font-style: normal; color: #14213d }
+@media (max-width: 640px) { .board { top: auto; height: 65vh; width: 100vw; border-left: 0; border-top: 2px solid #35599a; border-radius: 12px 12px 0 0 } }

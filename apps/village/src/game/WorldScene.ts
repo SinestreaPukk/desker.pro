@@ -8,6 +8,7 @@ export interface SceneData {
   userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
   libraryAutoFocus: boolean; desks: { userId: string; spotId: string }[]; names: Record<string, string>
   claimDesk: (spotId: string) => Promise<boolean>; onPresence?: (p: Presence) => void
+  openBoard: () => void
   focusKey: (atDesk: boolean) => boolean // F: React handles it when a timer is running or I am at a desk (true = handled)
 }
 interface Remote { k: Avatar; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number; sat?: Spot; gap: number; delay: number }
@@ -29,6 +30,7 @@ export class WorldScene extends Phaser.Scene {
   private plates = new Map<string, Phaser.GameObjects.Text>()
   private presences = new Map<string, Presence>()
   private statuses = new Map<string, Status>()
+  private pin?: Phaser.GameObjects.Arc // a small red pin on the Board when something is due within 24 hours
   private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
   private notice: { text: string; until: number } | null = null
@@ -82,6 +84,9 @@ export class WorldScene extends Phaser.Scene {
     const b = this.data0.bridge
     b.toggleFocus = () => this.toggleFocus()
     b.locate = (id) => { const t = this.who(id); if (!t || t === this.me) return; const cam = this.cameras.main; cam.startFollow(t.sprite, true, CAMERA_LERP, CAMERA_LERP); this.time.delayedCall(2000, () => cam.startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP)) } // locate only; walking to them comes in Phase 1
+    const bd = this.world.interactables.find((o) => o.kind === 'board')
+    this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
+    b.boardPin = (on) => { this.pin?.setVisible(on) }
     b.roster = () => this.roster()
     b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
       if (on) { this.autoFocused = false; this.setPresence('focusing', false) }
@@ -132,7 +137,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.place(); this.me.idle(this.facing, time)
     const s = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
-    this.hint(s ? 'X  sit' : '')
+    this.hint(s ? 'X  sit' : this.nearBoard() ? 'X  read the board' : '')
   }
 
   private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
@@ -176,10 +181,11 @@ export class WorldScene extends Phaser.Scene {
   }
 
   // ---- sitting (X) ------------------------------------------------------------------------------------------------------
+  private nearBoard() { const b = this.world.interactables.find((o) => o.kind === 'board'); return !!b && this.fx > b.x - 1.6 && this.fx < b.x + b.w + 0.6 && this.fy > b.y - 1.6 && this.fy < b.y + b.h + 0.6 } // standing right beside it (tile centres)
   private interact() {
     if (this.sitting) { const sp = this.sitting.spot; return sp.kind === 'desk' && !this.desks.has(sp.id) ? this.claimHere(sp) : this.stand() } // at an unclaimed desk X claims it; walk away to stand
     const spot = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
-    if (spot) this.sit(spot, true)
+    if (spot) this.sit(spot, true); else if (this.nearBoard()) this.data0.openBoard()
   }
   private sit(spot: Spot, tell: boolean) {
     if (tell) { // the room must know where I am before it seats me

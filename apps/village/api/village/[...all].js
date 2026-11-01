@@ -4,6 +4,7 @@ import { userOf } from '../../../../api/_auth.js'
 import { limit } from '../../../../api/_rate.js'
 import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
 import { finishSession, todaysTasks } from './_session.js'
+import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { keyMatches } from '../../../../packages/db/keys.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 
@@ -87,6 +88,16 @@ export default async function handler(req, res) {
       if (!r.length) return res.status(409).json({ error: 'taken' })
     } catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'taken' }); throw e }
     return res.json({ ok: true, spotId: spot })
+  }
+
+  if (second === 'board' && req.method === 'GET') { // Phase 0 Board: deadlines of members who share them, for this village's courses (polled by the client every 5 minutes)
+    const rows = await sql.query(
+      `select d.user_id as "userId", d.title, d.due_date::text as date, d.due_time as time, d.context
+         from deadlines d join village_member m on m.user_id = d.user_id
+        where m.village_id = $1 and m.share_deadlines and m.banned_at is null and d.due_date >= current_date - 2 and d.due_date <= current_date + 70`, [v.id])
+    // ponytail: Desker stores dates without a time zone; Thai universities are all UTC+7, so due times are read as Bangkok time. Per-user zones if Desker ever has them.
+    const items = rows.map((r) => ({ userId: r.userId, title: String(r.title).slice(0, 120), dueAt: Date.parse(`${r.date}T${/^\d\d:\d\d$/.test(r.time ?? '') ? r.time : '23:59'}:00+07:00`), courseCode: courseOf(`${r.title} ${r.context ?? ''}`) }))
+    return res.json({ items: buildBoard(items, v.course_tags ?? [], Date.now()) })
   }
 
   if (second === 'tasks' && req.method === 'GET') { // the focus picker: today's open Desker tasks (the client sends its own local date)

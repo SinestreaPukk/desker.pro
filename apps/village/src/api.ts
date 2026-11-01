@@ -23,3 +23,5 @@ export const focusStart = (slug: string) => call<{ sessionId: string; startedAt:
 export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
 export const patchVillage = (slug: string, body: { libraryAutoFocus: boolean }) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
+export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[] }
+export const board = (slug: string) => call<{ items: BoardItem[] }>(`${slug}/board`)

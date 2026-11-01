@@ -14,6 +14,8 @@ export class Bridge {
   toggleFocus: () => void = () => {}
   /** React tells the scene a village timer started (true) or ended (false). */
   timer: (on: boolean) => void = () => {}
+  /** A red pin on the Board in the world while something is due within 24 hours. */
+  boardPin: (on: boolean) => void = () => {}
   fromServer(m: ServerMsg) { if (this.handler) this.handler(m); else this.held.push(m) }
   attach(h: (m: ServerMsg) => void) { this.handler = h; this.held.splice(0).forEach(h) }
 }

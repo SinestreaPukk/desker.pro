@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { actionOf, isTyping, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
+import { actionOf, isTyping, urgency, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { claimDesk, focusEnd, focusStart, info, type Info } from './api.ts'
+import { board as fetchBoard, claimDesk, focusEnd, focusStart, info, type BoardItem, type Info } from './api.ts'
+import Board from './Board.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
 import Members from './Members.tsx'
@@ -42,8 +43,12 @@ export default function World({ slug }: { slug: string }) {
   const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [now, setNow] = useState(Date.now())
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
+  const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
+  const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); bridgeRef.current?.boardPin(r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now())) }, () => {})
+  useEffect(() => { if (!data) return; loadBoard(); const t = setInterval(loadBoard, 300_000); return () => clearInterval(t) }, [data]) // polled every 5 minutes in Phase 0
+  useEffect(() => { if (boardOpen) loadBoard() }, [boardOpen])
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
   useEffect(() => {
     if (!data || !el.current) return
@@ -69,14 +74,16 @@ export default function World({ slug }: { slug: string }) {
       userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: setZone, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
       desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
       claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
+      openBoard: () => setBoardOpen(true),
       focusKey: (atDesk) => { if (timerRef.current) { setAsk(true); return true } if (atDesk) { setPick(true); return true } return false },
     }) })
     return () => { gone = true; window.removeEventListener('resize', fit); net.close(); game?.destroy(true) }
   }, [data])
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); setPick(false); return }
+      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); setPick(false); setBoardOpen(false); return }
       if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
+      if (actionOf(e.key, isTyping()) === 'board' && !e.ctrlKey && !e.metaKey && !e.altKey) { setBoardOpen((o) => !o); return } // B anywhere
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
       e.preventDefault(); setNotice(''); setTalk({ text: '' })
     }
@@ -132,10 +139,12 @@ export default function World({ slug }: { slug: string }) {
           <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}>Talk<kbd>T</kbd></button>
           <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
           <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
+          <button onClick={() => setBoardOpen((o) => !o)}>Board<kbd>B</kbd></button>
           <button onClick={openLog}>Chat log</button>
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
+        {boardOpen && <Board items={boardItems} members={data.members} onClose={() => setBoardOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
         {logOpen && <ChatLog items={log} onClose={() => setLogOpen(false)} />}
