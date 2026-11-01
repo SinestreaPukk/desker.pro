@@ -8,6 +8,8 @@ import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
 import Members, { type Act } from './Members.tsx'
 import EmoteWheel from './EmoteWheel.tsx'
+import Minimap from './Minimap.tsx'
+import { zoneNote } from '@desker/shared'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
@@ -50,8 +52,9 @@ export default function World({ slug }: { slug: string }) {
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
+  const zoneAt = useRef<Partial<Record<ZoneId, number>>>({}), noteTimer = useRef<ReturnType<typeof setTimeout>>()
   const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
-  const [wheel, setWheel] = useState(false), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
+  const [wheel, setWheel] = useState(false), [mapOn, setMapOn] = useState(() => !isTouchUi()), [note, setNote] = useState(''), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
   const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
@@ -102,7 +105,7 @@ export default function World({ slug }: { slug: string }) {
     const name = data.members.find((m) => m.userId === data.me.userId)?.name ?? 'You'
     // the name tags use the pixel font, so it must be loaded before the first tag is drawn
     Promise.all([import('./game/start.ts'), document.fonts.load('7px VT323')]).then(([{ startGame }]) => { if (!gone) game = startGame(box, {
-      userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: setZone, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
+      userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: (z) => { setZone(z); const t = zoneNote(zoneAt.current, z, Date.now()); if (t) { setNote(t); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(''), 2500) } }, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
       desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
       claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
       openBoard: () => setBoardOpen(true),
@@ -114,6 +117,7 @@ export default function World({ slug }: { slug: string }) {
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); setPick(false); setBoardOpen(false); return }
+      if ((e.key === 'm' || e.key === 'M') && !isTyping() && !e.ctrlKey && !e.metaKey && !e.altKey) { setMapOn((o) => !o); return } // M = minimap
       if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
       if (actionOf(e.key, isTyping()) === 'board' && !e.ctrlKey && !e.metaKey && !e.altKey) { setBoardOpen((o) => !o); return } // B anywhere
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
@@ -171,13 +175,14 @@ export default function World({ slug }: { slug: string }) {
   if (err) return <main className="pad"><p role="alert">Couldn't open the village ({err}).</p><a href="/">Back</a></main>
   if (!data) return <p className="pad">Loading the world…</p>
   return (
-    <div className={touch ? 'world touch' : 'world'}>
+    <div className={`${touch ? 'world touch' : 'world'}${mapOn ? ' mm' : ''}`}>
       <div ref={el} className="canvas" />
       <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
           {more && <>
+            <button onClick={() => { setMapOn((o) => !o); setMore(false) }} aria-pressed={mapOn}><i aria-hidden>🗺</i>Map<kbd>M</kbd></button>
             <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>Emote<kbd>E</kbd></button>
             <button onClick={() => { bridgeRef.current?.toggleDnd(); setMore(false) }} aria-pressed={presence === 'dnd'}><i aria-hidden>🎧</i>{presence === 'dnd' ? 'DND on' : 'DND'}<kbd>G</kbd></button>
             {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
@@ -203,6 +208,8 @@ export default function World({ slug }: { slug: string }) {
         {boardOpen && <Board items={boardItems} members={data.members} onClose={() => setBoardOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
+        {mapOn && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}
+        {note && <div className="zone-note" role="status">{note}</div>}
         {wheel && <EmoteWheel onPick={(id) => { send.current({ t: 'emote', id }); setWheel(false) }} onClose={() => setWheel(false)} />}
         {knock && <div className="knock-card" role="alert"><span><b>{knock.name}</b> knocked: chat when you're free?</span><span className="row"><button onClick={() => { bridgeRef.current?.follow(knock.from, true); setKnock(null) }}>Walk over</button><button onClick={() => setKnock(null)}>Later</button></span></div>}
         {awayCard && <div className="away-card" role="dialog" aria-label="While you were away"><b>While you were away</b>{awayCard.length ? awayCard.map((q, i) => <span key={i}>{q.name ?? 'Someone'}: {q.text}</span>) : <span>Nothing missed.</span>}<span className="row"><button onClick={() => setAwayCard(null)}>OK</button></span></div>}

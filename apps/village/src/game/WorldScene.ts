@@ -1,6 +1,6 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tapRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
+import { EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, clickRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
 import { isTouchUi } from './touch.ts'
@@ -44,6 +44,7 @@ export class WorldScene extends Phaser.Scene {
   private glows: Phaser.GameObjects.Image[] = []
   private lastZone: ZoneId | null = null
   private data0!: SceneData
+  private routeRun = false; private routeActive = false; private faceTarget: { x: number; y: number } | null = null
   private followId: string | null = null; private followOnce = false; private followAt = 0
   private emotes = new Map<string, { t: Phaser.GameObjects.Text; timer: Phaser.Time.TimerEvent }>()
 
@@ -92,11 +93,9 @@ export class WorldScene extends Phaser.Scene {
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a click or tap on a person opens what you can do about them; a tap on a tile walks there
       if (p.getDistance() > 12 || p.getDuration() > 500) return
       const who = this.avatarAt(p); if (who && who !== this.data0.userId) return this.data0.onAvatar?.(who)
-      if (!(p.wasTouch || this.touchUi)) return
       this.setFollow(null)
-      const w = this.cameras.main.getWorldPoint(p.x, p.y), tx = Math.floor(w.x / TILE_PX), ty = Math.floor(w.y / TILE_PX)
-      if (this.sitting) this.stand()
-      this.route = tapRoute(this.world, this.tx, this.ty, tx, ty)
+      const w = this.cameras.main.getWorldPoint(p.x, p.y)
+      this.walkTo(Math.floor(w.x / TILE_PX), Math.floor(w.y / TILE_PX), !!(p.event as MouseEvent | undefined)?.shiftKey) // Shift held at click time = run there
     })
     for (const d of this.data0.desks) this.setDesk(d.userId, d.spotId)
     const b = this.data0.bridge
@@ -106,6 +105,8 @@ export class WorldScene extends Phaser.Scene {
     this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
     b.boardPin = (on) => { this.pin?.setVisible(on) }
     b.interact = () => this.interact()
+    b.walkToTile = (x, y) => { this.setFollow(null); this.walkTo(x, y, false) }
+    b.positions = () => [{ userId: this.data0.userId, x: this.fx, y: this.fy }, ...[...this.remotes].map(([userId, r]) => ({ userId, x: r.shown.x, y: r.shown.y }))]
     b.toggleDnd = () => this.toggleDnd(); b.follow = (id, once) => this.setFollow(id, !!once); b.stopFollow = () => this.setFollow(null)
     b.roster = () => this.roster()
     b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
@@ -125,7 +126,7 @@ export class WorldScene extends Phaser.Scene {
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
   update(time: number, delta: number) {
-    this.tickFollow(time); this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time); this.followBubbles()
+    this.tickFollow(time); this.moveMe(time, Math.min(delta, 50)); this.arrived(); this.drawRemotes(time); this.followBubbles()
     this.me.tick(time); for (const r of this.remotes.values()) r.k.tick(time)
     if (this.myPresence === 'available' && time - this.lastInput > this.awayMs) this.setPresence('away') // asleep after 5 quiet minutes; any input wakes you
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
@@ -138,7 +139,7 @@ export class WorldScene extends Phaser.Scene {
   // and a small box around the feet slides along walls. No waiting for tile boundaries, no waiting for the room: it answers the instant a key goes down.
   private moveMe(time: number, dt: number) {
     let { dx, dy } = this.keys.vec()
-    if (dx || dy) { this.route = []; this.setFollow(null) } // a key press takes over from a tap, and ends following
+    if (dx || dy) { this.route = []; this.routeActive = false; this.setFollow(null) } // a key press takes over from a tap, and ends following
     else if (this.route.length && !this.sitting) { // steer toward the next tile centre (the route is straight lines, so one axis at a time)
       let t = this.route[0]
       while (t && Math.hypot(t.x - this.fx, t.y - this.fy) < 0.2) { this.route.shift(); t = this.route[0] }
@@ -151,7 +152,7 @@ export class WorldScene extends Phaser.Scene {
     if (dx || dy) {
       const face: Dir = dx ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down' // sideways wins on a diagonal: we only draw four facings
       if (face !== this.facing) { this.facing = face; this.dirty = true }
-      const len = Math.hypot(dx, dy), d = dt * (this.keys.run() ? RUN_TILES_PER_MS : WALK_TILES_PER_MS)
+      const len = Math.hypot(dx, dy), d = dt * (this.keys.run() || (this.route.length && this.routeRun) ? RUN_TILES_PER_MS : WALK_TILES_PER_MS)
       const from = { x: this.fx, y: this.fy }, to = walkBody(this.world, this.fx, this.fy, (dx / len) * d, (dy / len) * d, BODY_HALF_W, BODY_HALF_H)
       const moved = Math.hypot(to.x - from.x, to.y - from.y)
       if (moved > 0) {
@@ -218,6 +219,28 @@ export class WorldScene extends Phaser.Scene {
     if (!this.me.focus && this.lastZone === 'library' && this.data0.libraryAutoFocus) { this.autoFocused = true; this.setPresence('focusing') } else if (this.me.focus) this.setPresence('focusing', false)
   }
 
+  // ---- click or tap to walk (A*) ----------------------------------------------------------------------------------------------
+  private walkTo(tx: number, ty: number, run: boolean) {
+    if (this.sitting) this.stand()
+    const path = clickRoute(this.world, { x: this.tx, y: this.ty }, { x: tx, y: ty }); if (!path?.length) return
+    this.route = path; this.routeRun = run; this.routeActive = true
+    this.faceTarget = this.world.sitSpots.some((s) => s.x === tx && s.y === ty) ? { x: tx, y: ty } : null // clicked a seat: arrive facing it, so X sits
+    this.footprints(path)
+  }
+  /** Faint footprints along the route for 600 ms. */
+  private footprints(path: { x: number; y: number }[]) {
+    path.forEach((t, i) => {
+      const f = this.add.ellipse(t.x * TILE_PX + TILE_PX / 2 + (i % 2 ? 2 : -2), t.y * TILE_PX + TILE_PX / 2 + 3, 3, 2, 0x35599a, 0.45).setDepth(D.floor + 0.5)
+      this.tweens.add({ targets: f, alpha: 0, duration: 600, onComplete: () => f.destroy() })
+    })
+  }
+  private arrived() { // the route is used up: turn to face the seat that was clicked
+    if (!this.routeActive || this.route.length) return
+    this.routeActive = false
+    const f = this.faceTarget; this.faceTarget = null
+    if (f) { const dx = f.x - this.fx, dy = f.y - this.fy; this.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down'; this.dirty = true }
+  }
+
   // ---- doing something about another person: follow (keep walking to them), walk to (go once) -------------------------------------
   private setFollow(id: string | null, once = false) {
     if (id === this.followId && once === this.followOnce) return
@@ -229,7 +252,7 @@ export class WorldScene extends Phaser.Scene {
     if (!this.followId) return
     const t = this.remotes.get(this.followId); if (!t) return this.setFollow(null)
     if (Math.hypot(t.shown.x - this.fx, t.shown.y - this.fy) < 1.6) { this.route = []; if (this.followOnce) this.setFollow(null); return } // beside them
-    if (time - this.followAt > 400) { this.followAt = time; if (this.sitting) this.stand(); this.route = tapRoute(this.world, this.tx, this.ty, Math.round(t.shown.x), Math.round(t.shown.y)) }
+    if (time - this.followAt > 400) { this.followAt = time; if (this.sitting) this.stand(); this.route = clickRoute(this.world, { x: this.tx, y: this.ty }, { x: Math.round(t.shown.x), y: Math.round(t.shown.y) }) ?? []; this.routeRun = false }
   }
 
   // ---- emotes: a glyph above the head for 3 s with a little hop --------------------------------------------------------

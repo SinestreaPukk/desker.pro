@@ -101,3 +101,7 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 
 .new label:has(> input[type=checkbox]) { display: flex; gap: 6px; align-items: center }
 .members li .acts { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px } .members li .acts button { padding: 2px 8px; border: 2px solid #35599a; border-radius: 6px; background: #fff; font-size: 12px; text-align: center; white-space: nowrap }
+.minimap { position: absolute; right: 12px; top: 62px; width: 160px; height: 112px; background: #fff; border: 2px solid #35599a; border-radius: 6px; image-rendering: pixelated; pointer-events: auto; cursor: pointer; z-index: 5 }
+.world.mm .members { top: 184px }
+.zone-note { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); background: rgba(20,33,61,.82); color: #fff; padding: 4px 12px; border-radius: 14px; font-size: 14px; pointer-events: none; z-index: 6 }
+@media (max-width: 640px) { .minimap { top: 56px; width: 128px; height: 90px } .world.mm .members { top: auto } }

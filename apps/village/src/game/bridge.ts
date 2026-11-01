@@ -19,6 +19,9 @@ export class Bridge {
   boardPin: (on: boolean) => void = () => {}
   /** Phase 1 CP3: Do Not Disturb, and what you can do about another person (all set by the scene). */
   toggleDnd: () => void = () => {}
+  /** Minimap: where everyone is (tiles), and click-to-walk to a tile. */
+  positions: () => { userId: string; x: number; y: number }[] = () => []
+  walkToTile: (x: number, y: number) => void = () => {}
   follow: (userId: string, once?: boolean) => void = () => {} // once = walk over and stop ("Walk to"); otherwise keep following until a movement key or Esc
   stopFollow: () => void = () => {}
   fromServer(m: ServerMsg) { if (this.handler) this.handler(m); else this.held.push(m) }
