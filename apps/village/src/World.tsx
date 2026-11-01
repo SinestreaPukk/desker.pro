@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { actionOf, isTyping, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { claimDesk, info, type Info } from './api.ts'
+import { claimDesk, focusEnd, focusStart, info, type Info } from './api.ts'
+import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
+import Privacy from './Privacy.tsx'
 import Members from './Members.tsx'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
@@ -14,11 +16,11 @@ const PILL: Record<Status, string> = {
 }
 
 /** A soft blip when someone nearby speaks, if the player turned cosy sounds on (SPEC §4.3). */
-function blip() {
+function blip(from = 660, to = 880) {
   try {
     const p = JSON.parse(localStorage.getItem('village.sound') ?? '{}'); if (!p.on) return
     const ac = new AudioContext(), o = ac.createOscillator(), g = ac.createGain()
-    o.type = 'sine'; o.frequency.setValueAtTime(660, ac.currentTime); o.frequency.exponentialRampToValueAtTime(880, ac.currentTime + 0.08)
+    o.type = 'sine'; o.frequency.setValueAtTime(from, ac.currentTime); o.frequency.exponentialRampToValueAtTime(to, ac.currentTime + 0.08)
     g.gain.setValueAtTime(0.0001, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.12 * (p.volume ?? 0.5) + 0.0001, ac.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18)
     o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + 0.2); o.onended = () => ac.close()
   } catch { /* no audio available */ }
@@ -35,13 +37,18 @@ export default function World({ slug }: { slug: string }) {
   const [log, setLog] = useState<Extract<ServerMsg, { t: 'log' }>['items'] | null>(null), [logOpen, setLogOpen] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
   const [membersOpen, setMembersOpen] = useState(false), [presence, setPresence] = useState<Presence>('available')
+  const timerKey = `village.timer.${slug}`
+  const [timer, setTimerState] = useState<Timer | null>(() => { try { const t = JSON.parse(localStorage.getItem(timerKey) ?? 'null') as Timer | null; return t && Date.now() < t.endsAt + 3_600_000 ? t : null } catch { return null } }) // a timer survives a reload
+  const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [now, setNow] = useState(Date.now())
+  const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
+  const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
   useEffect(() => {
     if (!data || !el.current) return
     const onMsg = (m: ServerMsg) => {
-      if (m.t === 'welcome') setOnline(m.members) // a fresh welcome replaces local state
+      if (m.t === 'welcome') { setOnline(m.members); if (timerRef.current && !m.focus[data.me.userId]) announce(timerRef.current) } // a fresh welcome replaces local state; a timer that was running is re-announced
       else if (m.t === 'joined') setOnline((o) => [...o.filter((x) => x.userId !== m.member.userId), m.member])
       else if (m.t === 'left') setOnline((o) => o.filter((x) => x.userId !== m.userId))
       else if (m.t === 'log') setLog(m.items)
@@ -62,18 +69,47 @@ export default function World({ slug }: { slug: string }) {
       userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: setZone, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
       desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
       claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
+      focusKey: (atDesk) => { if (timerRef.current) { setAsk(true); return true } if (atDesk) { setPick(true); return true } return false },
     }) })
     return () => { gone = true; window.removeEventListener('resize', fit); net.close(); game?.destroy(true) }
   }, [data])
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); return }
+      if (e.key === 'Escape') { setLogOpen(false); setMembersOpen(false); setPick(false); return }
       if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
       e.preventDefault(); setNotice(''); setTalk({ text: '' })
     }
     window.addEventListener('keydown', on); return () => window.removeEventListener('keydown', on)
   }, [])
+  // Tell the room about my timer: the ring for friends, the activity icon, and quiet mode. Also after every reconnect, since the room forgets me when the connection drops.
+  const announce = (t: Timer) => {
+    send.current({ t: 'focus.start', plannedMin: Math.min(600, Math.max(1, Math.ceil((t.endsAt - Date.now()) / 60000))), ...(t.taskId && { taskId: t.taskId.slice(0, 64) }) })
+    send.current({ t: 'status', status: { activity: t.activity, ...(t.courseCode && { courseCode: t.courseCode.slice(0, 16) }), ...(t.taskId && { taskId: t.taskId.slice(0, 64) }), taskTitle: t.title.slice(0, 120), endsAt: new Date(t.endsAt).toISOString() } })
+    bridgeRef.current?.timer(true)
+  }
+  const startTimer = async (p: Pick) => {
+    setPick(false)
+    try {
+      const r = await focusStart(slug), at = Date.now()
+      const t: Timer = { sessionId: r.sessionId, startedAt: at, endsAt: at + p.minutes * 60_000, plannedMin: p.minutes, taskId: p.taskId, title: p.title, courseCode: p.courseCode, activity: p.activity }
+      chimed.current = false; setTimer(t); setNow(at); announce(t)
+    } catch { toast("Couldn't start the timer. Try again.") }
+  }
+  const toast = (text: string) => { const id = Math.random(); setToasts((t) => [...t, { id, text }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000) }
+  const endTimer = (done: boolean) => {
+    const t = timerRef.current; if (!t) return
+    send.current({ t: 'focus.stop' }); bridgeRef.current?.timer(false); setTimer(null); setAsk(false)
+    const activeMin = Math.round((Math.min(Date.now(), t.endsAt) - t.startedAt) / 60000)
+    focusEnd(slug, { sessionId: t.sessionId, activeMin, done, taskId: t.taskId }).then(
+      (r) => toast(r.again ? 'Already saved.' : r.reason && r.reason !== 'no_outcome' ? `Logged ${activeMin} min in Desker. Too short or long to teach it your pace.` : `Logged ${activeMin} min in Desker${done && t.taskId ? '. Task done!' : '.'}`),
+      () => toast("Couldn't save that session to Desker."))
+  }
+  useEffect(() => { // count down, chime once at zero and ask the one question
+    if (!timer) return
+    const tick = () => { setNow(Date.now()); if (Date.now() >= timer.endsAt && !chimed.current) { chimed.current = true; blip(523, 784); setAsk(true) } }
+    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
+  }, [timer])
   const names = [...new Set([...(data?.members ?? []), ...online].map((m) => m.name))]
   const say = (text: string) => { lastText.current = text; send.current({ t: 'say', text }); setTalk(null); setNotice('') }
   const openLog = () => { setLog(null); setLogOpen(true); send.current({ t: 'log' }) }
@@ -83,15 +119,17 @@ export default function World({ slug }: { slug: string }) {
   return (
     <div className="world">
       <div ref={el} className="canvas" />
-      <Hud name={data.village.name} zone={zone} pill={PILL[status]}>
+      <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
           <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}>Talk<kbd>T</kbd></button>
-          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}>{presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
+          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
           <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
           <button onClick={openLog}>Chat log</button>
         </div>
+        {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
+        {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} onClose={() => setMembersOpen(false)} />}
         {logOpen && <ChatLog items={log} onClose={() => setLogOpen(false)} />}

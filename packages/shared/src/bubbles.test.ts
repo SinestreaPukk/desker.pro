@@ -62,3 +62,11 @@ test('rateCheck: 5 per 10 seconds, then it recovers', () => {
   assert.ok(!rateCheck(t, 10_999).ok) // the first one was at 1000 and is still inside the window
   assert.ok(rateCheck(t, 11_001).ok) // once the oldest is 10 s old there is room
 })
+
+test('a running focus timer is as quiet as the Library: only @mentions, queued', async () => {
+  const { visibility } = await import('./bubbles.ts')
+  const s = { x: 5, y: 20, zone: 'plaza' as const, table: null }, r = { x: 6, y: 20, zone: 'plaza' as const, table: null, focus: true }
+  assert.equal(visibility(s, r, false), 'none')
+  assert.equal(visibility(s, r, true), 'queued')
+  assert.equal(visibility(s, { ...r, focus: false }, false), 'full')
+})

@@ -12,7 +12,7 @@ export function useSound() { // sound is off until the player turns it on (SPEC 
   return [s, set] as const
 }
 
-export default function Hud({ name, zone, pill, children }: { name: string; zone: ZoneId; pill: string; children?: React.ReactNode }) {
+export default function Hud({ name, zone, pill, settingsExtra, children }: { name: string; zone: ZoneId; pill: string; settingsExtra?: React.ReactNode; children?: React.ReactNode }) {
   const [help, setHelp] = useState(false), [settings, setSettings] = useState(false)
   const [hint, setHint] = useState(() => !load('village.hintDismissed', false))
   const [sound, setSound] = useSound()
@@ -52,6 +52,7 @@ export default function Hud({ name, zone, pill, children }: { name: string; zone
             <h2>Settings</h2>
             <label><input type="checkbox" checked={sound.on} onChange={(e) => setSound({ ...sound, on: e.target.checked })} /> Cosy sounds</label>
             <label>Volume <input type="range" min={0} max={1} step={0.05} value={sound.volume} disabled={!sound.on} onChange={(e) => setSound({ ...sound, volume: Number(e.target.value) })} /></label>
+            {settingsExtra}
             <p><button onClick={() => setSettings(false)}>Close (Esc)</button></p>
           </div>
         </div>

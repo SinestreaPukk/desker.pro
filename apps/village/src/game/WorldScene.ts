@@ -1,6 +1,6 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Snap, type World, type ZoneId } from '@desker/shared'
+import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
 
@@ -8,6 +8,7 @@ export interface SceneData {
   userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
   libraryAutoFocus: boolean; desks: { userId: string; spotId: string }[]; names: Record<string, string>
   claimDesk: (spotId: string) => Promise<boolean>; onPresence?: (p: Presence) => void
+  focusKey: (atDesk: boolean) => boolean // F: React handles it when a timer is running or I am at a desk (true = handled)
 }
 interface Remote { k: Avatar; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number; sat?: Spot; gap: number; delay: number }
 const D = { ground: 0, floor: 1, walls: 2, below: 3, entity: DEPTH.entity, above: DEPTH.above, snow: 200000, tint: 300000, glow: 310000 } // render order
@@ -27,6 +28,7 @@ export class WorldScene extends Phaser.Scene {
   private desks = new Map<string, string>() // desk spot id -> the member who made it theirs
   private plates = new Map<string, Phaser.GameObjects.Text>()
   private presences = new Map<string, Presence>()
+  private statuses = new Map<string, Status>()
   private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
   private notice: { text: string; until: number } | null = null
@@ -81,6 +83,10 @@ export class WorldScene extends Phaser.Scene {
     b.toggleFocus = () => this.toggleFocus()
     b.locate = (id) => { const t = this.who(id); if (!t || t === this.me) return; const cam = this.cameras.main; cam.startFollow(t.sprite, true, CAMERA_LERP, CAMERA_LERP); this.time.delayedCall(2000, () => cam.startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP)) } // locate only; walking to them comes in Phase 1
     b.roster = () => this.roster()
+    b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
+      if (on) { this.autoFocused = false; this.setPresence('focusing', false) }
+      else { this.setPresence('available', false); if (this.lastZone === 'library' && this.data0.libraryAutoFocus) { this.autoFocused = true; this.setPresence('focusing') } } // still in the Library: back to quiet focus
+    }
     this.sparkle(this.me.x, this.me.y - 8, 0xf2c46d)
     this.data0.bridge.attach((m) => this.onServer(m))
   }
@@ -144,7 +150,9 @@ export class WorldScene extends Phaser.Scene {
     if (tell) this.data0.bridge.out({ t: 'presence', presence: p })
   }
   private touched() { this.lastInput = this.time.now; if (this.myPresence === 'away') this.setPresence('available') }
-  private toggleFocus() { this.autoFocused = false; if (this.myPresence === 'available') this.setPresence('focusing'); else if (this.myPresence === 'focusing') this.setPresence('available') }
+  private toggleFocus() {
+    if (this.data0.focusKey(this.sitting?.spot.kind === 'desk')) return // a running timer or a desk: the timer panel decides
+    this.autoFocused = false; if (this.myPresence === 'available') this.setPresence('focusing'); else if (this.myPresence === 'focusing') this.setPresence('available') }
 
   // ---- desks: a tiny name plate on a claimed desk, even when the owner is offline ---------------------------------------------
   private setDesk(userId: string, spotId: string) {
@@ -163,7 +171,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private roster(): RosterItem[] {
-    const item = (userId: string, x: number, y: number, seat?: Spot): RosterItem => ({ userId, zone: zoneAt(this.world, Math.round(x), Math.round(y)), atDesk: seat?.kind === 'desk', presence: this.presences.get(userId) ?? 'available' })
+    const item = (userId: string, x: number, y: number, seat?: Spot): RosterItem => ({ userId, zone: zoneAt(this.world, Math.round(x), Math.round(y)), atDesk: seat?.kind === 'desk', presence: this.presences.get(userId) ?? 'available', status: this.statuses.get(userId), endsAt: this.who(userId)?.focus?.endsAt })
     return [item(this.data0.userId, this.fx, this.fy, this.sitting?.spot), ...[...this.remotes].map(([id, r]) => item(id, r.shown.x, r.shown.y, r.sat))]
   }
 
@@ -198,6 +206,7 @@ export class WorldScene extends Phaser.Scene {
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
       for (const [uid, p] of Object.entries(m.presence)) { this.presences.set(uid, p); this.remotes.get(uid)?.k.setPresence(p) }
       const mineP = m.presence[this.data0.userId]; if (mineP) this.setPresence(mineP, false)
+      this.statuses.clear(); for (const uid of [...this.remotes.keys(), this.data0.userId]) { this.setStatus(uid, m.statuses[uid] ?? null); this.who(uid)?.setFocus(m.focus[uid] ?? null) }
       this.taken = new Set(Object.values(m.sitting)); this.seated = new Map(Object.entries(m.sitting))
       for (const [uid, spotId] of this.seated) this.seat(uid, spotId, true)
       const mine = m.sitting[this.data0.userId], p = m.positions[this.data0.userId]
@@ -223,12 +232,18 @@ export class WorldScene extends Phaser.Scene {
       }
     } else if (m.t === 'said') this.bubble(m.userId, m.text, !!m.nearbyOnly, !!m.mentionsYou)
     else if (m.t === 'presenceChanged') { if (m.userId !== this.data0.userId) { this.presences.set(m.userId, m.presence); this.remotes.get(m.userId)?.k.setPresence(m.presence) } }
+    else if (m.t === 'statusChanged') this.setStatus(m.userId, m.status)
+    else if (m.t === 'focusChanged') {
+      this.who(m.userId)?.setFocus(m.endsAt && m.startedAt ? { startedAt: m.startedAt, endsAt: m.endsAt } : null)
+      if (m.userId === this.data0.userId && m.endsAt) { this.autoFocused = false; this.setPresence('focusing', false) } // my own timer, also after a reconnect
+    }
     else if (m.t === 'deskClaimed') { if (m.userId !== this.data0.userId) this.setDesk(m.userId, m.spotId) }
     else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
     else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
     else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
   }
 
+  private setStatus(uid: string, s: Status | null) { if (s) this.statuses.set(uid, s); else this.statuses.delete(uid); this.who(uid)?.setStatus(s?.activity ?? null) }
   private seated = new Map<string, string>() // who sits where, for everyone but also me
   private seat(userId: string, spotId: string, instant: boolean) {
     this.seated.set(userId, spotId); this.taken.add(spotId)

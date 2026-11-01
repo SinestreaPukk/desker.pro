@@ -2,7 +2,8 @@
 // Membership is checked on every call; a banned or non-member gets the same answer as a village that does not exist.
 import { userOf } from '../../../../api/_auth.js'
 import { limit } from '../../../../api/_rate.js'
-import { sql } from '../../../../api/_store.js'
+import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
+import { finishSession, todaysTasks } from './_session.js'
 import { keyMatches } from '../../../../packages/db/keys.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 
@@ -35,11 +36,11 @@ export default async function handler(req, res) {
     const vid = req.body?.villageId
     if (typeof vid !== 'string' || !/^[0-9a-f-]{36}$/.test(vid)) return res.status(400).json({ error: 'Invalid village' })
     const m = (await sql.query(
-      `select m.role, m.desk_spot_id, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
+      `select m.role, m.desk_spot_id, m.status_sharing, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
         where m.village_id = $1 and m.user_id = $2 and m.banned_at is null and v.deleted_at is null`, [vid, uid]))[0]
     if (!m) return no(res)
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [vid, uid]) // "last seen" in the member list: refreshed every time a connection starts or renews
-    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
+    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
   if (!first || first === 'mine') return res.status(404).json({ error: 'Not found' })
@@ -86,6 +87,48 @@ export default async function handler(req, res) {
       if (!r.length) return res.status(409).json({ error: 'taken' })
     } catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'taken' }); throw e }
     return res.json({ ok: true, spotId: spot })
+  }
+
+  if (second === 'tasks' && req.method === 'GET') { // the focus picker: today's open Desker tasks (the client sends its own local date)
+    const date = String(req.query?.date ?? new URL(req.url, 'http://x').searchParams.get('date') ?? '')
+    if (!/^\d{4}-\d\d-\d\d$/.test(date)) return res.status(400).json({ error: 'Invalid date' })
+    return res.json({ tasks: todaysTasks(await loadDoc(uid), date) })
+  }
+
+  if (second === 'focus' && req.method === 'POST') { // start / end a focus session. Desker has no server-side running timer, so (like its own Focus screen) the document is written when the sitting ends.
+    if (!(await limit(req, res, { scope: 'village-focus', max: 60, id: uid }))) return
+    const b = req.body || {}
+    if (b.action === 'start') {
+      const open = (await sql.query('select id from village_focus_session where village_id = $1 and user_id = $2 and ended_at is null', [v.id, uid])).map((r) => r.id)
+      if (open.length) await sql.query('update village_focus_session set ended_at = now() where id = any($1::uuid[])', [open]) // a forgotten timer from an earlier visit is closed, not counted
+      const [row] = await sql.query('insert into village_focus_session (village_id, user_id, started_at) values ($1, $2, now()) returning id, started_at as "startedAt"', [v.id, uid])
+      return res.json({ ok: true, sessionId: row.id, startedAt: row.startedAt })
+    }
+    if (b.action === 'end') {
+      if (typeof b.sessionId !== 'string' || !/^[0-9a-f-]{36}$/.test(b.sessionId)) return res.status(400).json({ error: 'Invalid session' })
+      const row = (await sql.query('select id, started_at, ended_at, desker_session_id from village_focus_session where id = $1 and village_id = $2 and user_id = $3', [b.sessionId, v.id, uid]))[0]
+      if (!row) return res.status(404).json({ error: 'No such session' })
+      if (row.ended_at) return res.json({ ok: true, again: true, reason: null }) // ending twice writes once
+      const start = new Date(row.started_at).getTime(), end = Date.now()
+      const active = Math.min(Math.max(0, Math.round(Number(b.activeMin) || 0)), Math.round((end - start) / 6e4), 600) // never more than the clock allows
+      const claimed = (await sql.query('update village_focus_session set ended_at = now(), desker_session_id = $2 where id = $1 and ended_at is null returning id', [row.id, String(start)])).length
+      if (!claimed) return res.json({ ok: true, again: true, reason: null }) // someone else's request got there first
+      let reason = 'no_outcome'
+      for (let attempt = 0; attempt < 5; attempt++) { // two saves can land together: the version check makes one look again
+        const doc = await loadDoc(uid)
+        const r = finishSession(doc, { taskId: b.taskId, start, end, active, pauses: Math.min(99, Number(b.pauses) || 0), done: b.done === true })
+        try { await saveDoc(uid, Object.fromEntries(Object.entries(r.doc).filter(([k]) => k !== '_rev')), Number(doc._rev ?? 0)); reason = r.reason; break } catch (e) { if (!e.conflict) throw e }
+      }
+      return res.json({ ok: true, minutes: active, reason })
+    }
+    return res.status(400).json({ error: 'Invalid action' })
+  }
+
+  if (!second && req.method === 'PATCH') { // village settings, owner only
+    if (v.role !== 'owner') return res.status(403).json({ error: 'owner_only' })
+    if (typeof req.body?.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' })
+    await sql.query(`update village set settings = settings || jsonb_build_object('library_auto_focus', $2::boolean) where id = $1`, [v.id, req.body.libraryAutoFocus])
+    return res.json({ ok: true })
   }
 
   if (second === 'me' && req.method === 'PATCH') {

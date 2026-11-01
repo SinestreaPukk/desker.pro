@@ -3,10 +3,16 @@ import { useEffect, useState } from 'react'
 import { OUTFIT_TINTS, type Colour, type ZoneId } from '@desker/shared'
 import type { RosterItem } from './game/bridge.ts'
 import type { Info } from './api.ts'
+import { plain } from './Focus.tsx'
 
 const ZONE: Record<ZoneId, string> = { plaza: 'in the Plaza', library: 'in the Library', tables: 'at the Group Tables', lounge: 'in the Lounge', garden: 'in the Garden' }
 const ICON = { available: '●', focusing: '📖', dnd: '⛔', away: '💤' }
 const hex = (c: string) => '#' + (OUTFIT_TINTS[c as Colour] ?? 0xf2f5fa).toString(16).padStart(6, '0')
+const doing = (r: RosterItem) => { // what they are studying, as far as their sharing choice lets friends see
+  const s = r.status; if (!s) return ''
+  const left = r.endsAt ? ` · ${Math.max(0, Math.ceil((r.endsAt - Date.now()) / 60000))} min left` : ''
+  return (s.taskTitle ? `${s.courseCode ? s.courseCode + ' · ' : ''}${plain(s.taskTitle, s.courseCode)}` : 'Studying') + left
+}
 const ago = (iso: string) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 2 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
 
 export default function Members({ members, me, roster, onLocate, onClose }: { members: Info['members']; me: string; roster: () => RosterItem[]; onLocate: (id: string) => void; onClose: () => void }) {
@@ -23,6 +29,7 @@ export default function Members({ members, me, roster, onLocate, onClose }: { me
         <button disabled={!r || m.userId === me} onClick={() => onLocate(m.userId)} title={r && m.userId !== me ? 'Find them' : ''}>{m.name}{m.userId === me ? ' (you)' : ''}</button>
         <span className="pres" title={r?.presence ?? 'offline'}>{r ? ICON[r.presence] : ''}</span>
         <span className="where">{r ? (r.atDesk ? 'at their desk' : ZONE[r.zone]) : `last seen ${ago(m.lastSeenAt)}`}</span>
+        {r && doing(r) && <span className="what">{doing(r)}</span>}
       </li>
     )
   }

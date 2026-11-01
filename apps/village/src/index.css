@@ -43,3 +43,13 @@ kbd { border: 1px solid #5b6b86; border-bottom-width: 3px; border-radius: 4px; p
 .members ul { list-style: none; margin: 0; padding: 0 } .members li { display: grid; grid-template-columns: 12px 1fr 20px; gap: 2px 8px; align-items: center; padding: 4px 0; font-size: 14px }
 .members li i { width: 10px; height: 10px; border-radius: 50%; border: 1px solid #35599a } .members li button { text-align: left; border: 0; background: none; font: inherit; padding: 0; cursor: pointer; color: #14213d } .members li button:disabled { cursor: default }
 .members li .where { grid-column: 2 / 4; font-size: 12px; color: #5b6b86 } .members li.off { opacity: .6 } .members li.sep { display: block; font-size: 12px; color: #5b6b86; border-top: 1px solid #dfe6ef; margin-top: 4px; padding-top: 6px }
+
+/* Checkpoint 8: focus timer, task picker, privacy */
+.members li .what { grid-column: 2 / 4; font-size: 12px; color: #8a5a12 }
+.timer { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; pointer-events: auto; background: #fff3d6; border: 2px solid #d89b3a; border-radius: 8px; padding: 4px 10px; font-size: 14px; max-width: calc(100vw - 200px) }
+.timer b { font-size: 18px; font-variant-numeric: tabular-nums } .timer .t-act { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px }
+.timer button, .hud-panel .row button { height: 30px; padding: 0 12px; border-radius: 6px; border: 2px solid #35599a; background: #fff; cursor: pointer; font-size: 14px }
+.hud-panel .row button.primary { background: #35599a; color: #fff }
+.picker { width: min(440px, calc(100vw - 24px)); max-height: 80vh; overflow: auto } .picker ul { list-style: none; padding: 0; margin: 0 } .picker li label { margin: 6px 0 } .picker small { color: #5b6b86 }
+.hud-panel .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap } .hud-panel .row input, .hud-panel .row select { height: 30px; font: inherit }
+.privacy { margin: 12px 0 0; border: 1px solid #dfe6ef; border-radius: 6px } .privacy legend { font-size: 13px; color: #5b6b86; padding: 0 4px }

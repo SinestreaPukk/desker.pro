@@ -23,12 +23,13 @@ export function parseMentions(text: string, names: string[]): string[] {
   return [...found]
 }
 
-export interface Party { x: number; y: number; zone: ZoneId; table: number | null } // table = the group table you are seated at, if any
+export interface Party { x: number; y: number; zone: ZoneId; table: number | null; focus?: boolean } // table = the group table you are seated at, if any
 export type Verdict = 'full' | 'hint' | 'queued' | 'none'
 /** What a receiver gets of a sender's bubble. Rules in order: table seats, then the Library, then distance. */
 export function visibility(s: Party, r: Party, mentioned: boolean): Verdict {
   if (s.table != null) return r.table === s.table ? 'full' : 'none' // 1. from a table seat: only people at that table
-  if (s.zone === 'library' || r.zone === 'library') return mentioned ? (r.zone === 'library' ? 'queued' : 'full') : 'none' // 2. quiet: only @mentions, held for people studying
+  const rq = r.zone === 'library' || !!r.focus // studying: in the Library, or a focus timer is running
+  if (s.zone === 'library' || rq) return mentioned ? (rq ? 'queued' : 'full') : 'none' // 2. quiet: only @mentions, held for people studying
   const d = Math.hypot(s.x - r.x, s.y - r.y) // 3 and 4. everyone else by distance between tile centres
   return d <= BUBBLE_RADIUS_TILES ? 'full' : d <= BUBBLE_HINT_RADIUS_TILES ? 'hint' : 'none'
 }

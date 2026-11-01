@@ -38,7 +38,7 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({
     t: z.literal('welcome'), self: member, members: z.array(member),
     positions: z.record(z.object({ x: tile, y: tile, dir })), presence: z.record(presence), statuses: z.record(status),
-    desks: z.record(id), sitting: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(),
+    desks: z.record(id), focus: z.record(z.object({ startedAt: z.number(), endsAt: z.number() })), sitting: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(),
   }),
   z.object({ t: z.literal('joined'), member }),
   z.object({ t: z.literal('left'), userId: id }),
@@ -51,7 +51,7 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('deskClaimed'), userId: id, spotId: id }), // a seated member made this desk theirs (replaces any desk they had)
   z.object({ t: z.literal('statusChanged'), userId: id, status: status.nullable() }),
   z.object({ t: z.literal('presenceChanged'), userId: id, presence }),
-  z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.string().datetime().nullable() }),
+  z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.number().nullable(), startedAt: z.number().optional() }), // epoch ms; startedAt lets friends draw the ring's progress (extension to SPEC §10)
   z.object({ t: z.literal('board'), items: z.array(boardItem) }),
   z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
   z.object({ t: z.literal('log'), items: z.array(z.object({ zoneId: zone, userId: id, name: z.string().max(60), text: z.string().max(BUBBLE_MAX_CHARS), at: z.number() })) }),
