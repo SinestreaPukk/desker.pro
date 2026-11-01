@@ -6,6 +6,9 @@ import Join from './Join.tsx'
 import '@fontsource/vt323'
 import './index.css'
 
+// Phones: no pinch-zoom or double-tap zoom (iOS Safari ignores user-scalable=no)
+for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault())
+
 const World = lazy(() => import('./World.tsx')) // Phaser stays out of the picker's bundle
 
 function App() {

@@ -12,6 +12,7 @@ export class Bridge {
   roster: () => RosterItem[] = () => []
   locate: (userId: string) => void = () => {}
   toggleFocus: () => void = () => {}
+  interact: () => void = () => {} // the Sit/Stand button: the same as pressing X
   /** React tells the scene a village timer started (true) or ended (false). */
   timer: (on: boolean) => void = () => {}
   /** A red pin on the Board in the world while something is due within 24 hours. */

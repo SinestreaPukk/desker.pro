@@ -1,8 +1,9 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
+import { AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tapRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
+import { isTouchUi } from './touch.ts'
 
 export interface SceneData {
   userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
@@ -30,6 +31,8 @@ export class WorldScene extends Phaser.Scene {
   private plates = new Map<string, Phaser.GameObjects.Text>()
   private presences = new Map<string, Presence>()
   private statuses = new Map<string, Status>()
+  private route: { x: number; y: number }[] = [] // tiles still to walk after a tap
+  private touchUi = isTouchUi()
   private pin?: Phaser.GameObjects.Arc // a small red pin on the Board when something is due within 24 hours
   private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
@@ -80,6 +83,12 @@ export class WorldScene extends Phaser.Scene {
     window.addEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.addEventListener(t, touched, { passive: true })
     this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
     this.lastInput = this.time.now
+    this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a tap (not a drag or a long press) on a tile: walk there
+      if (!(p.wasTouch || this.touchUi) || p.getDistance() > 12 || p.getDuration() > 500) return
+      const w = this.cameras.main.getWorldPoint(p.x, p.y), tx = Math.floor(w.x / TILE_PX), ty = Math.floor(w.y / TILE_PX)
+      if (this.sitting) this.stand()
+      this.route = tapRoute(this.world, this.tx, this.ty, tx, ty)
+    })
     for (const d of this.data0.desks) this.setDesk(d.userId, d.spotId)
     const b = this.data0.bridge
     b.toggleFocus = () => this.toggleFocus()
@@ -87,6 +96,7 @@ export class WorldScene extends Phaser.Scene {
     const bd = this.world.interactables.find((o) => o.kind === 'board')
     this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
     b.boardPin = (on) => { this.pin?.setVisible(on) }
+    b.interact = () => this.interact()
     b.roster = () => this.roster()
     b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
       if (on) { this.autoFocused = false; this.setPresence('focusing', false) }
@@ -96,7 +106,11 @@ export class WorldScene extends Phaser.Scene {
     this.data0.bridge.attach((m) => this.onServer(m))
   }
 
-  private fitZoom() { this.cameras.main.setZoom(this.scale.width >= 900 ? 3 : 2) } // integer zoom only: 3x on desktop, 2x on narrower screens
+  private fitZoom() {
+    const w = this.scale.width
+    // desktop 3x, tablets 2x (whole numbers keep pixels crisp); a portrait phone fits about 15 tiles across, so its zoom is a fraction
+    this.cameras.main.setZoom(w >= 900 ? 3 : w >= 640 ? 2 : Math.max(1, Math.round((w / 240) * 4) / 4))
+  }
 
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
@@ -113,9 +127,15 @@ export class WorldScene extends Phaser.Scene {
   // Free walking: the keys give a direction, we move at a fixed speed along it (diagonals are normalised, so every direction is the same speed),
   // and a small box around the feet slides along walls. No waiting for tile boundaries, no waiting for the room: it answers the instant a key goes down.
   private moveMe(time: number, dt: number) {
-    const { dx, dy } = this.keys.vec()
+    let { dx, dy } = this.keys.vec()
+    if (dx || dy) this.route = [] // a key press takes over from a tap
+    else if (this.route.length && !this.sitting) { // steer toward the next tile centre (the route is straight lines, so one axis at a time)
+      let t = this.route[0]
+      while (t && Math.hypot(t.x - this.fx, t.y - this.fy) < 0.2) { this.route.shift(); t = this.route[0] }
+      if (t) { const ex = t.x - this.fx, ey = t.y - this.fy; dx = Math.abs(ex) > 0.06 ? Math.sign(ex) : 0; dy = Math.abs(ey) > 0.06 ? Math.sign(ey) : 0 }
+    }
     if (this.sitting) { // any walking key stands you up first
-      if (!dx && !dy) { const sp = this.sitting.spot; this.me.sit(this.facing); this.hint(this.notice && this.notice.until > time ? this.notice.text : sp.kind === 'desk' && !this.desks.has(sp.id) ? 'X  make this your desk?' : 'X  stand'); return }
+      if (!dx && !dy) { const sp = this.sitting.spot; this.me.sit(this.facing); this.hint(this.notice && this.notice.until > time ? this.notice.text : sp.kind === 'desk' && !this.desks.has(sp.id) ? this.kx('Tap Sit/Stand: make this your desk?', 'X  make this your desk?') : this.kx('Tap Stand', 'X  stand')); return }
       this.stand()
     }
     if (dx || dy) {
@@ -132,14 +152,15 @@ export class WorldScene extends Phaser.Scene {
         const c = this.phase % 1 // one full stride per tile walked: foot, passing, other foot, passing
         return this.me.walk(this.facing, c < 0.25 ? 1 : c < 0.5 ? 0 : c < 0.75 ? 2 : 0)
       }
-      this.me.walk(this.facing, 0) // pushing against a wall: face it, stand still
+      this.route = []; this.me.walk(this.facing, 0) // pushing against a wall: face it, stand still
       return
     }
     this.place(); this.me.idle(this.facing, time)
     const s = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
-    this.hint(s ? 'X  sit' : this.nearBoard() ? 'X  read the board' : '')
+    this.hint(s ? this.kx('Tap Sit', 'X  sit') : this.nearBoard() ? this.kx('Tap Board', 'X  read the board') : '')
   }
 
+  private kx(touch: string, keys: string) { return this.touchUi ? touch : keys } // the prompt names the button on a phone, the key on a keyboard
   private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
 
   private enterZone(z: ZoneId) {

@@ -10,6 +10,7 @@ import Members from './Members.tsx'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import { Bridge } from './game/bridge.ts'
+import { isTouchUi } from './game/touch.ts'
 
 const PILL: Record<Status, string> = {
   connecting: 'Connecting…', online: '', reconnecting: 'Reconnecting…', failed: "Can't reach the village right now.",
@@ -44,6 +45,7 @@ export default function World({ slug }: { slug: string }) {
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
+  const touch = isTouchUi(), [more, setMore] = useState(false)
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
   const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); bridgeRef.current?.boardPin(r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now())) }, () => {})
@@ -130,17 +132,24 @@ export default function World({ slug }: { slug: string }) {
   if (err) return <main className="pad"><p role="alert">Couldn't open the village ({err}).</p><a href="/">Back</a></main>
   if (!data) return <p className="pad">Loading the world…</p>
   return (
-    <div className="world">
+    <div className={touch ? 'world touch' : 'world'}>
       <div ref={el} className="canvas" />
       <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
-          <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}>Talk<kbd>T</kbd></button>
-          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
-          <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
-          <button onClick={() => setBoardOpen((o) => !o)}>Board<kbd>B</kbd></button>
-          <button onClick={openLog}>Chat log</button>
+          {more && touch && <>
+            <button onClick={() => { setMembersOpen((o) => !o); setMore(false) }}><i aria-hidden>👥</i>Members</button>
+            <button onClick={() => { openLog(); setMore(false) }}><i aria-hidden>🗒</i>Chat log</button>
+          </>}
+          <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}><i aria-hidden>💬</i>Talk<kbd>T</kbd></button>
+          <button onClick={() => bridgeRef.current?.interact()}><i aria-hidden>🪑</i>Sit<kbd>X</kbd></button>
+          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}><i aria-hidden>📖</i>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
+          <button onClick={() => setBoardOpen((o) => !o)}><i aria-hidden>📌</i>Board<kbd>B</kbd></button>
+          {touch ? <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More"><i aria-hidden>⋯</i>More</button> : <>
+            <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
+            <button onClick={openLog}>Chat log</button>
+          </>}
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}

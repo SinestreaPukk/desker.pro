@@ -82,3 +82,14 @@ export function spotNear(w: World, x: number, y: number, dir: Dir, taken: Readon
   for (const s of w.sitSpots) { if (taken.has(s.id)) continue; const d = Math.hypot(s.x - x, s.y - y); if (Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) <= 1 && d < bd) { best = s; bd = d } }
   return best
 }
+
+/** A phone tap (SPEC Checkpoint 10): walk from tile (fx,fy) to (tx,ty) in straight lines, first sideways then up/down, and stop at the first blocked tile.
+ *  Returns the tiles to walk through, in order (empty if the first step is blocked). A* arrives in Phase 1. */
+export function tapRoute(w: World, fx: number, fy: number, tx: number, ty: number): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = []
+  let x = fx, y = fy
+  for (const [dx, dy, n] of [[Math.sign(tx - fx), 0, Math.abs(tx - fx)], [0, Math.sign(ty - fy), Math.abs(ty - fy)]] as const) {
+    for (let i = 0; i < n; i++) { const s = stepBy(w, x, y, dx, dy); if (!s) return out; x = s.x; y = s.y; out.push(s) }
+  }
+  return out
+}

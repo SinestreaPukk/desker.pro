@@ -6,6 +6,12 @@ export default function BubbleBox({ names, me, initial, shake, notice, onSend, o
   const [text, setText] = useState(initial), [pick, setPick] = useState(0)
   const input = useRef<HTMLInputElement>(null)
   useEffect(() => input.current?.focus(), [])
+  useEffect(() => { // on a phone the keyboard covers the page: lift the box by however much of the screen it takes
+    const v = window.visualViewport; if (!v) return
+    const fit = () => document.documentElement.style.setProperty('--kb', `${Math.max(0, window.innerHeight - v.height - v.offsetTop)}px`)
+    fit(); v.addEventListener('resize', fit); v.addEventListener('scroll', fit)
+    return () => { v.removeEventListener('resize', fit); v.removeEventListener('scroll', fit); document.documentElement.style.removeProperty('--kb') }
+  }, [])
   const len = [...text].length
   const frag = /@([^@]*)$/.exec(text)?.[1] // what has been typed after the last @
   const options = useMemo(() => frag === undefined || frag.length > 24 ? [] : names.filter((n) => n !== me && n.toLowerCase().startsWith(frag.toLowerCase()) && n.length > frag.length).slice(0, 5), [frag, names, me])
@@ -22,6 +28,7 @@ export default function BubbleBox({ names, me, initial, shake, notice, onSend, o
     <div className={'bubblebox' + (shake ? ' shake' : '')} key={shake} role="dialog" aria-label="Say something">
       {options.length > 0 && <ul className="mentions" role="listbox">{options.map((n, i) => <li key={n} role="option" aria-selected={i === pick} className={i === pick ? 'on' : ''} onMouseDown={(e) => { e.preventDefault(); complete(n) }}>@{n}</li>)}</ul>}
       <input ref={input} value={text} onChange={(e) => change(e.target.value)} onKeyDown={key} placeholder="Say something…  (@ to mention)" aria-label="Your bubble" autoComplete="off" />
+      <button type="button" className="send" onMouseDown={(e) => e.preventDefault()} onClick={() => text.trim() && onSend(text)} disabled={!text.trim()}>Send</button>
       <span className={'count' + (len >= BUBBLE_MAX_CHARS ? ' full' : '')}>{len}/{BUBBLE_MAX_CHARS}</span>
       {notice && <em role="alert">{notice}</em>}
     </div>

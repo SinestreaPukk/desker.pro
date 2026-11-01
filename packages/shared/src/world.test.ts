@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { parseMap, walkable, step, stepBy, slide, canSit, spotNear, bodyFree, walkBody, zoneAt, reachable, approaches, tileInFront } from './world.ts'
+import { parseMap, walkable, step, stepBy, slide, canSit, spotNear, bodyFree, walkBody, tapRoute, zoneAt, reachable, approaches, tileInFront } from './world.ts'
 import { ambientAt, minuteOfDay } from './ambient.ts'
 
 const w = parseMap(JSON.parse(readFileSync(new URL('../../../apps/village/public/maps/snowy_campus.json', import.meta.url), 'utf8')))
@@ -77,4 +77,12 @@ test('free walking: a body slides along a wall, stops at it, and cannot squeeze 
   const before = p.x; for (let i = 0; i < 10; i++) p = walkBody(w, p.x, p.y, 0.05, -0.05, hw, hh) // diagonal into the wall: still slides right
   assert.ok(p.x > before + 0.4)
   let q = { x: 19, y: 14 }; for (let i = 0; i < 500; i++) q = walkBody(w, q.x, q.y, 0.04, -0.04, hw, hh); assert.ok(walkable(w, Math.round(q.x), Math.round(q.y)))
+})
+
+test('tapRoute: sideways first, then up/down, and it stops at the first blocked tile', () => {
+  assert.deepEqual(tapRoute(w, 19, 14, 21, 15), [{ x: 20, y: 14 }, { x: 21, y: 14 }, { x: 21, y: 15 }])
+  assert.deepEqual(tapRoute(w, 19, 14, 19, 14), [])
+  const toBoard = tapRoute(w, 19, 14, 19, 10) // straight up into the board: stops in front of it
+  assert.deepEqual(toBoard, [{ x: 19, y: 13 }])
+  assert.deepEqual(tapRoute(w, 1, 14, 0, 14), []) // the first step is a wall
 })
