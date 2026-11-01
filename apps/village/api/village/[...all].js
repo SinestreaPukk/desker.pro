@@ -24,7 +24,7 @@ const memberOf = async (slug, uid) => (await sql.query(
 
 export default async function handler(req, res) {
   const uid = await userOf(req)
-  if (!uid) return res.status(401).json({ error: 'Sign in first' })
+  if (!uid) return res.status(401).json({ error: 'Sign in first', dbg: { cookies: (req.headers.cookie || '').split(';').map((c) => c.split('=')[0].trim()).filter(Boolean), baseURL: process.env.BETTER_AUTH_URL, cookieDomain: process.env.COOKIE_DOMAIN, hasSecret: !!process.env.BETTER_AUTH_SECRET } }) // TEMP DEBUG
   const [first, second] = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
 
   if (first === 'mine' && !second && req.method === 'GET') {
