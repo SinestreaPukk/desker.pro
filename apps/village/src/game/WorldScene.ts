@@ -31,6 +31,7 @@ export class WorldScene extends Phaser.Scene {
   private plates = new Map<string, Phaser.GameObjects.Text>()
   private presences = new Map<string, Presence>()
   private statuses = new Map<string, Status>()
+  private tip?: Phaser.GameObjects.Text; private dustAt = 0
   private route: { x: number; y: number }[] = [] // tiles still to walk after a tap
   private touchUi = isTouchUi()
   private pin?: Phaser.GameObjects.Arc // a small red pin on the Board when something is due within 24 hours
@@ -83,6 +84,7 @@ export class WorldScene extends Phaser.Scene {
     window.addEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.addEventListener(t, touched, { passive: true })
     this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
     this.lastInput = this.time.now
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.hover(p))
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a tap (not a drag or a long press) on a tile: walk there
       if (!(p.wasTouch || this.touchUi) || p.getDistance() > 12 || p.getDuration() > 500) return
       const w = this.cameras.main.getWorldPoint(p.x, p.y), tx = Math.floor(w.x / TILE_PX), ty = Math.floor(w.y / TILE_PX)
@@ -149,6 +151,7 @@ export class WorldScene extends Phaser.Scene {
         this.fx = to.x; this.fy = to.y; this.dirty = true; this.phase += moved
         const z = zoneAt(this.world, this.tx, this.ty); if (z !== before || this.lastZone === null) this.enterZone(z)
         this.place(); this.hint('')
+        if (this.keys.run() && this.phase - this.dustAt > 0.33) { this.dustAt = this.phase; this.dust() } // little puffs under running feet
         const c = this.phase % 1 // one full stride per tile walked: foot, passing, other foot, passing
         return this.me.walk(this.facing, c < 0.25 ? 1 : c < 0.5 ? 0 : c < 0.75 ? 2 : 0)
       }
@@ -160,6 +163,22 @@ export class WorldScene extends Phaser.Scene {
     this.hint(s ? this.kx('Tap Sit', 'X  sit') : this.nearBoard() ? this.kx('Tap Board', 'X  read the board') : '')
   }
 
+  private dust() {
+    const p = this.add.circle(this.me.x + (Math.random() * 4 - 2), this.me.y - 1, 1.6, 0xffffff, 0.75).setDepth(DEPTH.entity + this.me.y - 1)
+    this.tweens.add({ targets: p, scale: 2.4, alpha: 0, y: p.y - 3, duration: 380, onComplete: () => p.destroy() })
+  }
+  /** Hover over someone to see their name and what they are doing (as far as their sharing choice allows). */
+  private hover(p: Phaser.Input.Pointer) {
+    if (this.touchUi) return
+    const w = this.cameras.main.getWorldPoint(p.x, p.y)
+    const all: [string, Avatar][] = [[this.data0.userId, this.me], ...[...this.remotes].map(([id, r]) => [id, r.k] as [string, Avatar])]
+    const hit = all.find(([, a]) => Math.abs(w.x - a.x) < 8 && w.y < a.y + 2 && w.y > a.y - 26)
+    if (!hit) return void this.tip?.setVisible(false)
+    const [id, a] = hit, s = this.statuses.get(id), name = this.data0.names[id] ?? this.data0.name
+    const what = s ? (s.taskTitle ? `${s.courseCode ? s.courseCode + ' · ' : ''}${s.taskTitle}` : 'Studying') : a.presence === 'away' ? 'Away' : a.presence === 'focusing' ? 'Focusing' : ''
+    this.tip ??= this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,255,255,0.95)', padding: { x: 3, y: 1 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 2)
+    this.tip.setText(what ? `${name}\n${what}` : name).setPosition(a.x, a.y - 52).setVisible(true)
+  }
   private kx(touch: string, keys: string) { return this.touchUi ? touch : keys } // the prompt names the button on a phone, the key on a keyboard
   private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
 
@@ -215,11 +234,12 @@ export class WorldScene extends Phaser.Scene {
     }
     this.sitting = { spot, from: { x: this.tx, y: this.ty } }
     this.facing = spot.facing; this.taken.add(spot.id)
+    this.cameras.main.setLerp(CAMERA_LERP / 2.5, CAMERA_LERP / 2.5) // settle gently into the seat
     this.me.put(spot.x * TILE_PX + TILE_PX / 2, (spot.y + 1) * TILE_PX); this.me.sit(this.facing)
   }
   private stand(tell = true) {
     const s = this.sitting; if (!s) return
-    this.sitting = null; this.taken.delete(s.spot.id)
+    this.sitting = null; this.taken.delete(s.spot.id); this.cameras.main.setLerp(CAMERA_LERP, CAMERA_LERP)
     this.fx = s.from.x; this.fy = s.from.y; this.place(); this.dirty = false
     if (tell) this.data0.bridge.out({ t: 'stand' })
   }

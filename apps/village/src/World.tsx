@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { actionOf, isTyping, urgency, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { board as fetchBoard, claimDesk, focusEnd, focusStart, info, type BoardItem, type Info } from './api.ts'
+import { track, board as fetchBoard, claimDesk, focusEnd, focusStart, info, type BoardItem, type Info } from './api.ts'
 import Board from './Board.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
@@ -46,11 +46,24 @@ export default function World({ slug }: { slug: string }) {
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null)
   const touch = isTouchUi(), [more, setMore] = useState(false)
+  const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
   const bridgeRef = useRef<Bridge | null>(null)
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
   const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); bridgeRef.current?.boardPin(r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now())) }, () => {})
   useEffect(() => { if (!data) return; loadBoard(); const t = setInterval(loadBoard, 300_000); return () => clearInterval(t) }, [data]) // polled every 5 minutes in Phase 0
-  useEffect(() => { if (boardOpen) loadBoard() }, [boardOpen])
+  useEffect(() => { if (boardOpen) { loadBoard(); track(slug, 'board_opened') } }, [boardOpen])
+  useEffect(() => { // village_opened, and session_minutes on leave and whenever the tab hides (sendBeacon, as a closing tab cannot wait)
+    if (!data) return
+    track(slug, 'village_opened', { device: touch ? 'phone' : 'desktop' })
+    const report = () => {
+      const t = time.current, minutes = t.since ? Math.round((Date.now() - t.since) / 60000) : 0, focusMinutes = Math.round(t.focusMin) // a running timer counts as focus when it ends
+      if (minutes > 0 || focusMinutes > 0) track(slug, 'session_minutes', { minutes, focusMinutes }, true)
+      t.since = null; t.focusMin = 0
+    }
+    const vis = () => { if (document.visibilityState === 'hidden') report(); else time.current.since = Date.now() }
+    document.addEventListener('visibilitychange', vis); window.addEventListener('pagehide', report)
+    return () => { document.removeEventListener('visibilitychange', vis); window.removeEventListener('pagehide', report); report() }
+  }, [data])
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
   useEffect(() => {
     if (!data || !el.current) return
@@ -106,7 +119,7 @@ export default function World({ slug }: { slug: string }) {
   const startTimer = async (p: Pick) => {
     setPick(false)
     try {
-      const r = await focusStart(slug), at = Date.now()
+      const r = await focusStart(slug, p.minutes), at = Date.now()
       const t: Timer = { sessionId: r.sessionId, startedAt: at, endsAt: at + p.minutes * 60_000, plannedMin: p.minutes, pausedMs: 0, pauses: 0, taskId: p.taskId, title: p.title, courseCode: p.courseCode, activity: p.activity }
       chimed.current = false; setTimer(t); setNow(at); announce(t)
     } catch { toast("Couldn't start the timer. Try again.") }
@@ -116,7 +129,8 @@ export default function World({ slug }: { slug: string }) {
     const t = timerRef.current; if (!t) return
     send.current({ t: 'focus.stop' }); bridgeRef.current?.timer(false); setTimer(null); setAsk(false)
     const activeMin = Math.max(0, Math.round((Math.min(t.pausedAt ?? Date.now(), t.endsAt) - t.startedAt - (t.pausedMs ?? 0)) / 60000)) // paused time is not focus time
-    focusEnd(slug, { sessionId: t.sessionId, activeMin, pauses: t.pauses ?? 0, done, taskId: t.taskId }).then(
+    time.current.focusMin += activeMin
+    focusEnd(slug, { sessionId: t.sessionId, activeMin, plannedMin: t.plannedMin, pauses: t.pauses ?? 0, done, taskId: t.taskId }).then(
       (r) => toast(r.again ? 'Already saved.' : r.reason && r.reason !== 'no_outcome' ? `Logged ${activeMin} min in Desker. Too short or long to teach it your pace.` : `Logged ${activeMin} min in Desker${done && t.taskId ? '. Task done!' : '.'}`),
       () => toast("Couldn't save that session to Desker."))
   }
@@ -126,7 +140,7 @@ export default function World({ slug }: { slug: string }) {
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
   }, [timer])
   const names = [...new Set([...(data?.members ?? []), ...online].map((m) => m.name))]
-  const say = (text: string) => { lastText.current = text; send.current({ t: 'say', text }); setTalk(null); setNotice('') }
+  const say = (text: string) => { track(slug, 'bubble_sent', { zoneId: zone, length: [...text].length }); lastText.current = text; send.current({ t: 'say', text }); setTalk(null); setNotice('') }
   const openLog = () => { setLog(null); setLogOpen(true); send.current({ t: 'log' }) }
   if (err === 'not_member') return <main className="pad"><h1>You're not in this village</h1><p>You need a join link from a member. Ask a friend to send you one.</p><a href="/">Back to your villages</a></main>
   if (err) return <main className="pad"><p role="alert">Couldn't open the village ({err}).</p><a href="/">Back</a></main>

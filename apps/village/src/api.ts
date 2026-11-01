@@ -19,9 +19,15 @@ export const patchMe = (slug: string, body: Partial<{ colour: string; statusShar
 export const claimDesk = (slug: string, spotId: string | null) => call<{ ok: true }>(`${slug}/desk`, { method: 'PUT', body: JSON.stringify({ spotId }) })
 export type PickTask = { id: string; title: string; hours: number; courseCode?: string; activity: string; repeat: boolean }
 export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug}/tasks?date=${new Date().toLocaleDateString('sv')}`)
-export const focusStart = (slug: string) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start' }) })
-export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; pauses: number; done: boolean; taskId?: string }) =>
+export const focusStart = (slug: string, plannedMin: number) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin }) })
+export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; plannedMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
 export const patchVillage = (slug: string, body: { libraryAutoFocus: boolean }) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
 export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[] }
 export const board = (slug: string) => call<{ items: BoardItem[] }>(`${slug}/board`)
+/** Analytics (SPEC §13): never message text. `beacon` survives the tab closing. */
+export function track(slug: string, name: string, props: Record<string, unknown> = {}, beacon = false) {
+  const body = JSON.stringify({ name, props }), url = `/api/village/${slug}/event`
+  if (beacon && navigator.sendBeacon) return void navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
+  fetch(url, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {})
+}

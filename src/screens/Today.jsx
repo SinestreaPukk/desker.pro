@@ -7,6 +7,8 @@ import { METHODS } from '../methods.js'
 import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
 import { track } from '../analytics.js'
+// The village app lives on its own host: village.desker.dev in production, village.desker.test:5174 when developing locally.
+const villageUrl = () => (/(^|\.)desker\.dev$/.test(location.hostname) ? 'https://village.desker.dev' : `http://village.desker.test:5174`)
 import { nameOf, lineFor, ritualDue, sceneChoice, followUpDue, wrapReply, wrappedToday } from '../kodama.js'
 import FollowUp from '../components/FollowUp.jsx'
 import BoxHead from '../components/BoxHead.jsx'
@@ -158,6 +160,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <p className="line-clamp-2 min-w-0 flex-1 basis-40 break-words sm:line-clamp-none" role="status" title={lineFor(data, { focusing: !!focus })}><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
             <KodamaSettings data={data} setData={setData} focusing={!!focus} />
           </div>
+          <a className={`${btn} ${ghost} mt-3 inline-block max-sm:mt-2`} href={`${villageUrl()}/go`}>Study in the village</a> {/* opens the village you visited last, or the list of your villages */}
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3 max-sm:mt-2`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 max-sm:order-2 max-sm:h-[72px] max-sm:overflow-hidden lg:order-2">

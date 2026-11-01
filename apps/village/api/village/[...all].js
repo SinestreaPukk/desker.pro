@@ -4,6 +4,7 @@ import { userOf } from '../../../../api/_auth.js'
 import { limit } from '../../../../api/_rate.js'
 import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
 import { finishSession, todaysTasks } from './_session.js'
+import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { keyMatches } from '../../../../packages/db/keys.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
@@ -13,6 +14,7 @@ const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in
 const SHARING = ['full', 'basic', 'off']
 // ponytail: desks are recognised by the snowy_campus naming (lib-desk-01..24); a second template would read its desk ids from its own map.
 const DESK = /^lib-desk-(0[1-9]|1\d|2[0-4])$/
+const ev = (villageId, uid, name, props) => sql.query('insert into village_event (village_id, user_id, name, props) values ($1, $2, $3, $4)', [villageId, uid, name, cleanEvent(name, props) ?? {}]).catch(() => {}) // analytics never breaks the request
 const no = (res) => res.status(403).json({ error: 'not_member' })
 
 const memberOf = async (slug, uid) => (await sql.query(
@@ -59,6 +61,7 @@ export default async function handler(req, res) {
       `insert into village_member (village_id, user_id) select $1, $2
         where (select count(*) from village_member where village_id = $1 and banned_at is null) < $3 on conflict do nothing returning user_id`, [v.id, uid, MAX_MEMBERS])
     if (!ins.length) return res.status(409).json({ error: 'full' })
+    await ev(v.id, uid, 'village_joined', { via: 'link' })
     return res.json({ ok: true, joined: true })
   }
 
@@ -87,6 +90,7 @@ export default async function handler(req, res) {
            and not exists (select 1 from village_member where village_id = $1 and desk_spot_id = $3 and user_id <> $2) returning desk_spot_id`, [v.id, uid, spot])
       if (!r.length) return res.status(409).json({ error: 'taken' })
     } catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'taken' }); throw e }
+    await ev(v.id, uid, 'desk_claimed', {})
     return res.json({ ok: true, spotId: spot })
   }
 
@@ -98,6 +102,14 @@ export default async function handler(req, res) {
     // ponytail: Desker stores dates without a time zone; Thai universities are all UTC+7, so due times are read as Bangkok time. Per-user zones if Desker ever has them.
     const items = rows.map((r) => ({ userId: r.userId, title: String(r.title).slice(0, 120), dueAt: Date.parse(`${r.date}T${/^\d\d:\d\d$/.test(r.time ?? '') ? r.time : '23:59'}:00+07:00`), courseCode: courseOf(`${r.title} ${r.context ?? ''}`) }))
     return res.json({ items: buildBoard(items, v.course_tags ?? [], Date.now()) })
+  }
+
+  if (second === 'event' && req.method === 'POST') { // what the browser knows: opened, bubble sent, board opened, minutes on leave (also by sendBeacon)
+    if (!(await limit(req, res, { scope: 'village-event', max: 600, id: uid }))) return
+    const name = req.body?.name
+    if (!CLIENT_EVENTS.includes(name)) return res.status(400).json({ error: 'Unknown event' })
+    await ev(v.id, uid, name, req.body?.props)
+    return res.json({ ok: true })
   }
 
   if (second === 'tasks' && req.method === 'GET') { // the focus picker: today's open Desker tasks (the client sends its own local date)
@@ -113,6 +125,7 @@ export default async function handler(req, res) {
       const open = (await sql.query('select id from village_focus_session where village_id = $1 and user_id = $2 and ended_at is null', [v.id, uid])).map((r) => r.id)
       if (open.length) await sql.query('update village_focus_session set ended_at = now() where id = any($1::uuid[])', [open]) // a forgotten timer from an earlier visit is closed, not counted
       const [row] = await sql.query('insert into village_focus_session (village_id, user_id, started_at) values ($1, $2, now()) returning id, started_at as "startedAt"', [v.id, uid])
+      await ev(v.id, uid, 'focus_started', { plannedMin: Number(b.plannedMin) })
       return res.json({ ok: true, sessionId: row.id, startedAt: row.startedAt })
     }
     if (b.action === 'end') {
@@ -130,6 +143,7 @@ export default async function handler(req, res) {
         const r = finishSession(doc, { taskId: b.taskId, start, end, active, pauses: Math.min(99, Number(b.pauses) || 0), done: b.done === true })
         try { await saveDoc(uid, Object.fromEntries(Object.entries(r.doc).filter(([k]) => k !== '_rev')), Number(doc._rev ?? 0)); reason = r.reason; break } catch (e) { if (!e.conflict) throw e }
       }
+      await ev(v.id, uid, 'focus_completed', { plannedMin: Number(b.plannedMin), actualMin: active, valid: reason === null })
       return res.json({ ok: true, minutes: active, reason })
     }
     return res.status(400).json({ error: 'Invalid action' })
