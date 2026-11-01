@@ -32,7 +32,7 @@ export class Avatar {
     this.ring = scene.add.circle(0, 0, 3).setStrokeStyle(1.5, 0xd89b3a).setDepth(DEPTH.tag).setVisible(false)
     this.arc = scene.add.graphics().setDepth(DEPTH.tag).setVisible(false)
     this.icon = scene.add.text(0, 0, '', { fontSize: '8px' }).setResolution(4).setOrigin(0.5, 1).setDepth(DEPTH.tag).setVisible(false)
-    this.shh = scene.add.text(0, 0, '🎧 shh', { fontFamily: 'VT323', fontSize: '8px', color: '#14213d', backgroundColor: '#ffe9a8', padding: { x: 2, y: 0 } }).setResolution(4).setOrigin(0.5, 1).setDepth(DEPTH.tag).setVisible(false)
+    this.shh = scene.add.text(0, 0, '🎧 shh', { fontFamily: 'VT323', fontSize: '8px', color: '#14213d', backgroundColor: '#ffe9a8', padding: { x: 2, y: 0 } }).setResolution(4).setOrigin(0, 1).setDepth(DEPTH.tag).setVisible(false)
     this.zz = scene.add.text(0, 0, 'z z', { fontFamily: 'VT323', fontSize: '8px', color: '#35599a' }).setResolution(4).setOrigin(0, 1).setDepth(DEPTH.tag).setVisible(false)
     // Pixel font for names only; resolution 4 keeps the tiny type crisp when the camera zooms in.
     this.tag = scene.add.text(0, 0, name, { fontFamily: 'VT323', fontSize: '7px', color: mine ? '#ffe9a8' : '#ffffff', backgroundColor: mine ? 'rgba(122,86,56,0.82)' : 'rgba(20,33,61,0.62)', padding: { x: 2, y: 0 } })
@@ -44,7 +44,7 @@ export class Avatar {
     this.layers.forEach((l, i) => l.setPosition(this.x, this.y).setDepth(DEPTH.entity + this.y + i * 0.01))
     this.shadow.setPosition(this.x, this.y - 1).setDepth(DEPTH.entity + this.y - 0.5)
     this.tag.setPosition(this.x, this.y - 25)
-    this.ring.setPosition(this.x, this.y - 40); this.arc.setPosition(this.x, this.y - 40); this.icon.setPosition(this.x, this.y - 46); this.zz.setPosition(this.x + 5, this.y - 29); this.shh.setPosition(this.x, this.y - 34)
+    this.ring.setPosition(this.x, this.y - 40); this.arc.setPosition(this.x, this.y - 40); this.icon.setPosition(this.x, this.y - 46); this.zz.setPosition(this.x + 5, this.y - 29); this.shh.setPosition(this.x + 7, this.y - 15)
   }
   setPresence(p: Presence) { this.presence = p; this.ring.setVisible(p === 'focusing' && !this.focus); this.zz.setVisible(p === 'away'); this.shh.setVisible(p === 'dnd') }
   setFocus(f: { startedAt: number; endsAt: number; pausedAt?: number } | null) { this.focus = f; this.arcAt = 0; this.arc.setVisible(!!f); this.ring.setVisible(this.presence === 'focusing' && !f); if (!f) this.arc.clear() }

@@ -353,6 +353,7 @@ export class WorldScene extends Phaser.Scene {
   private snapMe(x: number, y: number) { if (this.sitting) this.stand(false); this.fx = x; this.fy = y; this.place(); this.dirty = false }
 
   private addRemote(mem: Member, pos: { x: number; y: number; dir: Dir } | undefined, now: number, arrive: boolean) {
+    this.data0.names[mem.userId] = mem.name // people who joined after I loaded
     this.remotes.get(mem.userId)?.k.destroy()
     const p = pos ?? { ...spawnFor(this.world, mem.userId), dir: 'down' as Dir }
     const k = new Avatar(this, appearanceFor(mem.userId, mem.colour), mem.name, false)

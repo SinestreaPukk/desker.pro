@@ -98,3 +98,6 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .knock-card { top: 64px } .away-card { top: 110px } .follow-pill { top: 12px; padding: 4px 12px; display: block }
 .knock-card .row, .away-card .row { display: flex; gap: 6px } .knock-card button, .away-card button, .follow-pill button, .acts button { padding: 3px 8px; border: 2px solid #35599a; border-radius: 6px; background: #fff; font-size: 13px; cursor: pointer }
 .acts { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px 18px } .acts button { padding: 1px 6px; font-size: 12px }
+
+.new label:has(> input[type=checkbox]) { display: flex; gap: 6px; align-items: center }
+.members li .acts { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px } .members li .acts button { padding: 2px 8px; border: 2px solid #35599a; border-radius: 6px; background: #fff; font-size: 12px; text-align: center; white-space: nowrap }
