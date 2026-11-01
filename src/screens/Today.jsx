@@ -151,16 +151,16 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   return (
     <>
       <header className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:gap-8">
-        <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
-          <h1 className="text-2xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
-          <p className="mt-1 text-slate-700 md:mt-2">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{clashes > 0 && <> <button className={`${btn} ${ghost}`} onClick={moveOther}>Move the other one</button></>}</p>
-          <div className="px-sunk mt-3 flex max-w-md flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
+        <div className="order-2 min-w-0 flex-1 max-sm:order-1 lg:order-1 lg:pt-2">
+          <h1 className="text-2xl leading-8 max-sm:text-xl max-sm:leading-7 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
+          <p className="mt-1 text-slate-700 max-sm:line-clamp-2 md:mt-2">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{clashes > 0 && <> <button className={`${btn} ${ghost}`} onClick={moveOther}>Move the other one</button></>}</p>
+          <div className="px-sunk mt-3 flex max-w-md max-sm:hidden flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
             <p className="line-clamp-2 min-w-0 flex-1 basis-40 break-words sm:line-clamp-none" role="status" title={lineFor(data, { focusing: !!focus })}><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
             <KodamaSettings data={data} setData={setData} focusing={!!focus} />
           </div>
-          {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3`} onClick={onReplan}>Replan my week</button>}
+          {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3 max-sm:mt-2`} onClick={onReplan}>Replan my week</button>}
         </div>
-        <div className="order-1 lg:order-2">
+        <div className="order-1 max-sm:order-2 max-sm:h-[72px] max-sm:overflow-hidden lg:order-2">
           <Home data={data} focusing={!!focus} heavy={!!check?.over} view={sceneChoice(data)} />
         </div>
       </header>
@@ -204,8 +204,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
                   : <p className="mt-1 text-slate-700">{cur.method}{cur.minutes ? `, ${cur.minutes} min` : ''}. {cur.why}</p>}
                 {slotText && !cur.why?.startsWith('Planned') && <p className="mt-1 text-slate-700">{slotText}</p>}
               </div>
-              <div className={ACT}>
-                <button className={`${btn} ${BLUE}`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
+              <div className={`${ACT} max-sm:w-full`}>
+                <button className={`${btn} ${BLUE} max-sm:min-h-12 max-sm:flex-1 max-sm:text-lg`} onClick={focus ? finish : () => { signal('accept', cur.taskId); track('right_now_started', { via: cur.method === 'Calendar plan' ? 'calendar' : pick ? 'pick' : 'auto' }); setFocus({ ...cur, at: Date.now() }) }}>{focus ? 'Done' : 'Start'}</button>
                 {focus && <button className={`${btn} ${ghost}`} onClick={openTimer}>Open timer</button>}
                 {(focus || pick) && <button className={`${btn} ${ghost}`} onClick={() => (focus ? setFocus(null) : setPick(null))}>{focus ? 'Stop' : 'Clear pick'}</button>}
               </div>
@@ -306,6 +306,11 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             {!comingUp.length && <li className="text-slate-700">{soon.length ? 'Nothing else due soon.' : 'Nothing due soon.'} Add a task with a date, or ask your kodama to plan tomorrow.</li>}
           </ul>
         </section>
+      </div>
+
+      <div className="px-sunk mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2 sm:hidden">{/* phones only: the kodama's line sits below Coming up, so Right now stays in the first screen */}
+        <p className="min-w-0 flex-1 basis-40 break-words" role="status"><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
+        <KodamaSettings data={data} setData={setData} focusing={!!focus} />
       </div>
 
       <details className="mb-4 lg:mb-6">

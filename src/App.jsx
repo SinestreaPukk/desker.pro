@@ -242,7 +242,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className={`mx-auto w-full px-4 pb-44 pt-4 md:px-8 md:pb-32 md:pt-8 ${WRAP}`}>
+        <main className={`mx-auto w-full px-4 pb-[calc(4rem+env(safe-area-inset-bottom)+1rem)] pt-4 md:px-8 md:pb-32 md:pt-8 ${WRAP}`}>
           {saveStatus === 'offline' && <p role="alert" className="px-panel mb-4 p-3 text-danger">Desker cannot reach the server right now. Your changes are kept on this device and will save as soon as it is back.</p>}
           {replanOpen && <Replan data={data} busy={busyForAI(data.busy)} energy={patternOf(data)} ratio={ratioOf(tasks)} onClose={() => setReplanOpen(false)} onApply={(plan) => { setTasks(applyReplan(tasks, plan), { auto: true }); setReplanOpen(false) }} />}
           <Banner tab={tab} />
@@ -302,6 +302,7 @@ export default function App() {
           </button>
           {moreOpen && (
             <ul role="menu" className="px-panel absolute bottom-full right-1 mb-1 w-40 bg-white p-1">
+              <li role="none"><button role="menuitem" className={`${btn} w-full !justify-start gap-2`} onClick={() => { setMoreOpen(false); dispatchEvent(new Event('desker:feedback')) }}>Send feedback</button></li>
               {MORE.map((t) => (
                 <li key={t} role="none"><button role="menuitem" className={`${btn} w-full !justify-start gap-2 ${tab === t ? 'bg-pale' : ''}`} aria-current={tab === t ? 'page' : undefined} onClick={() => { setMoreOpen(false); setTab(t) }}><Icon name={t} />{t}</button></li>
               ))}

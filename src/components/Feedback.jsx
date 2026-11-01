@@ -15,6 +15,7 @@ export default function Feedback({ page }) {
   const [state, setState] = useState({ busy: false, error: '', sent: false })
   const opener = useRef(null)
 
+  useEffect(() => { const o = () => { setState({ busy: false, error: '', sent: false }); setOpen(true) }; addEventListener('desker:feedback', o); return () => removeEventListener('desker:feedback', o) }, []) // phones open it from the More menu
   const close = () => { setOpen(false); opener.current?.focus() }
   useEffect(() => {
     if (!open) return
@@ -36,7 +37,7 @@ export default function Feedback({ page }) {
 
   return (
     <>
-      <button ref={opener} className={`${btn} ${ghost} fixed bottom-20 right-3 z-20 bg-white md:bottom-4 md:right-4`} onClick={() => { setState({ busy: false, error: '', sent: false }); setOpen(true) }}>Feedback</button>
+      <button ref={opener} className={`${btn} ${ghost} fixed bottom-20 right-3 z-20 bg-white max-md:!hidden md:bottom-4 md:right-4`} onClick={() => { setState({ busy: false, error: '', sent: false }); setOpen(true) }}>Feedback</button>
       {open && (
         <div className="px-backdrop fixed inset-0 z-40 flex items-end justify-center sm:items-center" onClick={close}>
           <form role="dialog" aria-modal="true" aria-label="Send feedback" className="px-panel w-full max-w-md bg-yuki-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()} onSubmit={send}>
