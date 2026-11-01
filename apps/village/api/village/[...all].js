@@ -1,6 +1,11 @@
 // Village API: /api/village/mine, /:slug, /:slug/join, /:slug/me, /:slug/desk. One function (a Vercel project allows 12), same database and login as desker.dev.
 // Membership is checked on every call; a banned or non-member gets the same answer as a village that does not exist.
-import { userOf } from '../../../../api/_auth.js'
+// Ask Desker who this is instead of verifying its cookie here, so the village needs no copy of Desker's auth secret.
+const userOf = async (req) => {
+  if (!req.headers.cookie) return null
+  const r = await fetch(`${process.env.BETTER_AUTH_URL}/api/auth/get-session`, { headers: { cookie: req.headers.cookie } }).catch(() => null)
+  return r?.ok ? ((await r.json().catch(() => null))?.user?.id ?? null) : null
+}
 import { limit } from '../../../../api/_rate.js'
 import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
 import { finishSession, todaysTasks } from './_session.js'
