@@ -31,7 +31,7 @@ export function track(slug: string, name: string, props: Record<string, unknown>
   fetch(url, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {})
 }
 export type NewVillage = { name: string; slug: string; courses: string[]; whoCanInvite: 'admins' | 'everyone'; libraryAutoFocus: boolean; defaultSharing: 'basic' | 'full' }
-export const createVillage = (b: NewVillage) => call<{ slug: string }>('', { method: 'POST', body: JSON.stringify(b) })
+export const createVillage = (b: NewVillage) => call<{ slug: string }>('new', { method: 'POST', body: JSON.stringify(b) })
 export const myCourses = () => call<{ courses: string[] }>('courses')
 
 export type InvitePreview = { verdict: string; slug?: string; guest?: boolean; village?: { name: string; owner: string; members: number; online: number } }

@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     for (const r of rows) { const c = courseOf(`${r.title} ${r.context ?? ''}`); if (c) n.set(c, (n.get(c) ?? 0) + 1) }
     return res.json({ courses: [...n].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([c]) => c) })
   }
-  if (!first && req.method === 'POST') { // create a village: me as owner. Limits are counted here, the unique slug is the database's call.
+  if (first === 'new' && !second && req.method === 'POST') { // create a village (a named route: Vercel's [...all] needs at least one path segment): me as owner. Limits are counted here, the unique slug is the database's call.
     if (!(await limit(req, res, { scope: 'village-create', max: 10, id: uid }))) return
     const c = cleanCreate(req.body)
     if (!c.ok) return res.status(400).json({ error: c.error })
@@ -98,7 +98,7 @@ export default async function handler(req, res) {
     return res.json({ token, expiresInS: 600 })
   }
   if (first === 'invite') return inviteRoutes({ req, res, uid, code: second, action: parts[2], ev, maxMembers: MAX_MEMBERS, defaultSharing })
-  if (!first || first === 'mine' || first === 'courses') return res.status(404).json({ error: 'Not found' })
+  if (!first || first === 'mine' || first === 'courses' || first === 'new') return res.status(404).json({ error: 'Not found' })
   const slug = first.slice(0, 64)
 
   if (second === 'restore' && req.method === 'POST') { // undo closing, within 7 days, owner only
