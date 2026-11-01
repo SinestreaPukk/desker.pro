@@ -21,3 +21,5 @@ export const BUBBLE_HINT_RADIUS_TILES = 12 // §6.3 rule 4: the "…" indicator
 export const MOVE_SPEED_TOLERANCE = 1.2 // §3.5: run speed + 20%
 export const TOKEN_REFRESH_MS = 8 * 60_000
 export const RECONNECT_MS = { min: 500, max: 8000 }
+/** Reconnect wait for the nth failed attempt (0-based): 0.5 s, 1, 2, 4, 8, then 8 s max (SPEC §10). */
+export const reconnectDelay = (attempt: number) => Math.min(RECONNECT_MS.max, RECONNECT_MS.min * 2 ** attempt)

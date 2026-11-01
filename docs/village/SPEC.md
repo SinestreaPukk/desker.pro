@@ -415,3 +415,10 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - Do NOT use `vercel dev` for village work: it applies the Vercel project's cloud env over .env.local, so it silently used the production database.
 - Use `npm run dev:local` (Desker on desker.test:3000) and `npm run dev -w @desker/village` (village.desker.test:5174). Both read only `.env.local` via scripts/dev-api.js.
 - Known issue: one test account (village-test-b278e9@desker.test) was created in the production database by mistake and must be deleted by the owner.
+### Checkpoint 3: realtime room and auth (done)
+- `POST /api/village/token`: member-only, 10-minute HS256 token (packages/shared/src/token.js, Web Crypto, shared by API and Worker).
+- realtime/: Cloudflare Worker + one Durable Object per village (WebSocket Hibernation, SQLite-backed class). hello -> welcome, joined/left, ping/pong; wrong signature / wrong village / expired -> refused; protocol mismatch -> "please refresh"; junk dropped, 10 bad messages a minute disconnects; one connection per person (newest wins); sockets that never say hello are closed after 10 s.
+- Client net/connection.ts: token refresh at 8 min, reconnect backoff 0.5 s -> 8 s, "Reconnecting..." pill, fresh welcome replaces state.
+- Spec extension to confirm: the token also carries `n` (display name) and `c` (colour) so the room can list members without calling the API. Display only; permissions still come from `role`.
+- Run: `npm run dev -w @desker/realtime` (needs realtime/.dev.vars with VILLAGE_ROOM_SECRET), `node scripts/room-smoke.mjs` checks it live.
+- Not done / owner: deploying the Worker (needs `wrangler login` + `wrangler secret put VILLAGE_ROOM_SECRET`), and setting ALLOWED_ORIGINS for production.

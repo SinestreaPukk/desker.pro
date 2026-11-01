@@ -23,3 +23,7 @@ test('protocol drops bad messages', () => {
   assert.ok(!clientMsg.safeParse({ t: 'nope' }).success)
   assert.ok(serverMsg.safeParse({ t: 'said', userId: 'a', nearbyOnly: true }).success)
 })
+import { reconnectDelay } from './constants.ts'
+test('reconnect backoff doubles from 0.5 s up to 8 s', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 20].map(reconnectDelay), [500, 1000, 2000, 4000, 8000, 8000, 8000])
+})

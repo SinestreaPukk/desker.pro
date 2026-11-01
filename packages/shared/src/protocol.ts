@@ -1,6 +1,6 @@
 // SPEC §10, Phase 0 messages. Validated with zod on BOTH ends; unknown or invalid messages are dropped.
 import { z } from 'zod'
-import { ACTIVITIES } from './types.ts'
+import { ACTIVITIES, COLOURS } from './types.ts'
 import { BUBBLE_MAX_CHARS } from './constants.ts'
 
 const dir = z.enum(['up', 'down', 'left', 'right'])
@@ -12,7 +12,7 @@ export const status = z.object({
   courseCode: z.string().max(16).optional(), activity: z.enum(ACTIVITIES),
   taskId: id.optional(), taskTitle: z.string().max(120).optional(), endsAt: z.string().datetime().optional(),
 })
-const member = z.object({ userId: id, name: z.string().max(60), colour: z.string().max(16), role: z.enum(['owner', 'admin', 'member', 'guest']) })
+const member = z.object({ userId: id, name: z.string().max(60), colour: z.enum(COLOURS), role: z.enum(['owner', 'admin', 'member', 'guest']) })
 const boardItem = z.object({
   key: z.string(), kind: z.enum(['due', 'exam']), courseCode: z.string().nullable(), title: z.string(), dueAt: z.string(), userIds: z.array(id),
 })

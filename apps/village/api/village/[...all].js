@@ -4,6 +4,7 @@ import { userOf } from '../../../../api/_auth.js'
 import { limit } from '../../../../api/_rate.js'
 import { sql } from '../../../../api/_store.js'
 import { keyMatches } from '../../../../packages/db/keys.js'
+import { signToken } from '../../../../packages/shared/src/token.js'
 
 const MAX_MEMBERS = 50 // = VILLAGE_MAX_MEMBERS in packages/shared/src/constants.ts (plain JS here, no TS build step)
 const COLOURS = ['snow', 'sky', 'moss', 'rose', 'amber', 'plum'] // = COLOURS in packages/shared/src/types.ts
@@ -26,6 +27,17 @@ export default async function handler(req, res) {
          from village v join village_member m on m.village_id = v.id
         where m.user_id = $1 and m.banned_at is null and v.deleted_at is null order by m.last_seen_at desc`, [uid])
     return res.json({ villages: rows })
+  }
+  if (first === 'token' && !second && req.method === 'POST') { // SPEC §3.4: a 10-minute room token, only for a member who is not banned
+    if (!(await limit(req, res, { scope: 'village-token', max: 120, id: uid }))) return
+    const vid = req.body?.villageId
+    if (typeof vid !== 'string' || !/^[0-9a-f-]{36}$/.test(vid)) return res.status(400).json({ error: 'Invalid village' })
+    const m = (await sql.query(
+      `select m.role, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
+        where m.village_id = $1 and m.user_id = $2 and m.banned_at is null and v.deleted_at is null`, [vid, uid]))[0]
+    if (!m) return no(res)
+    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour }, process.env.VILLAGE_ROOM_SECRET, 600)
+    return res.json({ token, expiresInS: 600 })
   }
   if (!first || first === 'mine') return res.status(404).json({ error: 'Not found' })
   const slug = first.slice(0, 64)

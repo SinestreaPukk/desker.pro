@@ -27,11 +27,11 @@ export function devApi({ root, apiDir, rewrites = [] }) {
     name: 'dev-api',
     apply: 'serve',
     configureServer(server) {
-      Object.assign(process.env, loadEnv('development', root, '')) // .env.local wins over the shell
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url, 'http://x')
         if (!url.pathname.startsWith('/api/')) return next()
         try {
+          Object.assign(process.env, loadEnv('development', root, '')) // .env.local wins over the shell; re-read per request so edits apply at once
           let route = url
           for (const [re, to] of rewrites) if (re.test(url.pathname)) { route = new URL(to, 'http://x'); for (const [k, v] of url.searchParams) route.searchParams.set(k, v); break }
           const file = resolveFn(apiDir, route.pathname)

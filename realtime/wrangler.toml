@@ -1,0 +1,17 @@
+# One Durable Object per village (idFromName(villageId)): holds live state in memory, hibernates when quiet (WebSocket Hibernation API).
+name = "kodama-village-realtime"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "VillageRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["VillageRoom"]
+
+# Browsers allowed to open a socket (checked on the upgrade). Production: set to https://village.desker.dev in the dashboard / deploy command.
+[vars]
+ALLOWED_ORIGINS = "http://village.desker.test:5174,http://localhost:5174"
+# VILLAGE_ROOM_SECRET is a secret: `wrangler secret put VILLAGE_ROOM_SECRET` in production, realtime/.dev.vars locally (gitignored).

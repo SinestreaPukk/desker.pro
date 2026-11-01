@@ -1,0 +1,8 @@
+{
+  "name": "@desker/realtime",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "wrangler dev --port 8787", "deploy": "echo 'The owner deploys: see apps/village/README.md' && exit 1", "test": "node --experimental-strip-types --test src/*.test.ts", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@desker/shared": "*" },
+  "devDependencies": { "@cloudflare/workers-types": "^4.20250101.0", "typescript": "^5.6.0", "wrangler": "^4.0.0" }
+}
