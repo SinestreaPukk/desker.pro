@@ -3,12 +3,12 @@
 // export dynamically through wrangler, or we can potentially let users directly
 // add them as a sort of "plugin" system.
 
-import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-niCB2V/middleware-insertion-facade.js";
+import ENTRY, { __INTERNAL_WRANGLER_MIDDLEWARE__ } from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-DuvdqQ/middleware-insertion-facade.js";
 import { __facade_invoke__, __facade_register__, Dispatcher } from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/node_modules/wrangler/templates/middleware/common.ts";
-import type { WorkerEntrypointConstructor } from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-niCB2V/middleware-insertion-facade.js";
+import type { WorkerEntrypointConstructor } from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-DuvdqQ/middleware-insertion-facade.js";
 
 // Preserve all the exports from the worker
-export * from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-niCB2V/middleware-insertion-facade.js";
+export * from "/Users/sakditouchpukkanasut/Desktop/Desker.pro-village/realtime/.wrangler/tmp/bundle-DuvdqQ/middleware-insertion-facade.js";
 
 class __Facade_ScheduledController__ implements ScheduledController {
 	readonly #noRetry: ScheduledController["noRetry"];

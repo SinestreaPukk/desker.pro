@@ -16,7 +16,7 @@ function App() {
   const [, kind, slug] = path.match(/^\/(v|join)\/([\w-]+)$/) ?? []
   return (
     <>
-      <header className="bar"><b>Kodama Village</b><span>{user.name}</span></header>
+      {!kind && <header className="bar"><b>Kodama Village</b><span>{user.name}</span></header>}
       {kind === 'join' ? <Join slug={slug} /> : slug ? <Suspense fallback={<p className="pad">Loading the world…</p>}><World slug={slug} /></Suspense> : <Picker />}
     </>
   )

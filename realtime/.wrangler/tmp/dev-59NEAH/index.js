@@ -4267,6 +4267,13 @@ var serverMsg = external_exports.discriminatedUnion("t", [
   external_exports.object({ t: external_exports.literal("pong"), ts: external_exports.number() })
 ]);
 
+// ../packages/shared/src/ambient.ts
+var NIGHT = 5925530;
+var DAWN = 15911360;
+var DUSK = 15776138;
+var DAY = 16777215;
+var STOPS = [[0, NIGHT, 1], [5 * 60 + 30, NIGHT, 1], [6 * 60 + 15, DAWN, 0.6], [7 * 60, DAY, 0], [17 * 60 + 30, DAY, 0], [18 * 60 + 15, DUSK, 0.6], [19 * 60, NIGHT, 1], [24 * 60, NIGHT, 1]];
+
 // ../packages/shared/src/token.js
 var enc = new TextEncoder();
 var unb64 = /* @__PURE__ */ __name((s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)), "unb64");
@@ -4440,7 +4447,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-niCB2V/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-DuvdqQ/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -4472,7 +4479,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-niCB2V/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-DuvdqQ/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

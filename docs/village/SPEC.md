@@ -422,3 +422,10 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - Spec extension to confirm: the token also carries `n` (display name) and `c` (colour) so the room can list members without calling the API. Display only; permissions still come from `role`.
 - Run: `npm run dev -w @desker/realtime` (needs realtime/.dev.vars with VILLAGE_ROOM_SECRET), `node scripts/room-smoke.mjs` checks it live.
 - Not done / owner: deploying the Worker (needs `wrangler login` + `wrangler secret put VILLAGE_ROOM_SECRET`), and setting ALLOWED_ORIGINS for production.
+### Checkpoint 4: the world, single player (done)
+- Art: `node scripts/gen-placeholder-assets.ts` (tileset with 1px extruded tiles, 6 kodama colours 16x24, snowflake, lamp glow, assets/manifest.json). Map: `node scripts/gen-snowy-campus.ts` (40x28, all SPEC §4.2 zones, 24 desks, 16 table seats, 8 cushions, 8 spawns around the Board). Both are the source of the committed PNG/JSON.
+- Pure logic with tests (packages/shared): map parsing, collision, stepping, zones, reachability (every seat, door and zone reachable), day/night, held keys (game keys ignored while typing).
+- Phaser WorldScene: integer zoom (3x wide, 2x narrow), camera follow lerp 0.12, y-sorted depth, tile-by-tile walking at WALK/RUN_MS_PER_TILE, turning on blocked tiles, blink + bob, outdoor-only snow, day/night tint by local time (`?hour=21` previews), lamp glow, tea steam. Measured 60 fps steady in Chrome.
+- HUD in React: village name, zone, help overlay (?), first-visit hint, settings (sound prefs; sounds themselves come with bubbles).
+- Fixed: faint seams at zoom 3 came from an odd-height canvas, so the canvas is always snapped to even pixels.
+- Simplified / not yet: snow near indoor windows, the Garden bird, sounds, pixel font for names (Checkpoint 5), integer zoom on non-integer-DPR displays.
