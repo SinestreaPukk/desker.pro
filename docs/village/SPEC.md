@@ -444,3 +444,11 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - **Remote smoothness.** Everyone else is drawn behind real time by an adaptive delay (100 ms minimum, grows to 250 ms to fit that person's update rhythm), so they never stall between updates.
 - **World art.** New tileset (roofs, wall faces with windows/posters/clock/banners, per-room floors, rugs, autotiled cobble paths and pond, pines, stone lanterns, a torii and shrine, campfire with log seats, sofa, stove, vending machine). Same zones, desks, seats, spawns and Board position as before; walls are one tile, with a roof row above.
 
+### Checkpoint 6: bubbles (done)
+- T or Enter opens the bubble box (120-char counter, @mention autocomplete with Tab/Enter/click, Enter sends, Esc cancels; IME-safe). Bubbles render in Phaser with a Thai-capable font stack, pop in over 120 ms, stay 8 s, fade over 300 ms, and a new one replaces the old. A mention to you is amber. "…" shows for people 5-12 tiles away.
+- Rules live in `packages/shared/src/bubbles.ts` (`visibility`, `parseMentions`, `cleanBubble`, `rateCheck`) and `wordfilter.ts` (Thai + English, masks with ★), tested in `bubbles.test.ts`. The room applies them: table seats talk only to that table; the Library is quiet except @mentions, which are held in the receiver's socket (max 3) and delivered as `queued` when they leave the Library; everyone else by distance.
+- Rate limit 5 per 10 s: the room answers `error slow_down`, and the box comes back shaking with "Slow down a little" and your text.
+- **Deviation to confirm:** the 24 h zone chat log is stored in the room's own SQLite (one row per person who could see a bubble, purged by an alarm and filtered on read), not in Postgres `village_chat_log`. Reason: the Worker then needs no database credentials and a bubble costs no network call to Postgres. The Postgres table is unused for now. Say if you want it in Postgres instead.
+- Until Focus exists (Checkpoint 8), "focus ends" means "you left the Library". Blip sound plays when someone nearby speaks, only if cosy sounds are on.
+- Added messages: client `log`; server `log {items}`; `said.mentionsYou`; `queued` items carry `name`.
+

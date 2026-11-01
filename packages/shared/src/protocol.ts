@@ -29,6 +29,7 @@ export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('focus.start'), taskId: id.optional(), plannedMin: z.number().int().min(1).max(600) }),
   z.object({ t: z.literal('focus.stop') }),
   z.object({ t: z.literal('claimDesk'), spotId: id }),
+  z.object({ t: z.literal('log') }), // ask for the last 24 hours of bubbles I was able to see
   z.object({ t: z.literal('ping'), ts: z.number() }),
 ])
 export type ClientMsg = z.infer<typeof clientMsg>
@@ -44,14 +45,15 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('moved'), moves: z.array(z.object({ userId: id, x: coord, y: coord, dir, seq: z.number().int() })) }), // batched every 50 ms
   z.object({ t: z.literal('correct'), x: tile, y: tile }),
   // text + zoneId, or nearbyOnly: true for the "…" indicator
-  z.object({ t: z.literal('said'), userId: id, text: z.string().max(BUBBLE_MAX_CHARS).optional(), zoneId: zone.optional(), nearbyOnly: z.literal(true).optional() }),
+  z.object({ t: z.literal('said'), userId: id, text: z.string().max(BUBBLE_MAX_CHARS).optional(), zoneId: zone.optional(), nearbyOnly: z.literal(true).optional(), mentionsYou: z.literal(true).optional() }),
   z.object({ t: z.literal('sat'), userId: id, spotId: id }),
   z.object({ t: z.literal('stood'), userId: id }),
   z.object({ t: z.literal('statusChanged'), userId: id, status: status.nullable() }),
   z.object({ t: z.literal('presenceChanged'), userId: id, presence }),
   z.object({ t: z.literal('focusChanged'), userId: id, endsAt: z.string().datetime().nullable() }),
   z.object({ t: z.literal('board'), items: z.array(boardItem) }),
-  z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
+  z.object({ t: z.literal('queued'), items: z.array(z.object({ kind: z.enum(['mention', 'knock']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }),
+  z.object({ t: z.literal('log'), items: z.array(z.object({ zoneId: zone, userId: id, name: z.string().max(60), text: z.string().max(BUBBLE_MAX_CHARS), at: z.number() })) }),
   z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
   z.object({ t: z.literal('pong'), ts: z.number() }),
 ])

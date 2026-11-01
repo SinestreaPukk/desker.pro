@@ -38,6 +38,14 @@ await until(() => a.msgs.filter((m) => m.t === 'correct').length >= 2); console.
 void nextTile
 const nCorrect = a.msgs.filter((m) => m.t === 'correct').length; a.send(JSON.stringify({ t: 'sit', spotId: 'lib-desk-01' })) // far away: refused
 await until(() => a.msgs.filter((m) => m.t === 'correct').length > nCorrect); assert.ok(!b.msgs.some((m) => m.t === 'sat')); console.log('ok: sitting far from the seat refused')
+// bubbles: delivered to people nearby (and to the speaker), cleaned, mentions flagged, logged, rate limited
+const say = (ws, text) => ws.send(JSON.stringify({ t: 'say', text }))
+const seen = (ws, f) => until(() => ws.msgs.find((m) => m.t === 'said' && f(m)))
+say(a, '  hi @Bob   what the fuck  '); const hb = await seen(b, (m) => m.userId === 'ann' && m.text); assert.equal(hb.text, 'hi @Bob what the ★★★★'); assert.equal(hb.mentionsYou, true); assert.equal(hb.zoneId, 'plaza')
+await seen(a, (m) => m.userId === 'ann' && m.text); console.log('ok: bubble reaches nearby people and the speaker, cleaned and masked, mention flagged')
+b.send(JSON.stringify({ t: 'log' })); const lg = await until(() => b.msgs.find((m) => m.t === 'log')); assert.equal(lg.items.length, 1); assert.equal(lg.items[0].name, 'Ann'); console.log('ok: chat log keeps what I could see')
+for (let i = 0; i < 6; i++) say(a, 'spam ' + i)
+await until(() => a.msgs.find((m) => m.t === 'error' && m.code === 'slow_down')); console.log('ok: more than 5 bubbles in 10 s is refused with "slow down"')
 const b2 = await open(); hello(b2, await tok('bob', 'Bob')); assert.equal(await b.closed, 4000); console.log('ok: second connection replaces the first')
 assert.ok(!a.msgs.some((m) => m.t === 'left' && m.userId === 'bob'), 'replacing must not announce a leave')
 b2.close(); await until(() => a.msgs.find((m) => m.t === 'left' && m.userId === 'bob')); console.log('ok: leaving is announced')

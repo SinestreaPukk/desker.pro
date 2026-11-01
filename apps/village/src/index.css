@@ -23,3 +23,18 @@ canvas { image-rendering: pixelated; }
 .hud-panel { background: #fff; border: 2px solid #35599a; border-radius: 8px; padding: 18px 24px; min-width: 280px }
 .hud-panel h2 { margin: 0 0 10px } .hud-panel td { padding: 3px 14px 3px 0 } .hud-panel label { display: block; margin: 10px 0 }
 kbd { border: 1px solid #5b6b86; border-bottom-width: 3px; border-radius: 4px; padding: 0 6px; margin-right: 4px; background: #f3f6fc; font-family: monospace }
+.bar-actions { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 8px; pointer-events: none }
+.bar-actions button { pointer-events: auto; height: 38px; padding: 0 14px; border-radius: 6px; border: 2px solid #35599a; background: rgba(255,255,255,.94); font-size: 14px; cursor: pointer }
+.bar-actions kbd, .hud-panel kbd { background: #eef2f8; border: 1px solid #b4c6de; border-radius: 4px; padding: 0 5px; font-size: 12px; margin-left: 6px }
+.bubblebox { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); width: min(480px, calc(100vw - 24px)); pointer-events: auto; background: #fff; border: 2px solid #35599a; border-radius: 10px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; box-shadow: 0 6px 20px rgba(20,33,61,.25) }
+.bubblebox input { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 16px; padding: 6px 2px; font-family: system-ui, 'Noto Sans Thai', sans-serif }
+.bubblebox .count { font-size: 12px; color: #5b6b86 } .bubblebox .count.full { color: #b04a52 }
+.bubblebox em { flex-basis: 100%; font-style: normal; font-size: 13px; color: #b04a52 }
+.bubblebox .mentions { position: absolute; left: 0; right: 0; bottom: 100%; margin: 0 0 4px; padding: 4px; list-style: none; background: #fff; border: 2px solid #35599a; border-radius: 8px }
+.bubblebox .mentions li { padding: 5px 8px; border-radius: 5px; cursor: pointer } .bubblebox .mentions li.on { background: #fff3d6 }
+.bubblebox.shake { animation: shake .35s } @keyframes shake { 20% { transform: translateX(calc(-50% - 6px)) } 40% { transform: translateX(calc(-50% + 6px)) } 60% { transform: translateX(calc(-50% - 4px)) } 80% { transform: translateX(calc(-50% + 3px)) } }
+@media (prefers-reduced-motion: reduce) { .bubblebox.shake { animation: none } }
+.toasts { position: absolute; left: 12px; bottom: 12px; display: grid; gap: 6px; max-width: min(360px, calc(100vw - 24px)) }
+.toasts p { margin: 0; background: #fff3d6; border: 2px solid #d89b3a; border-radius: 8px; padding: 6px 10px; font-size: 13px; pointer-events: auto }
+.chatlog { max-width: 460px; width: calc(100vw - 32px); max-height: 80vh; overflow: auto } .chatlog h2 small { font-size: 12px; font-weight: 400; color: #5b6b86 } .chatlog h3 { margin: 12px 0 4px; font-size: 13px; color: #35599a }
+.chatlog p { margin: 2px 0; font-size: 14px } .chatlog time { color: #5b6b86; font-size: 12px; margin-right: 4px }

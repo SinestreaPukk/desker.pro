@@ -20,6 +20,7 @@ export class WorldScene extends Phaser.Scene {
   private sitting: { spot: Spot; from: { x: number; y: number } } | null = null
   private prompt!: Phaser.GameObjects.Text
   private taken = new Set<string>() // sit spots someone is on
+  private bubbles = new Map<string, { box: Phaser.GameObjects.Container; timer: Phaser.Time.TimerEvent }>()
   private tint!: Phaser.GameObjects.Rectangle
   private glows: Phaser.GameObjects.Image[] = []
   private lastZone: ZoneId | null = null
@@ -68,7 +69,7 @@ export class WorldScene extends Phaser.Scene {
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
   update(time: number, delta: number) {
-    this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time)
+    this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time); this.followBubbles()
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
       this.sendMove(); this.lastSend = time; this.dirty = false
     }
@@ -145,7 +146,7 @@ export class WorldScene extends Phaser.Scene {
     } else if (m.t === 'joined') { if (m.member.userId !== this.data0.userId) this.addRemote(m.member, undefined, now, true) }
     else if (m.t === 'left') {
       const r = this.remotes.get(m.userId); if (!r) return
-      this.remotes.delete(m.userId); this.release(m.userId)
+      this.remotes.delete(m.userId); this.release(m.userId); this.dropBubble(m.userId)
       r.k.fade(this, 1, 0, 400, () => r.k.destroy()) // a soft fade
     } else if (m.t === 'moved') {
       for (const mv of m.moves) {
@@ -158,7 +159,8 @@ export class WorldScene extends Phaser.Scene {
         if (gap > 250) r.buf.push({ t: now - 100, x: prev.x, y: prev.y, dir: mv.dir })
         r.buf.push({ t: now, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
       }
-    } else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
+    } else if (m.t === 'said') this.bubble(m.userId, m.text, !!m.nearbyOnly, !!m.mentionsYou)
+    else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
     else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
     else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
   }
@@ -204,6 +206,26 @@ export class WorldScene extends Phaser.Scene {
       if (pose.moving) r.k.walk(pose.dir, Math.floor(time / WALK_MS_PER_TILE) % 2 ? 1 : 2); else if (r.sat) r.k.sit(r.sat.facing); else r.k.idle(r.dir, time)
     }
   }
+
+  // ---- speech bubbles (SPEC §6.3): pop in over 120 ms, stay 8 s, fade over 300 ms; a new one replaces the old; "…" for people a little too far to read ----
+  private who(userId: string) { return userId === this.data0.userId ? this.me : this.remotes.get(userId)?.k }
+  private dropBubble(userId: string) { const b = this.bubbles.get(userId); if (b) { b.timer.remove(); b.box.destroy(); this.bubbles.delete(userId) } }
+  private bubble(userId: string, text: string | undefined, hint: boolean, mention: boolean) {
+    const who = this.who(userId); if (!who) return
+    this.dropBubble(userId)
+    const t = this.add.text(0, 0, hint ? '…' : text ?? '', { fontFamily: "'Noto Sans Thai','Sarabun','Thonburi','Tahoma',system-ui,sans-serif", fontSize: '8px', color: '#14213d', align: 'center', wordWrap: { width: 96 } }).setOrigin(0.5, 1).setResolution(4)
+    const w = Math.ceil(t.width) + 8, h = Math.ceil(t.height) + 5, g = this.add.graphics()
+    g.fillStyle(mention ? 0xfff3d6 : 0xffffff, 1).lineStyle(1, mention ? 0xd89b3a : 0x35599a, 1)
+    g.fillRoundedRect(-w / 2, -h - 3, w, h, 3).strokeRoundedRect(-w / 2, -h - 3, w, h, 3)
+    g.fillTriangle(-2, -3, 2, -3, 0, 0).lineBetween(-2, -3, 0, 0).lineBetween(2, -3, 0, 0) // the tail
+    g.fillStyle(mention ? 0xfff3d6 : 0xffffff, 1).fillRect(-1, -4, 3, 2)
+    t.setPosition(0, -5)
+    const box = this.add.container(who.x, who.y - 37, [g, t]).setDepth(DEPTH.tag + 2).setScale(0.6)
+    this.tweens.add({ targets: box, scale: 1, duration: 120, ease: 'Back.Out' })
+    const timer = this.time.delayedCall(hint ? 2500 : 8000, () => this.tweens.add({ targets: box, alpha: 0, duration: 300, onComplete: () => { box.destroy(); if (this.bubbles.get(userId)?.box === box) this.bubbles.delete(userId) } }))
+    this.bubbles.set(userId, { box, timer })
+  }
+  private followBubbles() { for (const [id, b] of this.bubbles) { const w = this.who(id); if (w) b.box.setPosition(w.x, w.y - 37) } }
 
   /** A small burst of specks: amber sparkle where someone appears, pale dust when someone snaps into place. */
   private sparkle(x: number, y: number, tint: number) {
