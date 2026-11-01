@@ -11,41 +11,174 @@
       "tileOrder": [
         "snow0",
         "snow1",
-        "path",
+        "snow2",
+        "snow3",
+        "snow4",
+        "door_mat",
+        "void0",
+        "void1",
+        "path_0",
+        "path_1",
+        "path_2",
+        "path_3",
+        "path_4",
+        "path_5",
+        "path_6",
+        "path_7",
+        "path_8",
+        "path_9",
+        "path_10",
+        "path_11",
+        "path_12",
+        "path_13",
+        "path_14",
+        "path_15",
+        "water_0",
+        "water_1",
+        "water_2",
+        "water_3",
+        "water_4",
+        "water_5",
+        "water_6",
+        "water_7",
+        "water_8",
+        "water_9",
+        "water_10",
+        "water_11",
+        "water_12",
+        "water_13",
+        "water_14",
+        "water_15",
         "wood",
-        "wall",
-        "window",
+        "wood_s",
+        "wood_d",
+        "tile_a",
+        "tile_b",
+        "tile_s",
+        "tatami",
+        "tatami_s",
+        "carpet",
+        "carpet_s",
+        "carpet_l",
+        "carpet_r",
+        "rug_tl",
+        "rug_t",
+        "rug_tr",
+        "rug_l",
+        "rug_c",
+        "rug_r",
+        "rug_bl",
+        "rug_b",
+        "rug_br",
+        "mat_tl",
+        "mat_t",
+        "mat_tr",
+        "mat_l",
+        "mat_c",
+        "mat_r",
+        "mat_bl",
+        "mat_b",
+        "mat_br",
+        "roof_l",
+        "roof_m",
+        "roof_r",
+        "wall_n",
+        "wall_win",
+        "wall_poster",
+        "wall_clock",
+        "wall_banner",
+        "wall_boardl",
+        "wall_boardr",
+        "wall_w",
+        "wall_e",
+        "wall_s",
+        "wall_nw",
+        "wall_ne",
+        "wall_sw",
+        "wall_se",
+        "wall_win_s",
         "fence",
+        "fence_post",
+        "desk_a",
+        "desk_b",
+        "desk_c",
+        "chair",
+        "chair_b",
+        "shelf_a",
+        "shelf_b",
+        "shelf_c",
+        "plant",
+        "plant_tall_b",
+        "plant_tall_t",
+        "table_a",
+        "table_b",
+        "cushion",
+        "cushion_b",
+        "kotatsu_tl",
+        "kotatsu_tr",
+        "kotatsu_bl",
+        "kotatsu_br",
+        "counter_l",
+        "counter_m",
+        "counter_r",
+        "sofa_l",
+        "sofa_m",
+        "sofa_r",
+        "stove_b",
+        "stove_t",
+        "vend_b",
+        "vend_t",
+        "coats",
+        "globe",
+        "bin",
         "trunk",
         "canopy",
-        "water",
-        "bench",
-        "desk",
-        "chair",
-        "shelf",
+        "pine_b",
+        "pine_t",
+        "pine2_b",
+        "pine2_t",
+        "bush",
+        "bush_berry",
+        "rock",
+        "rock_s",
+        "lantern_b",
+        "lantern_t",
         "lamp_base",
         "lamp_top",
-        "table",
-        "kotatsu",
-        "cushion",
-        "counter",
-        "plant",
+        "bench",
+        "bench_l",
+        "bench_r",
+        "log",
+        "campfire",
         "snowman_b",
         "snowman_t",
-        "door_mat",
+        "torii_bl",
+        "torii_br",
+        "torii_tl",
+        "torii_tr",
+        "torii_tm",
+        "shrine_b",
+        "shrine_t",
+        "sign",
+        "crate",
+        "barrel",
+        "lights_l",
+        "lights_m",
+        "lights_r",
+        "planter",
+        "stump",
+        "drift",
         "board0",
         "board1",
         "board2",
         "board3",
         "board4",
-        "board5",
-        "void0",
-        "void1"
+        "board5"
       ]
     },
     {
-      "key": "kodama-snow",
-      "file": "kodama-snow.png",
+      "key": "avatar-body",
+      "file": "avatar-body.png",
       "frameWidth": 16,
       "frameHeight": 24,
       "animations": {
@@ -73,21 +206,17 @@
           12,
           13
         ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
+        "sit": {
+          "down": 14,
+          "up": 15,
+          "left": 16,
+          "right": 17
+        }
       }
     },
     {
-      "key": "kodama-sky",
-      "file": "kodama-sky.png",
+      "key": "avatar-outfit",
+      "file": "avatar-outfit.png",
       "frameWidth": 16,
       "frameHeight": 24,
       "animations": {
@@ -115,21 +244,17 @@
           12,
           13
         ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
+        "sit": {
+          "down": 14,
+          "up": 15,
+          "left": 16,
+          "right": 17
+        }
       }
     },
     {
-      "key": "kodama-moss",
-      "file": "kodama-moss.png",
+      "key": "avatar-face",
+      "file": "avatar-face.png",
       "frameWidth": 16,
       "frameHeight": 24,
       "animations": {
@@ -157,21 +282,17 @@
           12,
           13
         ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
+        "sit": {
+          "down": 14,
+          "up": 15,
+          "left": 16,
+          "right": 17
+        }
       }
     },
     {
-      "key": "kodama-rose",
-      "file": "kodama-rose.png",
+      "key": "avatar-hair-short",
+      "file": "avatar-hair-short.png",
       "frameWidth": 16,
       "frameHeight": 24,
       "animations": {
@@ -199,21 +320,17 @@
           12,
           13
         ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
+        "sit": {
+          "down": 14,
+          "up": 15,
+          "left": 16,
+          "right": 17
+        }
       }
     },
     {
-      "key": "kodama-amber",
-      "file": "kodama-amber.png",
+      "key": "avatar-hair-long",
+      "file": "avatar-hair-long.png",
       "frameWidth": 16,
       "frameHeight": 24,
       "animations": {
@@ -241,58 +358,12 @@
           12,
           13
         ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
-      }
-    },
-    {
-      "key": "kodama-plum",
-      "file": "kodama-plum.png",
-      "frameWidth": 16,
-      "frameHeight": 24,
-      "animations": {
-        "down": [
-          0,
-          1,
-          2
-        ],
-        "up": [
-          3,
-          4,
-          5
-        ],
-        "left": [
-          6,
-          7,
-          8
-        ],
-        "right": [
-          9,
-          10,
-          11
-        ],
-        "idle": [
-          12,
-          13
-        ],
-        "sit": [
-          14
-        ],
-        "read": [
-          15,
-          16
-        ],
-        "sleep": [
-          17
-        ]
+        "sit": {
+          "down": 14,
+          "up": 15,
+          "left": 16,
+          "right": 17
+        }
       }
     },
     {

@@ -8,6 +8,7 @@ const presence = z.enum(['available', 'focusing', 'dnd', 'away'])
 const zone = z.enum(['plaza', 'library', 'tables', 'lounge', 'garden'])
 const id = z.string().min(1).max(64)
 const tile = z.number().int().min(0).max(1000)
+const coord = z.number().min(0).max(1000) // a position in tiles; tile t is centred on t, so a person between two tiles has a fraction
 export const status = z.object({
   courseCode: z.string().max(16).optional(), activity: z.enum(ACTIVITIES),
   taskId: id.optional(), taskTitle: z.string().max(120).optional(), endsAt: z.string().datetime().optional(),
@@ -19,7 +20,7 @@ const boardItem = z.object({
 
 export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('hello'), v: z.number().int(), token: z.string().max(2000) }),
-  z.object({ t: z.literal('move'), x: tile, y: tile, dir, seq: z.number().int().nonnegative() }),
+  z.object({ t: z.literal('move'), x: coord, y: coord, dir, seq: z.number().int().nonnegative() }),
   z.object({ t: z.literal('say'), text: z.string().min(1).max(BUBBLE_MAX_CHARS) }),
   z.object({ t: z.literal('sit'), spotId: id }),
   z.object({ t: z.literal('stand') }),
@@ -36,11 +37,11 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({
     t: z.literal('welcome'), self: member, members: z.array(member),
     positions: z.record(z.object({ x: tile, y: tile, dir })), presence: z.record(presence), statuses: z.record(status),
-    desks: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(),
+    desks: z.record(id), sitting: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(),
   }),
   z.object({ t: z.literal('joined'), member }),
   z.object({ t: z.literal('left'), userId: id }),
-  z.object({ t: z.literal('moved'), moves: z.array(z.object({ userId: id, x: tile, y: tile, dir, seq: z.number().int() })) }), // batched every 50 ms
+  z.object({ t: z.literal('moved'), moves: z.array(z.object({ userId: id, x: coord, y: coord, dir, seq: z.number().int() })) }), // batched every 50 ms
   z.object({ t: z.literal('correct'), x: tile, y: tile }),
   // text + zoneId, or nearbyOnly: true for the "…" indicator
   z.object({ t: z.literal('said'), userId: id, text: z.string().max(BUBBLE_MAX_CHARS).optional(), zoneId: zone.optional(), nearbyOnly: z.literal(true).optional() }),

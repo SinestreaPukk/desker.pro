@@ -3,12 +3,14 @@
 // token; tokens refill at run speed + 20%, up to a small burst. A target must be reachable by walking within the tokens we have.
 import { MOVE_SPEED_TOLERANCE, RUN_MS_PER_TILE } from './constants.ts'
 import type { Dir } from './types.ts'
-import { step, walkable, type World } from './world.ts'
+import { stepBy, walkable, type World } from './world.ts'
 
 export const MOVE_BURST = 3
+const EIGHT = [[0, -1], [0, 1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-1, 1], [1, 1]] as const
 export interface Mover { x: number; y: number; dir: Dir; tokens: number; at: number }
 export const newMover = (x: number, y: number, now: number, dir: Dir = 'down'): Mover => ({ x, y, dir, tokens: MOVE_BURST, at: now })
 
+// ponytail: a diagonal costs one token like a straight step, though the client takes 1.41x as long, so a cheater gains at most ~1.4x on diagonals. Octile cost if it ever matters.
 /** Walking distance from (x,y) to (tx,ty) if it is at most `max` steps, else -1. */
 export function pathLength(w: World, x: number, y: number, tx: number, ty: number, max: number): number {
   if (!walkable(w, tx, ty)) return -1
@@ -17,8 +19,8 @@ export function pathLength(w: World, x: number, y: number, tx: number, ty: numbe
   const seen = new Set([y * w.w + x])
   for (let d = 1; d <= max; d++) {
     const next: [number, number][] = []
-    for (const [cx, cy] of frontier) for (const dir of ['up', 'down', 'left', 'right'] as Dir[]) {
-      const n = step(w, cx, cy, dir)
+    for (const [cx, cy] of frontier) for (const [dx, dy] of EIGHT) {
+      const n = stepBy(w, cx, cy, dx, dy)
       if (!n || seen.has(n.y * w.w + n.x)) continue
       if (n.x === tx && n.y === ty) return d
       seen.add(n.y * w.w + n.x); next.push([n.x, n.y])
@@ -31,7 +33,8 @@ export function pathLength(w: World, x: number, y: number, tx: number, ty: numbe
 export type MoveResult = { ok: true; mover: Mover; steps: number } | { ok: false; mover: Mover }
 export function applyMove(w: World, m: Mover, to: { x: number; y: number; dir: Dir }, now: number): MoveResult {
   const tokens = Math.min(MOVE_BURST, m.tokens + ((now - m.at) * MOVE_SPEED_TOLERANCE) / RUN_MS_PER_TILE)
-  const steps = pathLength(w, m.x, m.y, to.x, to.y, Math.floor(tokens))
+  const tx = Math.round(to.x), ty = Math.round(to.y) // positions may be fractional; the room checks the tile you are standing in
+  const steps = pathLength(w, m.x, m.y, tx, ty, Math.floor(tokens))
   if (steps < 0) return { ok: false, mover: { ...m, tokens, at: now } }
-  return { ok: true, steps, mover: { x: to.x, y: to.y, dir: to.dir, tokens: tokens - steps, at: now } }
+  return { ok: true, steps, mover: { x: tx, y: ty, dir: to.dir, tokens: tokens - steps, at: now } }
 }

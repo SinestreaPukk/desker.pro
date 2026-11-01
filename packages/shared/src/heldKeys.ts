@@ -25,7 +25,11 @@ export function heldKeys(target: Target, typing: () => boolean = () => isTyping(
   target.addEventListener('keydown', down); target.addEventListener('keyup', up)
   target.addEventListener('blur', clear); target.addEventListener('focusin', clear)
   return {
-    dir: (): Dir | undefined => held[held.length - 1],
+    /** Direction the keys point: -1/0/1 per axis. The latest key on an axis wins, and two axes together make a diagonal. */
+    vec: () => {
+      const last = (a: Dir, b: Dir) => { const i = held.lastIndexOf(a), j = held.lastIndexOf(b); return i === j ? 0 : i > j ? -1 : 1 }
+      return { dx: last('left', 'right'), dy: last('up', 'down') }
+    },
     run: () => shift,
     destroy() { target.removeEventListener('keydown', down); target.removeEventListener('keyup', up); target.removeEventListener('blur', clear); target.removeEventListener('focusin', clear) },
   }

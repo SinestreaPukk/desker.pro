@@ -36,6 +36,8 @@ assert.ok(!a.msgs.some((m) => m.t === 'moved' && m.moves.some((x) => x.userId ==
 let flood = 0; for (let i = 0; i < 8; i++) { mv(a, step1[0] + (i % 2 ? 0 : 3), step1[1], 10 + i); flood++ }
 await until(() => a.msgs.filter((m) => m.t === 'correct').length >= 2); console.log('ok: speed hack refused', flood, 'rapid jumps')
 void nextTile
+const nCorrect = a.msgs.filter((m) => m.t === 'correct').length; a.send(JSON.stringify({ t: 'sit', spotId: 'lib-desk-01' })) // far away: refused
+await until(() => a.msgs.filter((m) => m.t === 'correct').length > nCorrect); assert.ok(!b.msgs.some((m) => m.t === 'sat')); console.log('ok: sitting far from the seat refused')
 const b2 = await open(); hello(b2, await tok('bob', 'Bob')); assert.equal(await b.closed, 4000); console.log('ok: second connection replaces the first')
 assert.ok(!a.msgs.some((m) => m.t === 'left' && m.userId === 'bob'), 'replacing must not announce a leave')
 b2.close(); await until(() => a.msgs.find((m) => m.t === 'left' && m.userId === 'bob')); console.log('ok: leaving is announced')

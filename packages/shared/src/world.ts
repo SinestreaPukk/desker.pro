@@ -33,6 +33,24 @@ export const step = (w: World, x: number, y: number, dir: Dir): { x: number; y: 
   const [dx, dy] = DELTA[dir], nx = x + dx, ny = y + dy
   return walkable(w, nx, ny) ? { x: nx, y: ny } : null
 }
+/** One step by (dx,dy), each -1/0/1. A diagonal needs its target AND both side tiles open (no cutting corners through walls). */
+export const stepBy = (w: World, x: number, y: number, dx: number, dy: number): { x: number; y: number } | null =>
+  walkable(w, x + dx, y + dy) && (!dx || !dy || (walkable(w, x + dx, y) && walkable(w, x, y + dy))) ? { x: x + dx, y: y + dy } : null
+/** What a held-key vector does: the diagonal if open, otherwise slide along whichever axis is open (like Gather), otherwise nothing. */
+export const slide = (w: World, x: number, y: number, dx: number, dy: number) =>
+  stepBy(w, x, y, dx, dy) ?? (dx && dy ? stepBy(w, x, y, dx, 0) ?? stepBy(w, x, y, 0, dy) : null)
+/** Can a body centred at (x,y) (tile-centred coordinates, fractions allowed) stand there? Its four corners must all be on open tiles. */
+export function bodyFree(w: World, x: number, y: number, hw: number, hh: number): boolean {
+  for (const cx of [x - hw, x + hw]) for (const cy of [y - hh, y + hh]) if (!walkable(w, Math.round(cx), Math.round(cy))) return false
+  return true
+}
+/** Move a body by (dx,dy), one axis at a time so it slides along walls instead of sticking. */
+export function walkBody(w: World, x: number, y: number, dx: number, dy: number, hw: number, hh: number): { x: number; y: number } {
+  let nx = x, ny = y
+  if (dx && bodyFree(w, x + dx, y, hw, hh)) nx = x + dx
+  if (dy && bodyFree(w, nx, y + dy, hw, hh)) ny = y + dy
+  return { x: nx, y: ny }
+}
 export const tileInFront = (x: number, y: number, dir: Dir) => ({ x: x + DELTA[dir][0], y: y + DELTA[dir][1] })
 /** First zone whose rectangle holds the tile; anywhere else (paths, outdoors) is the plaza. */
 export const zoneAt = (w: World, x: number, y: number): ZoneId => w.zones.find((z) => x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h)?.id ?? 'plaza'
@@ -49,3 +67,18 @@ export function reachable(w: World, x: number, y: number): Set<number> {
 export const approaches = (w: World, s: Spot) => (Object.keys(DELTA) as Dir[]).map((d) => ({ x: s.x + DELTA[d][0], y: s.y + DELTA[d][1] })).filter((t) => walkable(w, t.x, t.y))
 /** Where a person appears: one of the 8 spawn points around the Board, stable per person (so server and client agree without talking). */
 export const spawnFor = (w: World, userId: string) => w.spawns[[...userId].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % w.spawns.length]
+
+/** The sit spot `spotId` if a person standing at (x,y) may sit there now: it exists, is free, and is on a tile next to them (diagonals count). */
+export function canSit(w: World, x: number, y: number, spotId: string, taken: ReadonlySet<string>): Spot | null {
+  const s = w.sitSpots.find((p) => p.id === spotId)
+  return s && !taken.has(spotId) && Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) <= 1 ? s : null
+}
+/** The free sit spot next to (x,y), preferring the one in front of `dir`. */
+export function spotNear(w: World, x: number, y: number, dir: Dir, taken: ReadonlySet<string>): Spot | null {
+  const f = tileInFront(x, y, dir)
+  const ahead = w.sitSpots.find((s) => s.x === f.x && s.y === f.y && !taken.has(s.id))
+  if (ahead) return ahead
+  let best: Spot | null = null, bd = 9
+  for (const s of w.sitSpots) { if (taken.has(s.id)) continue; const d = Math.hypot(s.x - x, s.y - y); if (Math.max(Math.abs(s.x - x), Math.abs(s.y - y)) <= 1 && d < bd) { best = s; bd = d } }
+  return best
+}

@@ -1,6 +1,6 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
-import { applyMove, newMover, parseMap, spawnFor, type Colour, type Dir, type Member, type Mover, type Role } from '@desker/shared'
+import { applyMove, canSit, newMover, parseMap, spawnFor, type Colour, type Dir, type Member, type Mover, type Role } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
 import campus from '../../apps/village/public/maps/snowy_campus.json'
@@ -9,7 +9,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } } }
 const HELLO_TIMEOUT_MS = 10_000
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
 
@@ -62,26 +62,43 @@ export class VillageRoom extends DurableObject<Env> {
       const h = await checkHello(msg, att.vid, this.env.VILLAGE_ROOM_SECRET)
       if (!h.ok) { this.send(ws, { t: 'error', code: h.code, message: h.message }); return void ws.close(h.code === 'version' ? 4002 : 4003, h.code) }
       const me: Member = { userId: h.claims.sub, name: h.claims.n ?? 'Someone', colour: (h.claims.c ?? 'snow') as Colour, role: h.claims.role as Role }
-      let pos: Mover | undefined
-      for (const o of this.authed()) if (o.att.member?.userId === me.userId) { pos = o.att.pos; o.ws.close(4000, 'replaced') } // one connection per person: the newest wins, and keeps the old place
+      let pos: Mover | undefined, sat: Att['sat']
+      for (const o of this.authed()) if (o.att.member?.userId === me.userId) { pos = o.att.pos; sat = o.att.sat; o.ws.close(4000, 'replaced') } // one connection per person: the newest wins, and keeps the old place
       const sp = spawnFor(WORLD, me.userId)
-      ws.serializeAttachment({ ...att, authed: true, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()) })
+      ws.serializeAttachment({ ...att, authed: true, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat })
       const all = this.authed()
       const members = [...new Map(all.map((x) => [x.att.member!.userId, x.att.member!])).values()]
       const positions = Object.fromEntries(all.map((x) => [x.att.member!.userId, { x: x.att.pos!.x, y: x.att.pos!.y, dir: x.att.pos!.dir }]))
-      this.send(ws, { t: 'welcome', self: me, members, positions, presence: {}, statuses: {}, desks: {}, board: [], mapVersion: 1 })
+      this.send(ws, { t: 'welcome', self: me, members, positions, presence: {}, statuses: {}, desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: 1 })
       this.broadcast({ t: 'joined', member: me }, ws)
       return
     }
     if (msg.t === 'ping') return this.send(ws, { t: 'pong', ts: msg.ts })
-    if (msg.t === 'move') { // validate loosely (SPEC §3.5): reachable within the walking budget, else tell the client where it really is
+    if (msg.t === 'sit') { // next to a free spot, and not already sitting: the room seats you there
+      const taken = new Set(this.authed().flatMap((x) => (x.att.sat ? [x.att.sat.spotId] : [])))
+      const spot = att.sat ? null : canSit(WORLD, att.pos!.x, att.pos!.y, msg.spotId, taken)
+      if (!spot) return this.send(ws, { t: 'correct', x: att.pos!.x, y: att.pos!.y }) // refused: here is where you really are
+      ws.serializeAttachment({ ...att, sat: { spotId: spot.id, from: { x: att.pos!.x, y: att.pos!.y } }, pos: { ...att.pos!, x: spot.x, y: spot.y, dir: spot.facing } })
+      return this.broadcast({ t: 'sat', userId: att.member!.userId, spotId: spot.id })
+    }
+    if (msg.t === 'stand') { // back to the tile you sat down from
+      if (!att.sat) return
+      const { from } = att.sat, pos = { ...att.pos!, x: from.x, y: from.y }
+      ws.serializeAttachment({ ...att, sat: undefined, pos })
+      this.broadcast({ t: 'stood', userId: att.member!.userId })
+      this.pending.set(att.member!.userId, { userId: att.member!.userId, x: from.x, y: from.y, dir: pos.dir, seq: 0 })
+      this.timer ??= setTimeout(() => this.flush(), MOVED_BATCH_MS)
+      return
+    }
+    if (msg.t === 'move') {
+      if (att.sat) return // sitting: stand first (the client always does) // validate loosely (SPEC §3.5): reachable within the walking budget, else tell the client where it really is
       const r = applyMove(WORLD, att.pos!, msg, Date.now())
       ws.serializeAttachment({ ...att, pos: r.mover })
       if (!r.ok) return this.send(ws, { t: 'correct', x: r.mover.x, y: r.mover.y })
       this.pending.set(att.member!.userId, { userId: att.member!.userId, x: msg.x, y: msg.y, dir: msg.dir, seq: msg.seq })
       this.timer ??= setTimeout(() => this.flush(), MOVED_BATCH_MS)
     }
-    // say, sit, status, presence, focus, claimDesk: later checkpoints
+    // say, status, presence, focus, claimDesk: later checkpoints
   }
 
   // `moved` goes out in one batch every 50 ms, to everyone except the mover (who predicts their own walking).

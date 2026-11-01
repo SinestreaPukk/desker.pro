@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { parseMap, walkable, step, zoneAt, reachable, approaches, tileInFront } from './world.ts'
+import { parseMap, walkable, step, stepBy, slide, canSit, spotNear, bodyFree, walkBody, zoneAt, reachable, approaches, tileInFront } from './world.ts'
 import { ambientAt, minuteOfDay } from './ambient.ts'
 
 const w = parseMap(JSON.parse(readFileSync(new URL('../../../apps/village/public/maps/snowy_campus.json', import.meta.url), 'utf8')))
@@ -49,4 +49,32 @@ test('ambient: day is clear, night is dark with lamps, dawn and dusk blend', () 
 test('minuteOfDay uses the given time zone', () => {
   const t = new Date('2026-11-01T05:00:00Z') // 12:00 in Bangkok (UTC+7)
   assert.equal(minuteOfDay(t, 'Asia/Bangkok'), 12 * 60); assert.equal(minuteOfDay(t, 'UTC'), 5 * 60)
+})
+
+test('diagonals: allowed in the open, never cut a wall corner, and slide along a wall instead of stopping', () => {
+  assert.deepEqual(stepBy(w, 19, 14, 1, 1), { x: 20, y: 15 })
+  assert.equal(stepBy(w, 17, 13, 1, -1), null) // up-right would clip the Board's corner at (18,12)
+  assert.deepEqual(slide(w, 17, 13, 1, -1), { x: 18, y: 13 }) // so it slides right instead
+  assert.deepEqual(slide(w, 17, 12, 1, -1), { x: 17, y: 11 }) // or up, when right is the wall
+  assert.equal(slide(w, 19, 13, 0, -1), null)
+})
+test('sitting: next to a free spot, diagonals count, taken or far spots do not', () => {
+  const s = w.sitSpots[0], none = new Set<string>()
+  const beside = approaches(w, s)[0]
+  assert.equal(canSit(w, beside.x, beside.y, s.id, none)?.id, s.id)
+  assert.equal(canSit(w, beside.x, beside.y, s.id, new Set([s.id])), null)
+  assert.equal(canSit(w, 19, 14, s.id, none), null); assert.equal(canSit(w, beside.x, beside.y, 'nope', none), null)
+  assert.equal(spotNear(w, beside.x, beside.y, 'down', none) != null, true)
+  assert.equal(spotNear(w, 19, 14, 'down', none), null)
+})
+
+test('free walking: a body slides along a wall, stops at it, and cannot squeeze through the Board', () => {
+  const hw = 0.28, hh = 0.2
+  assert.ok(bodyFree(w, 19, 14, hw, hh)); assert.ok(bodyFree(w, 19, 13, hw, hh)); assert.ok(!bodyFree(w, 19, 12.6, hw, hh)) // the Board is rows 11-12, so 12.6 would overlap it
+  let p = { x: 19, y: 14 }
+  for (let i = 0; i < 100; i++) p = walkBody(w, p.x, p.y, 0, -0.05, hw, hh) // push up into the Board
+  assert.ok(p.y >= 12.7 && p.y < 14, String(p.y))
+  const before = p.x; for (let i = 0; i < 10; i++) p = walkBody(w, p.x, p.y, 0.05, -0.05, hw, hh) // diagonal into the wall: still slides right
+  assert.ok(p.x > before + 0.4)
+  let q = { x: 19, y: 14 }; for (let i = 0; i < 500; i++) q = walkBody(w, q.x, q.y, 0.04, -0.04, hw, hh); assert.ok(walkable(w, Math.round(q.x), Math.round(q.y)))
 })

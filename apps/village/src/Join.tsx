@@ -8,7 +8,7 @@ const MSG: Record<string, string> = {
   full: 'This village is full.',
 }
 
-// /join/:slug?k=<key>: check the key, add me as a member, then a quick kodama colour pick.
+// /join/:slug?k=<key>: check the key, add me as a member, then a quick outfit colour pick.
 export default function Join({ slug }: { slug: string }) {
   const [state, setState] = useState<'joining' | 'pick' | 'error'>('joining')
   const [msg, setMsg] = useState('')
@@ -29,7 +29,7 @@ export default function Join({ slug }: { slug: string }) {
   if (state === 'joining' || already) return <p className="pad">Joining…</p>
   return (
     <main className="pad">
-      <h1>You're in! Pick your kodama's colour</h1>
+      <h1>You're in! Pick your outfit colour</h1>
       <div className="swatches">{COLOURS.map((c) => <button key={c} disabled={saving} aria-label={c} title={c} onClick={() => choose(c)} style={{ background: HEX[c] }} />)}</div>
     </main>
   )

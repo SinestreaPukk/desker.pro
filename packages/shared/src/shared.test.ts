@@ -27,3 +27,11 @@ import { reconnectDelay } from './constants.ts'
 test('reconnect backoff doubles from 0.5 s up to 8 s', () => {
   assert.deepEqual([0, 1, 2, 3, 4, 5, 20].map(reconnectDelay), [500, 1000, 2000, 4000, 8000, 8000, 8000])
 })
+
+test('appearanceFor: stable per person, varied across people, outfit follows the colour', async () => {
+  const { appearanceFor, OUTFIT_TINTS } = await import('./appearance.ts')
+  assert.deepEqual(appearanceFor('abc', 'sky'), appearanceFor('abc', 'sky'))
+  assert.equal(appearanceFor('abc', 'rose').outfit, OUTFIT_TINTS.rose)
+  const looks = new Set(Array.from({ length: 40 }, (_, i) => JSON.stringify({ ...appearanceFor('user-' + i, 'snow') })))
+  assert.ok(looks.size > 10)
+})

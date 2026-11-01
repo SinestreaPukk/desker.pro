@@ -28,6 +28,15 @@ export class Canvas {
     if (!c || x < 0 || y < 0 || x >= this.w || y >= this.h) return
     this.data.set(hex(c), (y * this.w + x) * 4)
   }
+  /** Alpha-blend a colour over what is already there (soft shadows). */
+  blend(x: number, y: number, w: number, h: number, c: string, a: number, ox = 0, oy = 0) {
+    const [r, g, b] = hex(c)
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const X = x + i + ox, Y = y + j + oy; if (X < 0 || Y < 0 || X >= this.w || Y >= this.h) continue
+      const k = (Y * this.w + X) * 4; if (!this.data[k + 3]) continue // only shade what exists
+      this.data[k] += (r - this.data[k]) * a; this.data[k + 1] += (g - this.data[k + 1]) * a; this.data[k + 2] += (b - this.data[k + 2]) * a
+    }
+  }
   rect(x: number, y: number, w: number, h: number, c: string | null, ox = 0, oy = 0) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.px(x + i, y + j, c, ox, oy) }
   ellipse(cx: number, cy: number, rx: number, ry: number, c: string, ox = 0, oy = 0) {
     for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++)

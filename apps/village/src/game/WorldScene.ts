@@ -1,22 +1,25 @@
-// The village world, single player (Checkpoint 4): map, collision, tile-by-tile walking, camera, snow, day/night. Multiplayer joins in Checkpoint 5.
+// The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { CAMERA_LERP, COLOURS, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_MS_PER_TILE, TILE_PX, WALK_MS_PER_TILE, ambientAt, heldKeys, interpolate, minuteOfDay, parseMap, spawnFor, step, tooFar, trim, zoneAt, type Colour, type Dir, type Member, type ServerMsg, type Snap, type World, type ZoneId } from '@desker/shared'
+import { BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Spot, type ServerMsg, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge } from './bridge.ts'
-import { DEPTH, Kodama } from './Kodama.ts'
+import { Avatar, DEPTH } from './Avatar.ts'
 
 export interface SceneData { userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void }
-interface Remote { k: Kodama; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number }
+interface Remote { k: Avatar; buf: Snap[]; dir: Dir; shown: { x: number; y: number }; lastArrival: number; sat?: Spot; gap: number; delay: number }
 const D = { ground: 0, floor: 1, walls: 2, below: 3, entity: DEPTH.entity, above: DEPTH.above, snow: 200000, tint: 300000, glow: 310000 } // render order
 
 export class WorldScene extends Phaser.Scene {
   private world!: World
-  private me!: Kodama
+  private me!: Avatar
   private remotes = new Map<string, Remote>()
   private seq = 0; private lastSend = 0; private dirty = false
   private keys!: ReturnType<typeof heldKeys>
-  private tx = 0; private ty = 0; private facing: Dir = 'down'
-  private mv: { fx: number; fy: number; tx: number; ty: number; start: number; dur: number; foot: 1 | 2 } | null = null
-  private foot: 1 | 2 = 1
+  private fx = 0; private fy = 0; private facing: Dir = 'down' // where I am, in tiles (tile t is centred on t; a fraction means between tiles)
+  private phase = 0 // how far I have walked, for the stepping animation
+  private get tx() { return Math.round(this.fx) } private get ty() { return Math.round(this.fy) } // the tile I am standing in
+  private sitting: { spot: Spot; from: { x: number; y: number } } | null = null
+  private prompt!: Phaser.GameObjects.Text
+  private taken = new Set<string>() // sit spots someone is on
   private tint!: Phaser.GameObjects.Rectangle
   private glows: Phaser.GameObjects.Image[] = []
   private lastZone: ZoneId | null = null
@@ -29,7 +32,7 @@ export class WorldScene extends Phaser.Scene {
     this.load.json('manifest', '/assets/manifest.json')
     this.load.tilemapTiledJSON('map', '/maps/snowy_campus.json')
     this.load.image('tiles', '/assets/tiles.png')
-    for (const c of COLOURS) this.load.spritesheet(`kodama-${c}`, `/assets/kodama-${c}.png`, { frameWidth: 16, frameHeight: 24 })
+    for (const l of ['body', 'outfit', 'face', 'hair-short', 'hair-long']) this.load.spritesheet(`avatar-${l}`, `/assets/avatar-${l}.png`, { frameWidth: 16, frameHeight: 24 })
     this.load.image('snowflake', '/assets/snowflake.png'); this.load.image('glow', '/assets/glow.png')
   }
 
@@ -42,9 +45,9 @@ export class WorldScene extends Phaser.Scene {
 
     // I start on a spawn point around the Board (stable per person, so reloading puts you back in the same place).
     const sp = spawnFor(this.world, this.data0.userId) // the room uses the same function, so we agree without talking
-    this.tx = sp.x; this.ty = sp.y
-    this.me = new Kodama(this, this.data0.colour, this.data0.name, true)
-    this.place(this.tx, this.ty)
+    this.fx = sp.x; this.fy = sp.y
+    this.me = new Avatar(this, appearanceFor(this.data0.userId, this.data0.colour), this.data0.name, true)
+    this.place()
 
     const cam = this.cameras.main, W = this.world.w * TILE_PX, H = this.world.h * TILE_PX
     cam.setBounds(0, 0, W, H).startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP).setRoundPixels(true)
@@ -52,52 +55,79 @@ export class WorldScene extends Phaser.Scene {
 
     this.snow(W, H); this.ambience(json); this.steam()
     this.keys = heldKeys(window)
-    this.events.once('shutdown', () => this.keys.destroy())
+    this.prompt = this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,233,168,0.92)', padding: { x: 2, y: 0 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 1).setVisible(false)
+    const onKey = (e: KeyboardEvent) => { if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && actionOf(e.key, isTyping()) === 'interact') this.interact() }
+    window.addEventListener('keydown', onKey)
+    this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey) })
     this.sparkle(this.me.x, this.me.y - 8, 0xf2c46d)
     this.data0.bridge.attach((m) => this.onServer(m))
   }
 
   private fitZoom() { this.cameras.main.setZoom(this.scale.width >= 900 ? 3 : 2) } // integer zoom only: 3x on desktop, 2x on narrower screens
 
-  private place(tx: number, ty: number) { this.me.put(tx * TILE_PX + TILE_PX / 2, (ty + 1) * TILE_PX) }
+  private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
-  update(time: number) {
-    this.moveMe(time); this.drawRemotes(time)
+  update(time: number, delta: number) {
+    this.moveMe(time, Math.min(delta, 50)); this.drawRemotes(time)
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
-      this.data0.bridge.out({ t: 'move', x: this.tx, y: this.ty, dir: this.facing, seq: ++this.seq }); this.lastSend = time; this.dirty = false
+      this.sendMove(); this.lastSend = time; this.dirty = false
     }
   }
+  private sendMove() { this.data0.bridge.out({ t: 'move', x: Math.round(this.fx * 100) / 100, y: Math.round(this.fy * 100) / 100, dir: this.facing, seq: ++this.seq }) }
 
-  private moveMe(time: number) {
-    let startAt = time
-    if (this.mv) {
-      const t = (time - this.mv.start) / this.mv.dur
-      if (t < 1) return this.drawStep(t)
-      this.tx = this.mv.tx; this.ty = this.mv.ty; startAt = this.mv.start + this.mv.dur; this.mv = null // carry the overshoot so a held key never stutters
-      this.place(this.tx, this.ty); this.dirty = true
-      const z = zoneAt(this.world, this.tx, this.ty); if (z !== this.lastZone) { this.lastZone = z; this.data0.onZone?.(z) }
+  // Free walking: the keys give a direction, we move at a fixed speed along it (diagonals are normalised, so every direction is the same speed),
+  // and a small box around the feet slides along walls. No waiting for tile boundaries, no waiting for the room: it answers the instant a key goes down.
+  private moveMe(time: number, dt: number) {
+    const { dx, dy } = this.keys.vec()
+    if (this.sitting) { // any walking key stands you up first
+      if (!dx && !dy) { this.me.sit(this.facing); this.hint('X  stand'); return }
+      this.stand()
     }
-    const dir = this.keys.dir()
-    if (dir) {
-      if (dir !== this.facing) this.dirty = true
-      this.facing = dir // turning to face a blocked tile works without moving
-      const n = step(this.world, this.tx, this.ty, dir)
-      if (n) {
-        this.foot = this.foot === 1 ? 2 : 1
-        this.mv = { fx: this.tx, fy: this.ty, tx: n.x, ty: n.y, start: startAt, dur: this.keys.run() ? RUN_MS_PER_TILE : WALK_MS_PER_TILE, foot: this.foot }
-        return this.drawStep(Math.min(1, (time - startAt) / this.mv.dur))
+    if (dx || dy) {
+      const face: Dir = dx ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down' // sideways wins on a diagonal: we only draw four facings
+      if (face !== this.facing) { this.facing = face; this.dirty = true }
+      const len = Math.hypot(dx, dy), d = dt * (this.keys.run() ? RUN_TILES_PER_MS : WALK_TILES_PER_MS)
+      const from = { x: this.fx, y: this.fy }, to = walkBody(this.world, this.fx, this.fy, (dx / len) * d, (dy / len) * d, BODY_HALF_W, BODY_HALF_H)
+      const moved = Math.hypot(to.x - from.x, to.y - from.y)
+      if (moved > 0) {
+        const before = zoneAt(this.world, this.tx, this.ty)
+        this.fx = to.x; this.fy = to.y; this.dirty = true; this.phase += moved
+        const z = zoneAt(this.world, this.tx, this.ty); if (z !== before || this.lastZone === null) { this.lastZone = z; this.data0.onZone?.(z) }
+        this.place(); this.hint('')
+        const c = this.phase % 1 // one full stride per tile walked: foot, passing, other foot, passing
+        return this.me.walk(this.facing, c < 0.25 ? 1 : c < 0.5 ? 0 : c < 0.75 ? 2 : 0)
       }
+      this.me.walk(this.facing, 0) // pushing against a wall: face it, stand still
+      return
     }
-    this.drawIdle(time)
+    this.place(); this.me.idle(this.facing, time)
+    const s = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
+    this.hint(s ? 'X  sit' : '')
   }
 
-  private drawStep(t: number) {
-    const m = this.mv!
-    const x = (m.fx + (m.tx - m.fx) * t) * TILE_PX + TILE_PX / 2, y = (m.fy + (m.ty - m.fy) * t + 1) * TILE_PX
-    this.me.put(x, y); this.me.walk(this.facing, t < 0.5 ? m.foot : 0)
-  }
+  private hint(text: string) { this.prompt.setVisible(!!text).setText(text).setPosition(this.me.x, this.me.y - 36) }
 
-  private drawIdle(time: number) { this.me.idle(this.facing, time) }
+  // ---- sitting (X) ------------------------------------------------------------------------------------------------------
+  private interact() {
+    if (this.sitting) return this.stand()
+    const spot = spotNear(this.world, this.tx, this.ty, this.facing, this.taken)
+    if (spot) this.sit(spot, true)
+  }
+  private sit(spot: Spot, tell: boolean) {
+    if (tell) { // the room must know where I am before it seats me
+      if (this.dirty) { this.sendMove(); this.dirty = false }
+      this.data0.bridge.out({ t: 'sit', spotId: spot.id })
+    }
+    this.sitting = { spot, from: { x: this.tx, y: this.ty } }
+    this.facing = spot.facing; this.taken.add(spot.id)
+    this.me.put(spot.x * TILE_PX + TILE_PX / 2, (spot.y + 1) * TILE_PX); this.me.sit(this.facing)
+  }
+  private stand(tell = true) {
+    const s = this.sitting; if (!s) return
+    this.sitting = null; this.taken.delete(s.spot.id)
+    this.fx = s.from.x; this.fy = s.from.y; this.place(); this.dirty = false
+    if (tell) this.data0.bridge.out({ t: 'stand' })
+  }
 
   // ---- everyone else ----------------------------------------------------------------------------------------------
   private onServer(m: ServerMsg) {
@@ -106,40 +136,62 @@ export class WorldScene extends Phaser.Scene {
       for (const r of this.remotes.values()) r.k.destroy()
       this.remotes.clear()
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
-      const p = m.positions[this.data0.userId]
-      if (p && (p.x !== this.tx || p.y !== this.ty) && !this.mv) this.snapMe(p.x, p.y)
+      this.taken = new Set(Object.values(m.sitting)); this.seated = new Map(Object.entries(m.sitting))
+      for (const [uid, spotId] of this.seated) this.seat(uid, spotId, true)
+      const mine = m.sitting[this.data0.userId], p = m.positions[this.data0.userId]
+      if (this.sitting && !mine) this.stand(false)
+      if (mine && !this.sitting) { const sp = this.world.sitSpots.find((q) => q.id === mine); if (sp) { this.fx = p?.x ?? this.fx; this.fy = p?.y ?? this.fy; this.sit(sp, false) } }
+      else if (!mine && p && (p.x !== this.tx || p.y !== this.ty)) this.snapMe(p.x, p.y)
     } else if (m.t === 'joined') { if (m.member.userId !== this.data0.userId) this.addRemote(m.member, undefined, now, true) }
     else if (m.t === 'left') {
       const r = this.remotes.get(m.userId); if (!r) return
-      this.remotes.delete(m.userId)
-      this.tweens.add({ targets: [r.k.sprite, r.k.tag], alpha: 0, duration: 400, onComplete: () => r.k.destroy() }) // a soft fade
+      this.remotes.delete(m.userId); this.release(m.userId)
+      r.k.fade(this, 1, 0, 400, () => r.k.destroy()) // a soft fade
     } else if (m.t === 'moved') {
       for (const mv of m.moves) {
         const r = this.remotes.get(mv.userId); if (!r) continue
-        const prev = r.buf[r.buf.length - 1], tiles = Math.abs(mv.x - prev.x) + Math.abs(mv.y - prev.y)
-        // A walk starts when the news arrives and lasts as long as the real steps did (measured from the gap between updates, never faster than running
-        // or slower than walking). So the first step after a rest starts from standing instead of popping in already part-way.
-        const dur = Math.min(tiles * WALK_MS_PER_TILE, Math.max(tiles * RUN_MS_PER_TILE, now - r.lastArrival)), start = Math.max(prev.t, now)
-        if (start > prev.t) r.buf.push({ t: start, x: prev.x, y: prev.y, dir: mv.dir }) // stand where they were until the walk begins
-        r.buf.push({ t: start + dur, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
+        const prev = r.buf[r.buf.length - 1]
+        // Positions arrive about every 100 ms while someone walks. If they had been standing a while, hold them there until just before this news,
+        // so the first step starts from rest instead of gliding across the whole quiet gap.
+        const gap = now - r.lastArrival
+        if (gap < 300) r.gap = Math.max(gap, r.gap * 0.97) // the longest recent wait between updates: the picture must stay that far behind to never run dry
+        if (gap > 250) r.buf.push({ t: now - 100, x: prev.x, y: prev.y, dir: mv.dir })
+        r.buf.push({ t: now, x: mv.x, y: mv.y, dir: mv.dir }); r.dir = mv.dir; r.lastArrival = now
       }
-    } else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
+    } else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
+    else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
+    else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
   }
 
-  private snapMe(x: number, y: number) { this.mv = null; this.tx = x; this.ty = y; this.place(x, y); this.dirty = false }
+  private seated = new Map<string, string>() // who sits where, for everyone but also me
+  private seat(userId: string, spotId: string, instant: boolean) {
+    this.seated.set(userId, spotId); this.taken.add(spotId)
+    const r = this.remotes.get(userId), sp = this.world.sitSpots.find((q) => q.id === spotId); if (!r || !sp) return
+    r.sat = sp; r.dir = sp.facing
+    const last = r.buf[r.buf.length - 1], now = this.time.now
+    if (instant) r.buf.splice(0, r.buf.length, { t: now - 1000, x: sp.x, y: sp.y, dir: sp.facing })
+    else r.buf.push({ t: Math.max(last.t, now), x: last.x, y: last.y, dir: sp.facing }, { t: Math.max(last.t, now) + WALK_MS_PER_TILE, x: sp.x, y: sp.y, dir: sp.facing }) // a hop onto the seat
+  }
+  private release(userId: string) {
+    const spot = this.seated.get(userId); this.seated.delete(userId); if (spot) this.taken.delete(spot)
+    const r = this.remotes.get(userId); if (r) r.sat = undefined
+  }
+
+  private snapMe(x: number, y: number) { if (this.sitting) this.stand(false); this.fx = x; this.fy = y; this.place(); this.dirty = false }
 
   private addRemote(mem: Member, pos: { x: number; y: number; dir: Dir } | undefined, now: number, arrive: boolean) {
     this.remotes.get(mem.userId)?.k.destroy()
     const p = pos ?? { ...spawnFor(this.world, mem.userId), dir: 'down' as Dir }
-    const k = new Kodama(this, mem.colour, mem.name, false)
+    const k = new Avatar(this, appearanceFor(mem.userId, mem.colour), mem.name, false)
     k.put(p.x * TILE_PX + TILE_PX / 2, (p.y + 1) * TILE_PX)
-    this.remotes.set(mem.userId, { k, buf: [{ t: now - 1000, x: p.x, y: p.y, dir: p.dir }], dir: p.dir, shown: { x: p.x, y: p.y }, lastArrival: now - 1000 })
-    if (arrive) { k.setAlpha(0); this.tweens.add({ targets: [k.sprite, k.tag], alpha: 1, duration: 400 }); this.sparkle(k.x, k.y - 8, 0xf2c46d) } // a soft sparkle where they appear
+    this.remotes.set(mem.userId, { k, buf: [{ t: now - 1000, x: p.x, y: p.y, dir: p.dir }], dir: p.dir, shown: { x: p.x, y: p.y }, lastArrival: now - 1000, gap: 0, delay: REMOTE_INTERP_DELAY_MS })
+    if (arrive) { k.fade(this, 0, 1, 400); this.sparkle(k.x, k.y - 8, 0xf2c46d) } // a soft sparkle where they appear
   }
 
   private drawRemotes(time: number) {
-    const rt = time - REMOTE_INTERP_DELAY_MS // drawn a little in the past so motion stays smooth between updates
     for (const r of this.remotes.values()) {
+      r.delay += (Math.min(250, Math.max(REMOTE_INTERP_DELAY_MS, r.gap + 40)) - r.delay) * 0.05 // drawn a little in the past, as far as their updates need
+      const rt = time - r.delay
       trim(r.buf, rt)
       const last = r.buf[r.buf.length - 1], pose = interpolate(r.buf, rt)
       if (!pose) continue
@@ -149,7 +201,7 @@ export class WorldScene extends Phaser.Scene {
       }
       r.shown = { x: pose.x, y: pose.y }
       r.k.put(pose.x * TILE_PX + TILE_PX / 2, (pose.y + 1) * TILE_PX)
-      if (pose.moving) r.k.walk(pose.dir, Math.floor(time / WALK_MS_PER_TILE) % 2 ? 1 : 2); else r.k.idle(r.dir, time)
+      if (pose.moving) r.k.walk(pose.dir, Math.floor(time / WALK_MS_PER_TILE) % 2 ? 1 : 2); else if (r.sat) r.k.sit(r.sat.facing); else r.k.idle(r.dir, time)
     }
   }
 
@@ -174,9 +226,12 @@ export class WorldScene extends Phaser.Scene {
   // Day/night follows the viewer's local time (?hour=21 previews another time). Lamps glow after dusk.
   private ambience(json: any) {
     this.tint = this.add.rectangle(0, 0, 6000, 6000, 0xffffff).setOrigin(0).setScrollFactor(0).setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(D.tint)
-    const order: string[] = this.cache.json.get('manifest').assets[0].tileOrder, lamp = order.indexOf('lamp_top') + 1
-    const above = json.layers.find((l: any) => l.name === 'furniture_above').data as number[]
-    above.forEach((g, i) => { if (g === lamp) this.glows.push(this.add.image((i % this.world.w) * TILE_PX + 8, Math.floor(i / this.world.w) * TILE_PX + 8, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(D.glow).setScale(1.3).setAlpha(0)) })
+    const order: string[] = this.cache.json.get('manifest').assets[0].tileOrder
+    // anything that gives off light glows after dusk: lamps, stone lanterns, the campfire, the stove and the warm windows
+    for (const [layer, name] of [['furniture_above', 'lamp_top'], ['furniture_above', 'lantern_t'], ['furniture_below', 'campfire'], ['furniture_below', 'stove_b'], ['walls', 'wall_win_s']] as const) {
+      const gid = order.indexOf(name) + 1
+      ;(json.layers.find((l: any) => l.name === layer).data as number[]).forEach((g, i) => { if (g === gid) this.glows.push(this.add.image((i % this.world.w) * TILE_PX + 8, Math.floor(i / this.world.w) * TILE_PX + 8, 'glow').setBlendMode(Phaser.BlendModes.ADD).setDepth(D.glow).setScale(name === 'campfire' ? 1.8 : name === 'wall_win_s' ? 1 : 1.3).setAlpha(0)) })
+    }
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Bangkok'
     const hour = new URLSearchParams(location.search).get('hour')
     const apply = () => {

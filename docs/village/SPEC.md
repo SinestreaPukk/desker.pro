@@ -7,7 +7,7 @@
 
 ## 1. Product summary
 
-Kodama Village is a Gather.town-style 2D pixel world where university students study together with friends. Each student appears as their **kodama**, Desker's companion character. They walk around a shared world, claim a desk, show what they're studying, chat in short speech bubbles, run focus timers together, and see a central **Board** of homework and exam deadlines.
+Kodama Village is a Gather.town-style 2D pixel world where university students study together with friends. Each student appears as their own **avatar**, a small person they will be able to customise (skin, hair, outfit) in a later phase. (Changed from the kodama after Checkpoint 5 feedback; the kodama stays Desker's companion, not the villager.) They walk around a shared world, claim a desk, show what they're studying, chat in short speech bubbles, run focus timers together, and see a central **Board** of homework and exam deadlines.
 
 - **One-liner:** a study café for your friend group, run by your kodamas.
 - **Design rule: quiet by default.** Studying is the main activity; chatting is for breaks. No voice or video.
@@ -164,7 +164,7 @@ Defined once in `packages/shared/keybindings.ts`, with a settings screen to rema
 
 | Key | Action | Phase |
 |---|---|---|
-| W A S D / arrow keys | Walk one tile per step; holding repeats. No diagonals | 0 |
+| W A S D / arrow keys | Walk freely in any of 8 directions (two keys make a diagonal; same speed in every direction). A small box around the feet slides along walls | 0 |
 | Shift (held) | Run | 0 |
 | T or Enter | Open the bubble box. Enter sends, Esc cancels | 0 |
 | X | Interact: sit/stand at a sit spot, read the Board, open a door | 0 |
@@ -436,3 +436,11 @@ _(Claude Code updates this section after each checkpoint: what's done, what's le
 - Name tags in VT323 (own tag highlighted amber), soft sparkle + fade-in on arrival, fade-out on leave. `spawnFor(userId)` is shared so room and client agree where people appear.
 - Fixed on the way: a closed connection could still open a socket after its token loaded and kick the live one out ("Opened in another tab").
 - Not yet: `joined` carries no position (a new person appears at their spawn point; the next `moved` fixes any difference), sounds.
+
+### Checkpoint 5 feedback pass (after the first hands-on test)
+- **Free walking, 8 directions.** Movement is no longer tile-by-tile: keys set a direction, you move at a fixed speed (diagonals normalised) and a feet box (0.56 x 0.4 tile) slides along walls. The client sends fractional positions (tile-centred coordinates) at most 10 Hz; the room validates the tile you are in with an 8-neighbour no-corner-cutting path check (diagonal costs one token, so a cheater gains at most ~1.4x on diagonals; octile cost if that ever matters).
+- **Avatar, not kodama.** Layered, tinted at runtime: body (skin), outfit, face, hair (short or long). Skin, hair and style derive from the user id for now (`appearanceFor`); the customiser replaces that later. The outfit tint is the member's colour.
+- **Sitting pulled forward from Checkpoint 7.** X sits on a free spot next to you (in front first), X or any walking key stands; the room tracks `sat`/`stood`, refuses far or taken spots with `correct`, and `welcome` now carries `sitting`. Added spot kinds: bench, sofa, log (campfire). Desk *claiming* is still Checkpoint 7.
+- **Remote smoothness.** Everyone else is drawn behind real time by an adaptive delay (100 ms minimum, grows to 250 ms to fit that person's update rhythm), so they never stall between updates.
+- **World art.** New tileset (roofs, wall faces with windows/posters/clock/banners, per-room floors, rugs, autotiled cobble paths and pond, pines, stone lanterns, a torii and shrine, campfire with log seats, sofa, stove, vending machine). Same zones, desks, seats, spawns and Board position as before; walls are one tile, with a roof row above.
+

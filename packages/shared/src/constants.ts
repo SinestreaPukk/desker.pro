@@ -23,3 +23,8 @@ export const TOKEN_REFRESH_MS = 8 * 60_000
 export const RECONNECT_MS = { min: 500, max: 8000 }
 /** Reconnect wait for the nth failed attempt (0-based): 0.5 s, 1, 2, 4, 8, then 8 s max (SPEC §10). */
 export const reconnectDelay = (attempt: number) => Math.min(RECONNECT_MS.max, RECONNECT_MS.min * 2 ** attempt)
+// Free walking (Checkpoint 5b): a small box around your feet, not a whole tile, so you slide along walls and round corners.
+export const BODY_HALF_W = 0.28 // tiles
+export const BODY_HALF_H = 0.2
+export const WALK_TILES_PER_MS = 1 / WALK_MS_PER_TILE
+export const RUN_TILES_PER_MS = 1 / RUN_MS_PER_TILE
