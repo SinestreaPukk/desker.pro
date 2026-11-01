@@ -12,11 +12,11 @@ import FollowUp from '../components/FollowUp.jsx'
 import BoxHead from '../components/BoxHead.jsx'
 import RhythmCard from '../components/RhythmCard.jsx'
 import Review from '../Review.jsx'
-import { overlaps } from '../schedule.js'
+import { overlaps, moveOther as moveOtherOf } from '../schedule.js'
 import { getTaskTime, timeSentence, workLeft, workLeftText, fmtMin, withPlanned } from '../taskTime.js'
 import Row from '../components/Row.jsx'
 import { BLUE, btn, ghost, input, panel, LEVELS } from '../ui.js'
-import { quadrant, patternOf, busyForAI, freeTodayOf, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
+import { quadrant, patternOf, busyForAI, freeTodayOf, plannerArgs, todayStr, fromCalendar, fmtDate } from '../shared.jsx'
 
 const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Still up' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
 
@@ -63,7 +63,9 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const missed = tasks.filter((t) => isMissed(t))
   const stats = doneStats(tasks)
   const planner = plannerOf(data)
-  const clashes = overlaps(tasks, data.busy || [], planner?.scale ?? 1, planner?.pad ?? 0).length // planned times that overlap (older plans, or edits by hand)
+  const clashList = overlaps(tasks, data.busy || [], planner?.scale ?? 1, planner?.pad ?? 0) // the planner never leaves one; only times pinned by hand can overlap
+  const clashes = clashList.length
+  const moveOther = () => setData((d) => ({ ...d, tasks: moveOtherOf({ tasks: d.tasks, busy: d.busy || [], deadlines: d.deadlines || [], freeHours: d.freeHours ?? 4, freeToday: freeTodayOf(d), now: new Date(), ...plannerArgs(d) }, clashList[0].a, clashList[0].b).tasks }))
   const weekEnd = new Date(Date.now() + 7 * 864e5).toLocaleDateString('sv')
   const soon = [
     ...deadlines.filter((d) => !d.done).map((d) => {
@@ -78,7 +80,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
   const thisWeek = soon.filter((x) => x.date <= weekEnd)
   const ritual = ritualDue(data)
   const finding = clashes
-    ? `${clashes === 1 ? 'Two things are' : 'Some things are'} planned at the same time. Replan to fix it.`
+    ? `${clashes === 1 ? 'Two things are' : 'Some things are'} planned at the same time, at the times you set.`
     : missed.length
     ? `${missed.length} planned task${missed.length === 1 ? '' : 's'} slipped past ${missed.length === 1 ? 'its' : 'their'} time.`
     : thisWeek.length ? `${thisWeek[0].title} is due ${thisWeek[0].date === today ? 'today' : fmtDate(thisWeek[0].date)}.`
@@ -151,7 +153,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
       <header className="mb-4 flex flex-col gap-3 lg:mb-6 lg:flex-row lg:gap-8">
         <div className="order-2 min-w-0 flex-1 lg:order-1 lg:pt-2">
           <h1 className="text-2xl leading-8 md:text-5xl md:leading-[56px]">{greeting()}.</h1>
-          <p className="mt-1 text-slate-700 md:mt-2">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}</p>
+          <p className="mt-1 text-slate-700 md:mt-2">{new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}. {finding}{clashes > 0 && <> <button className={`${btn} ${ghost}`} onClick={moveOther}>Move the other one</button></>}</p>
           <div className="px-sunk mt-3 flex max-w-md flex-wrap items-start justify-between gap-x-3 gap-y-2 px-3 py-2">
             <p className="line-clamp-2 min-w-0 flex-1 basis-40 break-words sm:line-clamp-none" role="status" title={lineFor(data, { focusing: !!focus })}><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
             <KodamaSettings data={data} setData={setData} focusing={!!focus} />

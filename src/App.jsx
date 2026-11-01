@@ -8,7 +8,8 @@ import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
 import { Icon } from './icons.jsx'
-import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf } from './shared.jsx'
+import { quadrant, patternOf, ratioOf, setLiveRatio, busyForAI, importCalendar, freeTodayOf, plannerArgs } from './shared.jsx'
+import { settleOverlaps } from './schedule.js'
 import { markInvalid, rhythmOf, record, addOutcome, addSession, addSignal, outcomeFor, typeOf, profile, mayAsk } from './rhythm.js'
 import { logEnergy } from './energy.js'
 import EnergyAsk from './components/EnergyAsk.jsx'
@@ -101,6 +102,13 @@ export default function App() {
       return { ...d, kodama: { ...k, legacy: k.legacy ?? legacyGrowth(legacyXp(d)), away: k.lastSeen ? Math.floor((Date.now() - k.lastSeen) / 864e5) : 0, lastSeen: Date.now() } }
     })
   }, [loaded])
+  // The planning invariant: whenever a planned length may have changed (new multiplier, edited estimate, imported event), re-place
+  // whatever now overlaps. Times the user pinned by hand are never moved.
+  useEffect(() => {
+    if (!data?.onboarding) return
+    const r = settleOverlaps({ tasks: data.tasks, busy: data.busy || [], deadlines: data.deadlines || [], freeHours: data.freeHours ?? 4, freeToday: freeTodayOf(data), now: new Date(), ...plannerArgs(data) })
+    if (r.tasks !== data.tasks && JSON.stringify(r.tasks) !== JSON.stringify(data.tasks)) setData((d) => ({ ...d, tasks: r.tasks }))
+  }, [data?.tasks, data?.rhythm, data?.busy, data?.freeHours])
   // One-off cleanup: stamp stored timings that cannot teach anything (a few seconds, a forgotten timer). Numbers are recomputed on read regardless.
   useEffect(() => {
     if (!loaded) return

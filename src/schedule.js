@@ -190,3 +190,22 @@ export function repair({ tasks, changed, busy, deadlines, freeHours, freeToday, 
   const by = new Map(plan.map((p) => [p.id, p]))
   return { tasks: tasks.map((t) => (by.has(t.id) ? withSlot(t, by.get(t.id), false) : t)), problems }
 }
+
+// The invariant: after this, no planned task overlaps another task or a calendar event, except two that the user pinned by hand.
+// Call it whenever a planned length may have changed (a new multiplier, an edited estimate). Of each clashing pair, the later
+// unpinned task is moved to the next free slot; pinned times never move. Returns { tasks, problems } (tasks is the same array when nothing clashed).
+export function settleOverlaps({ tasks, busy = [], scale = 1, pad = 0, ...rest }) {
+  const movers = new Set()
+  for (const { a, b } of overlaps(tasks, busy, scale, pad)) {
+    const mover = [a, b].filter((x) => x.id != null && !x.pinned).at(-1)
+    if (mover) movers.add(mover.id)
+  }
+  if (!movers.size) return { tasks, problems: [] }
+  return repair({ tasks, changed: [...movers], busy, scale, pad, ...rest })
+}
+
+// "Move the other one": the user pinned an overlap; this moves the later of the two (unpinned) to a free slot.
+export function moveOther({ tasks, busy = [], scale = 1, pad = 0, ...rest }, a, b) {
+  const id = b.id != null ? b.id : a.id
+  return repair({ tasks: tasks.map((t) => (t.id === id ? { ...t, pinned: undefined, when: undefined, start: undefined } : t)), changed: [id], busy, scale, pad, ...rest })
+}

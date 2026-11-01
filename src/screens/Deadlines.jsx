@@ -102,7 +102,7 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
             <DateField className="w-36 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Date for ${t.title}`}
               value={t.due || ''} onChange={(e) => upd(t.id, { due: e.target.value || undefined })} />
             <input type="time" className="w-32 border border-transparent bg-transparent px-1 py-1 text-xs text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label={`Time for ${t.title} (optional)`}
-              value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, when: t.when || t.due || dl.date } : { start: undefined, when: undefined })} />
+              value={t.start || ''} onChange={(e) => upd(t.id, e.target.value ? { start: e.target.value, pinned: true, when: t.when || t.due || dl.date } : { start: undefined, pinned: undefined, when: undefined })} />
             {t.hours > 0 && (() => { const tt = getTaskTime(t, rhythm); return <span className="text-xs text-slate-600" title={tt.reason}>{timeLabel(tt)}</span> })()}
             </span>
           </li>

@@ -31,7 +31,7 @@ function Detail({ t, goals, deadlines, update, remove, close, onStart, rhythm })
           <DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, ...(!e.target.value && { start: undefined }) })} />
         </label>
         <label className={lbl}>Start time
-          <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, ...(e.target.value && !t.when && { when: t.due || todayStr() }) })} />
+          <input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, pinned: e.target.value ? true : undefined, ...(e.target.value && !t.when && { when: t.due || todayStr() }) })} />
         </label>
         <label className={lbl}>Your guess (hours)
           <input type="number" min="0" step="0.5" className={input} value={t.hours ?? ''} onChange={(e) => update(t.id, { hours: e.target.value === '' ? undefined : +e.target.value })} />

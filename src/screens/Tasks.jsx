@@ -53,7 +53,7 @@ function Detail({ t, goals = [], projects, deadlines, update, onDelete, onClose,
         <div className="mt-3 grid grid-cols-2 gap-3">
           <label className={field}>Starts (for ongoing work)<DateField className={input} max={t.due || undefined} value={t.from || ''} onChange={(e) => update(t.id, { from: e.target.value || undefined })} /></label>
           <label className={field}>Do it on<DateField className={input} value={t.when || ''} onChange={(e) => update(t.id, { when: e.target.value || undefined, start: e.target.value ? t.start : undefined })} /></label>
-          <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
+          <label className={field}>Start time<input type="time" className={input} value={t.start || ''} onChange={(e) => update(t.id, { start: e.target.value || undefined, pinned: e.target.value ? true : undefined, when: t.when || (e.target.value ? t.due || todayStr() : undefined) })} /></label>
           <label className={field}>Goal it serves
             <select className={input} value={t.goalId ?? ''} onChange={(e) => update(t.id, { goalId: e.target.value === '' ? undefined : +e.target.value, manual: true })}>
               <option value="">None</option>
