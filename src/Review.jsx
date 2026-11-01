@@ -20,7 +20,7 @@ export default function Review({ tasks, goals, onAgent, rhythm }) {
   return (
     <section className="px-panel p-4" aria-label="This week">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">This week{r.alignment !== null && <span className="ml-2 text-xs font-normal text-slate-700">{r.alignment}% of planned work links to a goal</span>}</h2>
+        <h2 className="font-semibold">This week{goals.length > 0 && r.alignment !== null && <span className="ml-2 text-xs font-normal text-slate-700">{r.alignment}% of planned work links to a goal</span>}</h2>
         <button className="min-h-11 underline" onClick={onAgent}>Talk it over with your kodama</button>
       </div>
       {r.empty ? <p className="text-slate-700">Plan a few tasks for this week (give them a planned day) and you will see how your time splits across your goals.</p> : (
@@ -28,7 +28,7 @@ export default function Review({ tasks, goals, onAgent, rhythm }) {
           <Bar label="Planned" values={r.planned} />
           <Bar label="Done" values={r.done} />
           <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-700">
-            {SLICES.filter((s) => r.planned[s] > 0 || r.done[s] > 0).map((s) => <li key={s} className="flex items-center gap-1"><span className="h-2 w-2" style={{ background: SLICE_COLOR[s] }} />{s}</li>)}
+            {SLICES.filter((s) => (goals.length || s !== 'No goal') && (r.planned[s] > 0 || r.done[s] > 0)).map((s) => <li key={s} className="flex items-center gap-1"><span className="h-2 w-2" style={{ background: SLICE_COLOR[s] }} />{s}</li>)}
           </ul>
         </>
       )}
