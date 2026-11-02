@@ -5,8 +5,13 @@ export type Info = {
   me: { userId: string; role: string; colour: string; statusSharing: string; shareDeadlines: boolean; deskSpotId: string | null }
   members: { userId: string; name: string; colour: string; role: string; deskSpotId: string | null; lastSeenAt: string }[]
 }
+/** Vercel's catch-all file matches only ONE path segment, so "slug/questions/5/answers?x=1" is sent as /api/village/slug?rest=questions/5/answers&x=1 (the API puts it back together). */
+export const apiUrl = (path: string) => {
+  const [base, qs = ''] = path.split('?'), i = base.indexOf('/')
+  return `/api/village/${i < 0 ? base : base.slice(0, i)}${i < 0 && !qs ? '' : '?'}${i < 0 ? '' : `rest=${encodeURIComponent(base.slice(i + 1))}${qs ? '&' : ''}`}${qs}`
+}
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const r = await fetch(`/api/village/${path}`, { credentials: 'include', ...init, headers: { 'content-type': 'application/json' } })
+  const r = await fetch(apiUrl(path), { credentials: 'include', ...init, headers: { 'content-type': 'application/json' } })
   const body = await r.json().catch(() => ({}))
   if (!r.ok) throw Object.assign(new Error(body.error ?? `HTTP ${r.status}`), { code: body.error as string | undefined, body })
   return body as T
@@ -33,7 +38,7 @@ export const announce = (slug: string, b: { title: string; body?: string; pinned
 export const toPlanner = (slug: string, it: BoardItem) => call<{ ok: true; already?: boolean }>(`${slug}/board/planner`, { method: 'POST', body: JSON.stringify({ title: it.title, courseCode: it.courseCode, dueAt: it.dueAt, kind: it.kind }) })
 /** Analytics (SPEC §13): never message text. `beacon` survives the tab closing. */
 export function track(slug: string, name: string, props: Record<string, unknown> = {}, beacon = false) {
-  const body = JSON.stringify({ name, props }), url = `/api/village/${slug}/event`
+  const body = JSON.stringify({ name, props }), url = apiUrl(`${slug}/event`)
   if (beacon && navigator.sendBeacon) return void navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
   fetch(url, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body, keepalive: true }).catch(() => {})
 }
