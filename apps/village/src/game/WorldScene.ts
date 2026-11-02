@@ -77,7 +77,7 @@ export class WorldScene extends Phaser.Scene {
     this.place()
 
     const cam = this.cameras.main, W = this.world.w * TILE_PX, H = this.world.h * TILE_PX
-    cam.setBounds(0, 0, W, H).startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP).setRoundPixels(true)
+    cam.setBounds(0, 0, W, H).startFollow(this.me.sprite, true, this.fx2 ? 1 : CAMERA_LERP, this.fx2 ? 1 : CAMERA_LERP).setRoundPixels(true)
     this.fitZoom(); this.scale.on('resize', () => this.fitZoom())
 
     this.snow(W, H); this.ambience(json); if (!this.fx2) this.steam()
@@ -436,7 +436,7 @@ export class WorldScene extends Phaser.Scene {
   private bubble(userId: string, text: string | undefined, hint: boolean, mention: boolean) {
     const who = this.who(userId); if (!who) return
     this.dropBubble(userId)
-    const t = this.add.text(0, 0, hint ? '…' : text ?? '', { fontFamily: "'Noto Sans Thai','Sarabun','Thonburi','Tahoma',system-ui,sans-serif", fontSize: '8px', color: '#14213d', align: 'center', wordWrap: { width: 96 } }).setOrigin(0.5, 1).setResolution(4)
+    const t = this.add.text(0, 0, hint ? '…' : text ?? '', { fontFamily: "'Noto Sans Thai','Sarabun','Thonburi','Tahoma',system-ui,sans-serif", fontSize: document.documentElement.classList.contains('big') ? '11px' : '8px', color: '#14213d', align: 'center', wordWrap: { width: document.documentElement.classList.contains('big') ? 120 : 96 } }).setOrigin(0.5, 1).setResolution(4)
     const w = Math.ceil(t.width) + 8, h = Math.ceil(t.height) + 5, g = this.add.graphics()
     g.fillStyle(mention ? 0xfff3d6 : 0xffffff, 1).lineStyle(1, mention ? 0xd89b3a : 0x35599a, 1)
     g.fillRoundedRect(-w / 2, -h - 3, w, h, 3).strokeRoundedRect(-w / 2, -h - 3, w, h, 3)

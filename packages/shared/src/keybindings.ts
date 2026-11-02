@@ -23,9 +23,24 @@ export const KEYBINDINGS: { action: Action; keys: string[]; phase: 0 | 1 | 2; la
 ]
 export const isTyping = (el: Element | null = typeof document === 'undefined' ? null : document.activeElement) =>
   !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el as HTMLElement).isContentEditable)
+// Remapping (Phase 1): a person's own single-key choices per action, kept by the app (localStorage) and set here at start-up.
+export const REMAPPABLE: Action[] = ['talk', 'interact', 'focus', 'members', 'board', 'help', 'ask', 'join', 'dnd', 'emote', 'minimap']
+const RESERVED = ['Escape', 'Enter', 'Shift']
+let overrides: Partial<Record<Action, string>> = {}
+export const setKeyOverrides = (o: Partial<Record<Action, string>>) => { overrides = { ...o } }
+const norm = (k: string) => (k.length === 1 ? k.toLowerCase() : k)
+/** The keys that run an action now: the person's choice if they made one, else the default. */
+export const keysOf = (a: Action) => (overrides[a] ? [overrides[a]!] : KEYBINDINGS.find((b) => b.action === a)?.keys ?? [])
+/** Can `key` become the key for `action`? -> null if so, else why not: 'reserved' | 'taken:<other action>' */
+export function remapCheck(action: Action, key: string): string | null {
+  const k = norm(key)
+  if (RESERVED.includes(k) || !(k.length === 1 || k === 'Tab')) return 'reserved'
+  const other = KEYBINDINGS.find((b) => b.action !== action && b.phase <= 1 && keysOf(b.action).includes(k))
+  return other ? `taken:${other.action}` : null
+}
 /** The action for a key event, or null (also null while typing). Phase 0 keys only until `phase` is raised. */
 export function actionOf(key: string, typing = isTyping(), phase = 0): Action | null {
   if (typing) return null
   const k = key.length === 1 ? key.toLowerCase() : key
-  return KEYBINDINGS.find((b) => b.phase <= phase && b.keys.includes(k))?.action ?? null
+  return KEYBINDINGS.find((b) => b.phase <= phase && keysOf(b.action).includes(k))?.action ?? null
 }

@@ -35,3 +35,16 @@ test('appearanceFor: stable per person, varied across people, outfit follows the
   const looks = new Set(Array.from({ length: 40 }, (_, i) => JSON.stringify({ ...appearanceFor('user-' + i, 'snow') })))
   assert.ok(looks.size > 10)
 })
+
+import { setKeyOverrides, remapCheck, keysOf } from './keybindings.ts'
+test('remap: conflicts and reserved keys are refused, a choice replaces the default', () => {
+  setKeyOverrides({})
+  assert.equal(remapCheck('focus', 'x'), 'taken:interact')
+  assert.equal(remapCheck('focus', 'Escape'), 'reserved')
+  assert.equal(remapCheck('focus', 'ArrowUp'), 'reserved')
+  assert.equal(remapCheck('focus', 'k'), null)
+  setKeyOverrides({ focus: 'k' })
+  assert.deepEqual(keysOf('focus'), ['k']); assert.equal(actionOf('k', false), 'focus'); assert.equal(actionOf('f', false), null)
+  assert.equal(remapCheck('board', 'k'), 'taken:focus'); assert.equal(remapCheck('focus', 'f'), null)
+  setKeyOverrides({})
+})

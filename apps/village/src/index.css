@@ -137,3 +137,14 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .install { text-align: left; max-width: 300px; }
 .install ol { margin: 6px 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
 .install .ico { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+/* Tour (first visit) */
+.tour { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); pointer-events: auto; background: #fff; color: #14213d; border: 2px solid #35599a; border-radius: 12px; padding: 10px 14px; width: min(340px, calc(100vw - 24px)); box-shadow: 0 6px 20px rgba(20,33,61,.3); z-index: 5 }
+.tour p { margin: 6px 0 8px; font-size: 15px } .tour .row { display: flex; justify-content: space-between; gap: 8px }
+.keymap { list-style: none; margin: 0 0 6px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px }
+.keymap li { display: flex; justify-content: space-between; align-items: center; font-size: 14px }
+/* Accessibility switches (classes on <html>, see prefs.ts) */
+.rm *, .rm *::before, .rm *::after { animation: none !important; transition: none !important }
+.hc .hud-card, .hc .hud-hint, .hc .toasts p { background: #000; color: #fff; border: 1px solid #fff }
+.hc button:focus-visible, .hc input:focus-visible, .hc select:focus-visible { outline: 3px solid #ffd400; outline-offset: 2px }
+.cb .board li.u-red::before { content: "⚠ "; font-weight: 700 } .cb .board li.u-amber::before { content: "⏰ " }
+.big .bubblebox input { font-size: 20px } .big .hud-panel, .big .board { font-size: 17px }

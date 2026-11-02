@@ -7,6 +7,9 @@ import New from './New.tsx'
 import { mine } from './api.ts'
 import '@fontsource/vt323'
 import './index.css'
+import { initPrefs } from './prefs.ts'
+import './i18n.ts'
+initPrefs()
 
 // Phones: no pinch-zoom or double-tap zoom (iOS Safari ignores user-scalable=no)
 for (const t of ['gesturestart', 'gesturechange']) document.addEventListener(t, (e) => e.preventDefault())

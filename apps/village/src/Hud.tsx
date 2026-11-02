@@ -1,10 +1,12 @@
 // React HUD over the canvas: village name, zone, help overlay, first-visit hint, settings (sound). Panels live here, never in Phaser.
 import { useEffect, useState } from 'react'
-import { KEYBINDINGS, actionOf, type ZoneId } from '@desker/shared'
+import { KEYBINDINGS, actionOf, keysOf, type ZoneId } from '@desker/shared'
+import SettingsSections from './Settings.tsx'
+import { t, useLang } from './i18n.ts'
 
 const ZONE: Record<ZoneId, string> = { plaza: 'Board Plaza', library: 'Library (quiet)', tables: 'Group Tables', lounge: 'Lounge', garden: 'Garden' }
 const load = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? '') as T } catch { return d } }
-export type SoundPrefs = { on: boolean; volume: number }
+export type SoundPrefs = { on: boolean; volume: number; effects?: number; ambience?: number }
 
 export function useSound() { // sound is off until the player turns it on (SPEC §4.3); the sounds themselves arrive with bubbles and chimes
   const [s, set] = useState<SoundPrefs>(() => load('village.sound', { on: false, volume: 0.5 }))
@@ -13,6 +15,7 @@ export function useSound() { // sound is off until the player turns it on (SPEC 
 }
 
 export default function Hud({ name, zone, pill, settingsExtra, children }: { name: string; zone: ZoneId; pill: string; settingsExtra?: React.ReactNode; children?: React.ReactNode }) {
+  useLang()
   const [help, setHelp] = useState(false), [settings, setSettings] = useState(false)
   const [hint, setHint] = useState(() => !load('village.hintDismissed', false))
   const [sound, setSound] = useSound()
@@ -25,7 +28,7 @@ export default function Hud({ name, zone, pill, settingsExtra, children }: { nam
   }, [])
   const dismiss = () => { setHint(false); localStorage.setItem('village.hintDismissed', 'true') }
   const phase0 = KEYBINDINGS.filter((k) => k.phase === 0 || ['ask', 'join', 'dnd', 'emote', 'minimap'].includes(k.action)) // Phase 1 keys appear as they are built
-  const rows = [...new Map(phase0.map((k) => [k.label, phase0.filter((x) => x.label === k.label).flatMap((x) => x.keys)])).entries()]
+  const rows = [...new Map(phase0.map((k) => [k.label, phase0.filter((x) => x.label === k.label).flatMap((x) => keysOf(x.action))])).entries()]
   return (
     <div className="hud">
       <div className="hud-top">
@@ -36,11 +39,11 @@ export default function Hud({ name, zone, pill, settingsExtra, children }: { nam
         </div>
       </div>
       {children}
-      {hint && <div className="hud-hint" role="note">WASD to walk · T to talk · X to sit · ? for help <button onClick={dismiss} aria-label="Dismiss hint">×</button></div>}
+      {hint && <div className="hud-hint" role="note">{t('hint.keys')} <button onClick={dismiss} aria-label="Dismiss hint">×</button></div>}
       {help && (
         <div className="hud-modal" role="dialog" aria-label="Keyboard help" onClick={() => setHelp(false)}>
           <div className="hud-panel" onClick={(e) => e.stopPropagation()}>
-            <h2>Keys</h2>
+            <h2>{t('hud.keys')}</h2>
             <table><tbody>{rows.map(([label, keys]) => <tr key={label}><td>{label}</td><td>{keys.map((k) => <kbd key={k}>{k === 'ArrowUp' ? '↑' : k === 'ArrowDown' ? '↓' : k === 'ArrowLeft' ? '←' : k === 'ArrowRight' ? '→' : k}</kbd>)}</td></tr>)}</tbody></table>
             <p>Phones: tap a tile to walk. <button onClick={() => setHelp(false)}>Close (Esc)</button></p>
           </div>
@@ -49,9 +52,8 @@ export default function Hud({ name, zone, pill, settingsExtra, children }: { nam
       {settings && (
         <div className="hud-modal" role="dialog" aria-label="Settings" onClick={() => setSettings(false)}>
           <div className="hud-panel" onClick={(e) => e.stopPropagation()}>
-            <h2>Settings</h2>
-            <label><input type="checkbox" checked={sound.on} onChange={(e) => setSound({ ...sound, on: e.target.checked })} /> Cosy sounds</label>
-            <label>Volume <input type="range" min={0} max={1} step={0.05} value={sound.volume} disabled={!sound.on} onChange={(e) => setSound({ ...sound, volume: Number(e.target.value) })} /></label>
+            <h2>{t('hud.settings')}</h2>
+            <SettingsSections sound={sound} setSound={setSound} />
             {settingsExtra}
             <p><button onClick={() => setSettings(false)}>Close (Esc)</button></p>
           </div>

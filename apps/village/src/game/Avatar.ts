@@ -35,7 +35,7 @@ export class Avatar {
     this.shh = scene.add.text(0, 0, '🎧 shh', { fontFamily: 'VT323', fontSize: '8px', color: '#14213d', backgroundColor: '#ffe9a8', padding: { x: 2, y: 0 } }).setResolution(4).setOrigin(0, 1).setDepth(DEPTH.tag).setVisible(false)
     this.zz = scene.add.text(0, 0, 'z z', { fontFamily: 'VT323', fontSize: '8px', color: '#35599a' }).setResolution(4).setOrigin(0, 1).setDepth(DEPTH.tag).setVisible(false)
     // Pixel font for names only; resolution 4 keeps the tiny type crisp when the camera zooms in.
-    this.tag = scene.add.text(0, 0, name, { fontFamily: 'VT323', fontSize: '7px', color: mine ? '#ffe9a8' : '#ffffff', backgroundColor: mine ? 'rgba(122,86,56,0.82)' : 'rgba(20,33,61,0.62)', padding: { x: 2, y: 0 } })
+    this.tag = scene.add.text(0, 0, name, { fontFamily: 'VT323', fontSize: '7px', color: mine ? '#ffe9a8' : '#ffffff', backgroundColor: document.documentElement.classList.contains('hc') ? '#000000' : mine ? 'rgba(122,86,56,0.82)' : 'rgba(20,33,61,0.62)', padding: { x: 2, y: 0 } })
       .setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag)
   }
 

@@ -18,6 +18,8 @@ import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
 import Manage from './Manage.tsx'
 import Install from './Install.tsx'
+import Tour from './Tour.tsx'
+import { t, useLang } from './i18n.ts'
 import { can } from '@desker/shared'
 import { leaveVillage, closeVillage, blocks as fetchBlocks } from './api.ts'
 import { Bridge } from './game/bridge.ts'
@@ -40,6 +42,7 @@ function blip(from = 660, to = 880) {
 }
 
 export default function World({ slug }: { slug: string }) {
+  useLang()
   const el = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<Info | null>(null)
   const [err, setErr] = useState<string | null>(null)
@@ -252,35 +255,36 @@ export default function World({ slug }: { slug: string }) {
   if (!data) return <p className="pad">Loading the world…</p>
   return (
     <div className={`${touch ? 'world touch' : 'world'}${mapOn ? ' mm' : ''}`}>
-      <div ref={el} className="canvas" />
+      <div ref={el} className="canvas" aria-hidden="true" />
       <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} onBlocked={setBlocked} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
           {more && <>
-            <button onClick={() => { setMapOn((o) => !o); setMore(false) }} aria-pressed={mapOn}><i aria-hidden>🗺</i>Map<kbd>M</kbd></button>
+            <button onClick={() => { setMapOn((o) => !o); setMore(false) }} aria-pressed={mapOn}><i aria-hidden>🗺</i>{t('bar.map')}<kbd>M</kbd></button>
             <button onClick={openGroup}><i aria-hidden>📚</i>{group ? (joined ? 'In session' : 'Join session') : 'Study together'}<kbd>J</kbd></button>
-            <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>Emote<kbd>E</kbd></button>
+            <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>{t('bar.emote')}<kbd>E</kbd></button>
             <button onClick={() => { bridgeRef.current?.toggleDnd(); setMore(false) }} aria-pressed={presence === 'dnd'}><i aria-hidden>🎧</i>{presence === 'dnd' ? 'DND on' : 'DND'}<kbd>G</kbd></button>
             {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
             {can(data.me.role, 'moderate') && <button onClick={() => { setPanel('manage'); setMore(false) }}><i aria-hidden>🛠</i>Manage</button>}
             {data.me.role !== 'owner' ? <button onClick={() => { setPanel('leave'); setMore(false) }}><i aria-hidden>🚪</i>Leave</button> : <button onClick={() => { setPanel('close'); setMore(false) }}><i aria-hidden>🗑</i>Close village</button>}
           </>}
           {more && touch && <>
-            <button onClick={() => { setMembersOpen((o) => !o); setMore(false) }}><i aria-hidden>👥</i>Members</button>
-            <button onClick={() => { openLog(); setMore(false) }}><i aria-hidden>🗒</i>Chat log</button>
+            <button onClick={() => { setMembersOpen((o) => !o); setMore(false) }}><i aria-hidden>👥</i>{t('bar.members')}</button>
+            <button onClick={() => { openLog(); setMore(false) }}><i aria-hidden>🗒</i>{t('bar.chatlog')}</button>
           </>}
-          <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}><i aria-hidden>💬</i>Talk<kbd>T</kbd></button>
-          <button onClick={() => bridgeRef.current?.interact()}><i aria-hidden>🪑</i>Sit<kbd>X</kbd></button>
-          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}><i aria-hidden>📖</i>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : 'Focus'}<kbd>F</kbd></button>
-          <button onClick={() => setQOpen(true)}><i aria-hidden>❓</i>Ask<kbd>Q</kbd></button>
-          <button onClick={() => setBoardOpen((o) => !o)}><i aria-hidden>📌</i>Board<kbd>B</kbd></button>
-          {touch ? <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More"><i aria-hidden>⋯</i>More</button> : <>
+          <button onClick={() => { setNotice(''); setTalk({ text: '' }) }}><i aria-hidden>💬</i>{t('bar.talk')}<kbd>T</kbd></button>
+          <button onClick={() => bridgeRef.current?.interact()}><i aria-hidden>🪑</i>{t('bar.sit')}<kbd>X</kbd></button>
+          <button onClick={() => bridgeRef.current?.toggleFocus()} aria-pressed={presence === 'focusing'}><i aria-hidden>📖</i>{timer ? 'Timer' : presence === 'focusing' ? 'Focusing' : presence === 'away' ? 'Away' : t('bar.focus')}<kbd>F</kbd></button>
+          <button onClick={() => setQOpen(true)}><i aria-hidden>❓</i>{t('bar.ask')}<kbd>Q</kbd></button>
+          <button onClick={() => setBoardOpen((o) => !o)}><i aria-hidden>📌</i>{t('bar.board')}<kbd>B</kbd></button>
+          {touch ? <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More"><i aria-hidden>⋯</i>{t('bar.more')}</button> : <>
             <button onClick={() => setMembersOpen((o) => !o)}>Members<kbd>Tab</kbd></button>
             <button onClick={openLog}>Chat log</button>
             <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More">⋯</button>
           </>}
         </div>
+        <Tour touch={touch} />
         {touch && <Install />}
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
