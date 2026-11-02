@@ -21,7 +21,8 @@ export async function safety({ req, res, uid, v, parts, ev }) {
       if (typeof target !== 'string' || !UID.test(target) || target === uid) return res.status(400).json({ error: 'Invalid' }), true
       const there = await sql.query('select 1 from village_member where village_id = $1 and user_id = $2', [v.id, target]) // you can only block someone you share this village with
       if (!there.length) return res.status(404).json({ error: 'not_found' }), true
-      if ((await blockedBy(uid)).length >= MAX_BLOCKS && !(await blockedBy(uid)).includes(target)) return res.status(409).json({ error: 'too_many_blocks' }), true
+      const mine = await blockedBy(uid)
+      if (mine.length >= MAX_BLOCKS && !mine.includes(target)) return res.status(409).json({ error: 'too_many_blocks' }), true
       await sql.query('insert into village_block (blocker_id, blocked_id) values ($1, $2) on conflict do nothing', [uid, target])
       await tellRoom(v, uid)
       return res.json({ ok: true }), true

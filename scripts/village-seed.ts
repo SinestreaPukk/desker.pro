@@ -2,7 +2,7 @@
 //   set -a; . ./.env.local; set +a; node scripts/village-seed.ts --name "Med Year 1 Study Den" --owner you@example.com --courses DTIP122,ANAT101
 import { parseArgs } from 'node:util'
 import { sql } from '../api/_store.js'
-import { slugify } from '../packages/db/keys.js'
+import { slugify } from './slugify.js'
 import { newCode } from '../apps/village/api/village/_manage.js'
 
 const { values: a } = parseArgs({ options: { name: { type: 'string' }, owner: { type: 'string' }, courses: { type: 'string', default: '' }, base: { type: 'string', default: process.env.VILLAGE_URL ?? 'http://village.desker.test:5174' } } })

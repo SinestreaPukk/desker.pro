@@ -5,6 +5,7 @@ import { OUTFIT_TINTS, type Colour, type ZoneId } from '@desker/shared'
 import type { RosterItem } from './game/bridge.ts'
 import { blockUser, fileReport, unblockUser, type Info } from './api.ts'
 import { plain } from './Focus.tsx'
+import { ago } from './time.ts'
 
 const ZONE: Record<ZoneId, string> = { plaza: 'in the Plaza', library: 'in the Library', tables: 'at the Group Tables', lounge: 'in the Lounge', garden: 'in the Garden' }
 const ICON = { available: '●', focusing: '📖', dnd: '⛔', away: '💤' }
@@ -14,7 +15,6 @@ const doing = (r: RosterItem) => { // what they are studying, as far as their sh
   const left = r.endsAt ? ` · ${Math.max(0, Math.ceil((r.endsAt - Date.now()) / 60000))} min left` : ''
   return (s.taskTitle ? `${s.courseCode ? s.courseCode + ' · ' : ''}${plain(s.taskTitle, s.courseCode)}` : 'Studying') + left
 }
-const ago = (iso: string) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 2 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
 
 export type Act = 'locate' | 'walk' | 'follow' | 'wave' | 'knock'
 type LogItem = Extract<ServerMsg, { t: 'log' }>['items'][number]

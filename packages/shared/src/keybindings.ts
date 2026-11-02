@@ -1,6 +1,6 @@
 // SPEC §5.1. Defined once; Phase 1 adds the remap screen. Game keys are ignored while any text input has focus.
 export type Action = 'up' | 'down' | 'left' | 'right' | 'run' | 'talk' | 'interact' | 'focus' | 'members' | 'board' | 'close' | 'help'
-  | 'ask' | 'join' | 'dnd' | 'emote' | 'minimap' | 'build'
+  | 'ask' | 'join' | 'dnd' | 'emote' | 'minimap'
 export const KEYBINDINGS: { action: Action; keys: string[]; phase: 0 | 1 | 2; label: string }[] = [
   { action: 'up', keys: ['w', 'ArrowUp'], phase: 0, label: 'Walk' },
   { action: 'down', keys: ['s', 'ArrowDown'], phase: 0, label: 'Walk' },
@@ -19,7 +19,6 @@ export const KEYBINDINGS: { action: Action; keys: string[]; phase: 0 | 1 | 2; la
   { action: 'dnd', keys: ['g'], phase: 1, label: 'Do not disturb' },
   { action: 'emote', keys: ['e'], phase: 1, label: 'Emote' },
   { action: 'minimap', keys: ['m'], phase: 1, label: 'Minimap' },
-  { action: 'build', keys: ['Mod+b'], phase: 2, label: 'Build mode' },
 ]
 export const isTyping = (el: Element | null = typeof document === 'undefined' ? null : document.activeElement) =>
   !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || (el as HTMLElement).isContentEditable)

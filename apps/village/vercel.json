@@ -1,10 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/api/village/:first/:rest*",
-      "destination": "/api/village/:first?rest=:rest*"
-    },
-    {
       "source": "/((?!assets/|maps/|api/).*)",
       "destination": "/index.html"
     }
