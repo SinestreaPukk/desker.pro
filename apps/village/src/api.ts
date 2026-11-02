@@ -18,7 +18,7 @@ export const patchMe = (slug: string, body: Partial<{ colour: string; statusShar
 export const claimDesk = (slug: string, spotId: string | null) => call<{ ok: true }>(`${slug}/desk`, { method: 'PUT', body: JSON.stringify({ spotId }) })
 export type PickTask = { id: string; title: string; hours: number; courseCode?: string; activity: string; repeat: boolean }
 export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug}/tasks?date=${new Date().toLocaleDateString('sv')}`)
-export const focusStart = (slug: string, plannedMin: number) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin }) })
+export const focusStart = (slug: string, plannedMin: number, groupId?: string) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin, ...(groupId && { groupId }) }) })
 export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; plannedMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
 export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
@@ -65,3 +65,12 @@ export const thread = (slug: string, id: string) => call<{ question: Question; a
 export const answer = (slug: string, id: string, text: string) => call<{ id: string }>(`${slug}/questions/${id}/answers`, { method: 'POST', body: JSON.stringify({ text }) })
 export const resolveQuestion = (slug: string, id: string, resolved: boolean) => call<{ ok: true }>(`${slug}/questions/${id}/resolve`, { method: 'POST', body: JSON.stringify({ resolved }) })
 export const markHelpful = (slug: string, answerId: string) => call<{ ok: true }>(`${slug}/answers/${answerId}/helpful`, { method: 'POST', body: '{}' })
+
+export type GroupState = { id: string; startedBy: string; startedByName: string; focusMin: number; breakMin: number; rounds: number; startedAt: number; participants: { userId: string; name: string; colour: string; taskTitle?: string; courseCode?: string }[] }
+export type GroupSummary = { id: string; focusMin: number; breakMin: number; rounds: number; totalMin: number; people: { userId: string; name: string; colour: string; minutes: number; taskTitle?: string; courseCode?: string }[] }
+export const getGroup = (slug: string) => call<{ group: GroupState | null; serverNow: number; summary: GroupSummary | null }>(`${slug}/group`)
+export const startGroup = (slug: string, b: { focusMin: number; breakMin: number; rounds: number }) => call<{ ok: true }>(`${slug}/group`, { method: 'POST', body: JSON.stringify(b) })
+export const joinGroup = (slug: string, b: { taskTitle: string; courseCode?: string }) => call<{ groupId: string }>(`${slug}/group/join`, { method: 'POST', body: JSON.stringify(b) })
+export const leaveGroup = (slug: string) => call<{ ok: true }>(`${slug}/group/leave`, { method: 'POST', body: '{}' })
+export const finishGroup = (slug: string) => call<{ ok: true }>(`${slug}/group/finish`, { method: 'POST', body: '{}' })
+export const endGroup = (slug: string) => call<{ ok: true }>(`${slug}/group`, { method: 'DELETE' })

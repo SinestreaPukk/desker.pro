@@ -17,6 +17,10 @@ export class Bridge {
   timer: (on: boolean) => void = () => {}
   /** A red pin on the Board in the world while something is due within 24 hours. */
   boardPin: (red: boolean, question?: boolean) => void = () => {}
+  /** Study together: walk to my desk; warmer light during a break. */
+  walkToDesk: (spotId: string) => void = () => {}
+  groupBreak: (on: boolean) => void = (on) => { this.breakOn = on } // remembered, so a scene that starts later still gets the warm light
+  breakOn = false
   /** Something new went on the Board while you are here: the pins pulse gently. */
   boardPulse: () => void = () => {}
   /** Phase 1 CP3: Do Not Disturb, and what you can do about another person (all set by the scene). */

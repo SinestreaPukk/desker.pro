@@ -1,6 +1,6 @@
 // SPEC §5.1. Defined once; Phase 1 adds the remap screen. Game keys are ignored while any text input has focus.
 export type Action = 'up' | 'down' | 'left' | 'right' | 'run' | 'talk' | 'interact' | 'focus' | 'members' | 'board' | 'close' | 'help'
-  | 'ask' | 'dnd' | 'emote' | 'minimap' | 'build'
+  | 'ask' | 'join' | 'dnd' | 'emote' | 'minimap' | 'build'
 export const KEYBINDINGS: { action: Action; keys: string[]; phase: 0 | 1 | 2; label: string }[] = [
   { action: 'up', keys: ['w', 'ArrowUp'], phase: 0, label: 'Walk' },
   { action: 'down', keys: ['s', 'ArrowDown'], phase: 0, label: 'Walk' },
@@ -15,6 +15,7 @@ export const KEYBINDINGS: { action: Action; keys: string[]; phase: 0 | 1 | 2; la
   { action: 'close', keys: ['Escape'], phase: 0, label: 'Close' },
   { action: 'help', keys: ['?'], phase: 0, label: 'Help' },
   { action: 'ask', keys: ['q'], phase: 1, label: 'Ask a question' },
+  { action: 'join', keys: ['j'], phase: 1, label: 'Join a study session' },
   { action: 'dnd', keys: ['g'], phase: 1, label: 'Do not disturb' },
   { action: 'emote', keys: ['e'], phase: 1, label: 'Emote' },
   { action: 'minimap', keys: ['m'], phase: 1, label: 'Minimap' },

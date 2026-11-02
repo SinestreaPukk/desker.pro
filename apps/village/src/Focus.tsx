@@ -4,14 +4,14 @@ import { useEffect, useState } from 'react'
 import { ACTIVITIES, type Activity } from '@desker/shared'
 import { todaysTasks, type PickTask } from './api.ts'
 
-export interface Timer { sessionId: string; startedAt: number; endsAt: number; plannedMin: number; pausedAt?: number; pausedMs?: number; pauses?: number; taskId?: string; title: string; courseCode?: string; activity: Activity }
+export interface Timer { sessionId: string; startedAt: number; endsAt: number; plannedMin: number; pausedAt?: number; pausedMs?: number; pauses?: number; taskId?: string; title: string; courseCode?: string; activity: Activity; groupId?: string; round?: number }
 export const LABEL: Record<Activity, string> = { reading: 'Reading', practising: 'Practising', writing: 'Writing', revising: 'Revising', lab_report: 'Lab report', group_work: 'Group work', admin: 'Admin', other: 'Other' }
 export type Pick = { taskId?: string; title: string; courseCode?: string; activity: Activity; minutes: number }
 /** A task called "DTIP 122 read chapter 3" already says its course: show the course once. */
 export const plain = (title: string, code?: string) => (code && title.startsWith(code) ? title.slice(code.length).replace(/^[\s·:-]+/, '') || title : title)
 const clampMin = (n: number) => Math.min(600, Math.max(1, Math.round(n) || 25))
 
-export function TaskPicker({ slug, onPick, onClose }: { slug: string; onPick: (p: Pick) => void; onClose: () => void }) {
+export function TaskPicker({ slug, onPick, onClose, group }: { slug: string; onPick: (p: Pick) => void; onClose: () => void; group?: boolean }) {
   const [tasks, setTasks] = useState<PickTask[] | null>(null), [err, setErr] = useState(false)
   const [sel, setSel] = useState<PickTask | 'other'>('other'), [min, setMin] = useState(25), [label, setLabel] = useState(''), [act, setAct] = useState<Activity>('reading')
   useEffect(() => { todaysTasks(slug).then((r) => { setTasks(r.tasks); if (r.tasks[0]) { setSel(r.tasks[0]); setMin(clampMin(r.tasks[0].hours * 60)) } }).catch(() => { setErr(true); setTasks([]) }) }, [slug])
@@ -20,9 +20,9 @@ export function TaskPicker({ slug, onPick, onClose }: { slug: string; onPick: (p
     ? { title: label.trim().slice(0, 60) || LABEL[act], activity: act, minutes: clampMin(min) }
     : { taskId: sel.id, title: sel.title, courseCode: sel.courseCode, activity: sel.activity as Activity, minutes: clampMin(min) })
   return (
-    <div className="hud-modal" role="dialog" aria-label="Start a focus timer" onClick={onClose}>
+    <div className="hud-modal" role="dialog" aria-label={group ? 'Join the study session' : 'Start a focus timer'} onClick={onClose}>
       <div className="hud-panel picker" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}>
-        <h2>What are you working on?</h2>
+        <h2>{group ? 'Join the study session: what are you working on?' : 'What are you working on?'}</h2>
         {tasks === null && <p>Loading today's tasks…</p>}
         {err && <p role="alert">Couldn't load your Desker tasks. You can still pick something else.</p>}
         {tasks && tasks.length === 0 && !err && <p>No tasks planned for today in Desker.</p>}
@@ -38,8 +38,8 @@ export function TaskPicker({ slug, onPick, onClose }: { slug: string; onPick: (p
             <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} placeholder="A short label (optional)" aria-label="Label" />
           </p>
         )}
-        <p className="row"><label>Minutes <input type="number" min={1} max={600} value={min} onChange={(e) => setMin(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>
-          <button className="primary" onClick={go} autoFocus>Start</button> <button onClick={onClose}>Cancel (Esc)</button></p>
+        <p className="row">{!group && <label>Minutes <input type="number" min={1} max={600} value={min} onChange={(e) => setMin(Number(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && go()} /></label>}
+          <button className="primary" onClick={go} autoFocus>{group ? 'Join' : 'Start'}</button> <button onClick={onClose}>Cancel (Esc)</button></p>
       </div>
     </div>
   )

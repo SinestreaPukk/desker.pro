@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import { actionOf, isTyping, urgency, type Presence, type Colour, type Member, type ServerMsg, type ZoneId } from '@desker/shared'
 import BubbleBox from './BubbleBox.tsx'
 import ChatLog from './ChatLog.tsx'
-import { track, board as fetchBoard, questions as fetchQuestions, claimDesk, focusEnd, focusStart, info, type Announcement, type BoardItem, type Info } from './api.ts'
+import { track, board as fetchBoard, questions as fetchQuestions, claimDesk, endGroup, finishGroup, focusEnd, focusStart, getGroup, info, joinGroup, leaveGroup, startGroup, type GroupState, type GroupSummary, type Announcement, type BoardItem, type Info } from './api.ts'
 import Board from './Board.tsx'
 import { AskBox } from './Questions.tsx'
+import { GroupBar, GroupStart, GroupSummaryCard } from './Group.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
 import Members, { type Act } from './Members.tsx'
 import EmoteWheel from './EmoteWheel.tsx'
 import Minimap from './Minimap.tsx'
-import { zoneNote } from '@desker/shared'
+import { zoneNote, phaseAt, minutesLeft } from '@desker/shared'
 import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
@@ -54,6 +55,19 @@ export default function World({ slug }: { slug: string }) {
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null), [news, setNews] = useState<Announcement[]>([])
   const redPin = useRef(false), qPin = useRef(false)
+  // Study together: the session record, my clock offset to the server's, who I am in it, and the little prompts
+  const [group, setGroup] = useState<GroupState | null>(null), [offset, setOffset] = useState(0), [gnow, setGnow] = useState(Date.now()), [summary, setSummary] = useState<GroupSummary | null>(null)
+  const [gStart, setGStart] = useState(false), [gErr, setGErr] = useState(''), [gPick, setGPick] = useState(false), [deskPrompt, setDeskPrompt] = useState(false)
+  const gTask = useRef<Pick | null>(null), seenGroup = useRef<string | null>(null)
+  const joined = !!group?.participants.some((x) => x.userId === data?.me.userId)
+  const srvNow = () => Date.now() + offset
+  const loadGroup = () => getGroup(slug).then((r) => {
+    setOffset(r.serverNow - Date.now()); setGroup(r.group)
+    if (r.group && seenGroup.current !== r.group.id) { blip(660, 990); seenGroup.current = r.group.id } // a soft bell for a session that is new to this screen
+    if (r.summary && !localStorage.getItem(`village.group.seen.${r.summary.id}`)) setSummary(r.summary)
+  }, () => {})
+  const loadGroupRef = useRef<() => void>(() => {})
+  loadGroupRef.current = loadGroup
   const zoneAt = useRef<Partial<Record<ZoneId, number>>>({}), noteTimer = useRef<ReturnType<typeof setTimeout>>()
   const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
   const [wheel, setWheel] = useState(false), [mapOn, setMapOn] = useState(() => !isTouchUi()), [note, setNote] = useState(''), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
@@ -66,6 +80,8 @@ export default function World({ slug }: { slug: string }) {
   loadBoardRef.current = loadBoard
   const loadQPin = () => fetchQuestions(slug).then((r) => { qPin.current = r.questions.some((q) => !q.resolved && q.answers === 0); pins() }, () => {}) // a "?" on the Board in the world while a question waits for its first answer
   useEffect(() => { if (data) loadQPin() }, [data, qRev])
+  useEffect(() => { if (data) loadGroup() }, [data])
+  useEffect(() => { if (!group) return; const t = setInterval(() => setGnow(Date.now()), 1000); return () => clearInterval(t) }, [group?.id])
   useEffect(() => { if (!data) return; loadBoard(); const t = setInterval(loadBoard, 300_000); return () => clearInterval(t) }, [data]) // polled every 5 minutes in Phase 0
   useEffect(() => { if (boardOpen) { loadBoard(); track(slug, 'board_opened') } }, [boardOpen])
   useEffect(() => { // village_opened, and session_minutes on leave and whenever the tab hides (sendBeacon, as a closing tab cannot wait)
@@ -97,6 +113,7 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'log') setLog(m.items)
       else if (m.t === 'said' && m.text && m.userId !== data.me.userId) blip()
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
+      else if (m.t === 'qupdate' && m.qid === 'group') loadGroupRef.current() // the group changed: someone started, joined, left or it ended
       else if (m.t === 'qupdate' && m.qid === 'board') { loadBoardRef.current(); bridgeRef.current?.boardPulse() } // the API sends qid 'board' when something changes on the Board
       else if (m.t === 'qupdate' || m.t === 'asked') setQRev((n) => n + 1)
       else if (m.t === 'answered') { setQRev((n) => n + 1); toast(`${m.name} answered your question`); blip() }
@@ -129,6 +146,7 @@ export default function World({ slug }: { slug: string }) {
       if (e.key === 'Escape') { setQOpen(false); setLogOpen(false); setMembersOpen(false); setPick(false); setBoardOpen(false); return }
       if ((e.key === 'm' || e.key === 'M') && !isTyping() && !e.ctrlKey && !e.metaKey && !e.altKey) { setMapOn((o) => !o); return } // M = minimap
       if (e.key === 'Tab' && !isTyping()) { e.preventDefault(); setMembersOpen((o) => !o); return } // Tab = members (SPEC §5.1)
+      if (actionOf(e.key, isTyping(), 1) === 'join' && !e.ctrlKey && !e.metaKey && !e.altKey) { document.dispatchEvent(new CustomEvent('village:join')); return }
       if (actionOf(e.key, isTyping(), 1) === 'ask' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); setQOpen(true); return } // Q = ask the village
       if (actionOf(e.key, isTyping()) === 'board' && !e.ctrlKey && !e.metaKey && !e.altKey) { setBoardOpen((o) => !o); return } // B anywhere
       if (e.ctrlKey || e.metaKey || e.altKey || isTyping() || actionOf(e.key) !== 'talk') return
@@ -175,9 +193,45 @@ export default function World({ slug }: { slug: string }) {
   }
   useEffect(() => { // count down, chime once at zero and ask the one question
     if (!timer) return
-    const tick = () => { setNow(Date.now()); if (!timer.pausedAt && Date.now() >= timer.endsAt && !chimed.current) { chimed.current = true; blip(523, 784); setAsk(true) } }
+    const tick = () => { setNow(Date.now()); if (!timer.pausedAt && Date.now() >= timer.endsAt && !chimed.current && !timer.groupId) { chimed.current = true; blip(523, 784); setAsk(true) } }
     tick(); const id = setInterval(tick, 1000); return () => clearInterval(id)
   }, [timer])
+  useEffect(() => { const on = () => { if (group && !joined) setGPick(true) }; document.addEventListener('village:join', on); return () => document.removeEventListener('village:join', on) }, [group, joined])
+  // ---- Study together: every client derives the same phase from the session record; my timer follows it ----
+  const gp = group ? phaseAt(group, gnow + offset) : null
+  const starting = useRef(false), prevPhase = useRef('')
+  const startGroupTimer = async (g: GroupState, p: NonNullable<typeof gp>) => {
+    if (starting.current) return
+    starting.current = true
+    const task = gTask.current ?? (() => { try { return JSON.parse(localStorage.getItem(`village.group.task.${g.id}`) ?? 'null') as Pick | null } catch { return null } })() ?? { title: 'Studying together', activity: 'reading' as const, minutes: 25 }
+    try {
+      const mins = minutesLeft(p, srvNow()), r = await focusStart(slug, mins, g.id), at = Date.now()
+      const t: Timer = { sessionId: r.sessionId, startedAt: at, endsAt: p.endsAt - offset, plannedMin: mins, pausedMs: 0, pauses: 0, taskId: task.taskId, title: task.title, courseCode: task.courseCode, activity: task.activity, groupId: g.id, round: p.round }
+      chimed.current = false; setTimer(t); setNow(at); announce(t)
+    } catch { toast("Couldn't start your timer for this round.") }
+    starting.current = false
+  }
+  useEffect(() => {
+    const t = timerRef.current
+    if (!group || !gp) { bridgeRef.current?.groupBreak(false); prevPhase.current = ''; if (t?.groupId) endTimer(false); return }
+    if (gp.kind === 'done') finishGroup(slug).catch(() => {}) // time is up: the first client to say so ends it and the summary card follows
+    if (t?.groupId && (!joined || gp.kind !== 'focus' || t.groupId !== group.id || t.round !== gp.round)) endTimer(false) // a break (or leaving) ends this round's Desker sitting
+    if (joined && gp.kind === 'focus' && !timerRef.current) startGroupTimer(group, gp)
+    const was = prevPhase.current.startsWith(group.id) ? prevPhase.current.split(':')[1] : '', now = `${group.id}:${gp.kind}`
+    if (was && was !== gp.kind && joined) {
+      if (gp.kind === 'break') { blip(784, 523); toast(`Break · ${group.breakMin} min · the Lounge is open`) }
+      else if (gp.kind === 'focus') { blip(523, 784); if (data?.me.deskSpotId) setDeskPrompt(true) }
+    }
+    bridgeRef.current?.groupBreak(gp.kind === 'break' && joined)
+    prevPhase.current = now
+  }, [group?.id, gp?.kind, gp?.round, joined])
+  const doJoin = (p: Pick) => {
+    setGPick(false); gTask.current = p
+    if (group) localStorage.setItem(`village.group.task.${group.id}`, JSON.stringify(p))
+    joinGroup(slug, { taskTitle: p.title, ...(p.courseCode && { courseCode: p.courseCode }) }).then(loadGroup, () => toast("Couldn't join. Try again."))
+  }
+  const doStart = (b: { focusMin: number; breakMin: number; rounds: number }) => startGroup(slug, b).then(() => { setGStart(false); setGErr(''); loadGroup().then(() => setGPick(true)) }, (e: { code?: string }) => { if (e.code === 'running') { setGErr('A study session is already running. Join it with J.'); loadGroup() } else setGErr("That didn't work. Try again.") })
+  const openGroup = () => { setMore(false); if (!group) setGStart(true); else if (!joined) setGPick(true); else toast('You are in the study session.') }
   const names = [...new Set([...(data?.members ?? []), ...online].map((m) => m.name))]
   const say = (text: string) => { track(slug, 'bubble_sent', { zoneId: zone, length: [...text].length }); lastText.current = text; send.current({ t: 'say', text }); setTalk(null); setNotice('') }
   const openLog = () => { setLog(null); setLogOpen(true); send.current({ t: 'log' }) }
@@ -194,6 +248,7 @@ export default function World({ slug }: { slug: string }) {
         <div className="bar-actions">
           {more && <>
             <button onClick={() => { setMapOn((o) => !o); setMore(false) }} aria-pressed={mapOn}><i aria-hidden>🗺</i>Map<kbd>M</kbd></button>
+            <button onClick={openGroup}><i aria-hidden>📚</i>{group ? (joined ? 'In session' : 'Join session') : 'Study together'}<kbd>J</kbd></button>
             <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>Emote<kbd>E</kbd></button>
             <button onClick={() => { bridgeRef.current?.toggleDnd(); setMore(false) }} aria-pressed={presence === 'dnd'}><i aria-hidden>🎧</i>{presence === 'dnd' ? 'DND on' : 'DND'}<kbd>G</kbd></button>
             {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
@@ -218,6 +273,11 @@ export default function World({ slug }: { slug: string }) {
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
         {boardOpen && <Board items={boardItems} news={news} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} courseTags={data.village.courseTags} rev={qRev} onChanged={loadBoard} onClose={() => setBoardOpen(false)} />}
+        {group && <GroupBar g={group} now={gnow + offset} joined={joined} canEnd={group.startedBy === data.me.userId || can(data.me.role, 'moderate')} onJoin={() => setGPick(true)} onLeave={() => leaveGroup(slug).then(loadGroup, () => toast("Couldn't leave. Try again."))} onEnd={() => endGroup(slug).then(loadGroup, () => toast("Couldn't end it. Try again."))} />}
+        {gStart && <GroupStart onStart={doStart} onClose={() => { setGStart(false); setGErr('') }} error={gErr} />}
+        {gPick && <TaskPicker slug={slug} group onPick={doJoin} onClose={() => setGPick(false)} />}
+        {deskPrompt && data.me.deskSpotId && <div className="knock-card" role="alert"><span>Back to your desk?</span><span className="row"><button onClick={() => { bridgeRef.current?.walkToDesk(data.me.deskSpotId!); setDeskPrompt(false) }}>Walk to my desk</button><button onClick={() => setDeskPrompt(false)}>Not now</button></span></div>}
+        {summary && !group && <GroupSummaryCard s={summary} me={data.me.userId} onClose={() => { localStorage.setItem(`village.group.seen.${summary.id}`, '1'); setSummary(null) }} />}
         {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.') }} onClose={() => setQOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}

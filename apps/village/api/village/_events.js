@@ -13,6 +13,7 @@ const SPEC = {
   board_opened: {},
   board_item_added: { kind: oneOf('due', 'exam', 'announcement') }, board_item_to_planner: { kind: oneOf('due', 'exam') },
   question_asked: {}, question_answered: {}, question_resolved: {},
+  group_started: { focusMin: num(120), breakMin: num(30), rounds: num(6) }, group_joined: {}, group_ended: { people: num(50), minutes: num(6000) },
   invite_created: {},
   invite_accepted: {},
   mod_kick: {}, mod_ban: {}, mod_unban: {}, mod_transfer: {},

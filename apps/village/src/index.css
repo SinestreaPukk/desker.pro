@@ -128,3 +128,9 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .add-item .chips { display: flex; gap: 4px; flex-wrap: wrap } .add-item .newtag { display: inline-flex; gap: 4px } .add-item .newtag input { width: 100px } .add-item .err { color: #b3261e }
 @media (max-width: 640px) { .board.wide { width: 100vw } .board .tabs { display: flex; gap: 4px; margin-bottom: 8px } .board .tabs button { flex: 1; padding: 6px 2px; border: 1px solid #b4c6de; background: #eef2f8; border-radius: 8px; cursor: pointer } .board .tabs .on { background: #35599a; color: #fff }
   .board .cols { display: block } .board .bcol { display: none } .board .bcol.on { display: block } }
+
+/* Study together (CP7) */
+.group-bar { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; max-width: min(720px, calc(100vw - 24px)); background: #fff; border: 2px solid #35599a; border-radius: 10px; padding: 6px 12px; pointer-events: auto; z-index: 4; font-size: 14px }
+.group-bar.break { background: #fff5e0; border-color: #d89b3a } .group-bar .clock { font-variant-numeric: tabular-nums; font-weight: 700 } .group-bar .who-in { color: #5b6b86; font-size: 12px }
+.group-bar button { cursor: pointer } .group-bar kbd { font-size: 11px; margin-left: 2px }
+.sum { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px } .sum i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #35599a; vertical-align: middle }

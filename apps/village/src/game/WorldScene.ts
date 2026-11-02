@@ -40,6 +40,7 @@ export class WorldScene extends Phaser.Scene {
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
   private notice: { text: string; until: number } | null = null
   private qpin?: Phaser.GameObjects.Text
+  private warm?: Phaser.GameObjects.Rectangle
   private bubbles = new Map<string, { box: Phaser.GameObjects.Container; timer: Phaser.Time.TimerEvent }>()
   private tint!: Phaser.GameObjects.Rectangle
   private glows: Phaser.GameObjects.Image[] = []
@@ -106,6 +107,10 @@ export class WorldScene extends Phaser.Scene {
     this.pin = bd ? this.add.circle((bd.x + bd.w) * TILE_PX - 3, bd.y * TILE_PX + 3, 3, 0xd9443a).setStrokeStyle(1, 0xffffff).setDepth(D.above).setVisible(false) : undefined
     this.qpin = bd ? this.add.text((bd.x + bd.w) * TILE_PX - 12, bd.y * TILE_PX - 2, '?', { fontFamily: 'VT323, monospace', fontSize: '10px', color: '#14213d', backgroundColor: '#f2c14e', padding: { x: 2, y: 0 } }).setDepth(D.above).setVisible(false) : undefined
     b.boardPin = (on, q = false) => { this.pin?.setVisible(on); this.qpin?.setVisible(q) }
+    b.walkToDesk = (id) => { const sp = this.world.sitSpots.find((q) => q.id === id); if (sp) { this.setFollow(null); this.walkTo(Math.round(sp.x), Math.round(sp.y), false) } }
+    this.warm = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, 10000, 10000, 0xffb35c, 0.16).setScrollFactor(0).setDepth(D.above + 50).setVisible(false) // the lights go warmer while the group is on a break
+    b.groupBreak = (on) => { b.breakOn = on; this.warm?.setVisible(on) }
+    this.warm.setVisible(b.breakOn)
     b.boardPulse = () => { for (const o of [this.pin, this.qpin]) if (o) this.tweens.add({ targets: o, scale: 1.8, duration: 300, yoyo: true, repeat: 2 }) }
     b.interact = () => this.interact()
     b.walkToTile = (x, y) => { this.setFollow(null); this.walkTo(x, y, false) }

@@ -14,6 +14,7 @@ import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
 import { inviteRoutes, manage, closeVillage } from './_manage.js'
 import { qa } from './_qa.js'
 import { board } from './_board.js'
+import { group } from './_group.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { cleanCreate, tagOf, MAX_COURSE_TAGS, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
@@ -144,6 +145,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, spotId: spot })
   }
 
+  if (await group({ req, res, uid, v, parts: parts.slice(1), ev })) return
   if (await board({ req, res, uid, v, parts: parts.slice(1), ev, auto: () => boardRows([v.id]) })) return // the Board: shared deadlines read live, plus items added by hand, announcements, planner
 
   if (second === 'event' && req.method === 'POST') { // what the browser knows: opened, bubble sent, board opened, minutes on leave (also by sendBeacon)
@@ -166,7 +168,9 @@ export default async function handler(req, res) {
     if (b.action === 'start') {
       const open = (await sql.query('select id from village_focus_session where village_id = $1 and user_id = $2 and ended_at is null', [v.id, uid])).map((r) => r.id)
       if (open.length) await sql.query('update village_focus_session set ended_at = now() where id = any($1::uuid[])', [open]) // a forgotten timer from an earlier visit is closed, not counted
-      const [row] = await sql.query('insert into village_focus_session (village_id, user_id, started_at) values ($1, $2, now()) returning id, started_at as "startedAt"', [v.id, uid])
+      // a group round: only if I really joined the running session of this village (then the Desker sitting is linked to it)
+      const gid = typeof b.groupId === 'string' && /^[0-9a-f-]{36}$/.test(b.groupId) && (await sql.query('select 1 from village_group_participant p join village_group_session g on g.id = p.group_session_id where g.id = $1 and g.village_id = $2 and g.ended_at is null and p.user_id = $3 and p.left_at is null', [b.groupId, v.id, uid])).length ? b.groupId : null
+      const [row] = await sql.query('insert into village_focus_session (village_id, user_id, started_at, group_session_id) values ($1, $2, now(), $3) returning id, started_at as "startedAt"', [v.id, uid, gid])
       await ev(v.id, uid, 'focus_started', { plannedMin: Number(b.plannedMin) })
       return res.json({ ok: true, sessionId: row.id, startedAt: row.startedAt })
     }
