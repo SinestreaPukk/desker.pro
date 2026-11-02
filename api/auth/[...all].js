@@ -50,7 +50,17 @@ const healCookies = (res) => {
   for (const c of real) headers.append('set-cookie', c)
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
 }
-const handle = async (req) => cors(req, healCookies(req.method === 'OPTIONS' ? new Response(null) : await route(req)))
+// The other direction: someone who signed in BEFORE the shared cookie was switched on holds only a host-only cookie, so desker.dev knows them but village.desker.dev never receives it
+// ("Sign in on Desker first" although they are signed in). When a signed-in browser asks for its session and holds one session cookie, hand the same value back scoped to the whole domain.
+const shareSession = async (req, res) => {
+  if (!process.env.COOKIE_DOMAIN || req.method !== 'GET' || !new URL(req.url).pathname.endsWith('/get-session') || !res.ok || res.headers.getSetCookie().some((c) => c.includes('session_token'))) return res
+  const own = (req.headers.get('cookie') ?? '').split(/;\s*/).filter((c) => /^(__Secure-)?better-auth\.session_token=/.test(c))
+  if (own.length !== 1 || !/"user"\s*:/.test(await res.clone().text())) return res
+  const headers = new Headers(res.headers)
+  headers.append('set-cookie', `${own[0]}; Domain=${process.env.COOKIE_DOMAIN}; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax${own[0].startsWith('__Secure-') ? '; Secure' : ''}`)
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+}
+const handle = async (req) => cors(req, healCookies(await shareSession(req, req.method === 'OPTIONS' ? new Response(null) : await route(req))))
 const route = (req) => {
   const name = new URL(req.url).pathname.replace(/^\/api\//, '')
   if (name === 'auth/providers') return Response.json(socialProviders, { headers: { 'cache-control': 'public, max-age=300' } })
