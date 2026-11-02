@@ -53,7 +53,11 @@ const memberOf = async (slug, uid) => (await sql.query(
     where v.slug = $1 and v.deleted_at is null and m.user_id = $2 and m.banned_at is null`, [slug, uid]))[0]
 
 export default async function handler(req, res) {
-  const parts = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
+  const url = new URL(req.url, 'http://x')
+  const parts = url.pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
+  // Vercel's catch-all file only matches ONE path segment, so vercel.json rewrites /api/village/a/b/c to /api/village/a?rest=b/c; put the rest back
+  const rest = url.searchParams.get('rest')
+  if (rest && parts.length === 1) parts.push(...rest.split('/').filter(Boolean))
   const [first, second] = parts
   if (first === 'cron' && !second) { // Vercel's daily cron (sends Authorization: Bearer $CRON_SECRET): deadline reminders and housekeeping, no user involved
     if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: 'Not allowed' })
