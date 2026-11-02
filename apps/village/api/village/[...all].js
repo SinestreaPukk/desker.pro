@@ -15,6 +15,8 @@ import { inviteRoutes, manage, closeVillage } from './_manage.js'
 import { qa } from './_qa.js'
 import { board } from './_board.js'
 import { group } from './_group.js'
+import { dailyJob, pushMany, pushRoutes } from './_push.js'
+import { notify } from './_qa.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { cleanCreate, tagOf, MAX_COURSE_TAGS, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
@@ -32,6 +34,17 @@ const boardRows = async (villageIds) => (await sql.query(
      from deadlines d join village_member m on m.user_id = d.user_id
     where m.village_id = any($1::uuid[]) and m.share_deadlines and m.banned_at is null and d.due_date >= current_date - 2 and d.due_date <= current_date + 70`, [villageIds]))
   .map((r) => ({ vid: r.vid, userId: r.userId, title: String(r.title).slice(0, 120), dueAt: Date.parse(`${r.date}T${/^\d\d:\d\d$/.test(r.time ?? '') ? r.time : '23:59'}:00+07:00`), courseCode: courseOf(`${r.title} ${r.context ?? ''}`) }))
+// "The village is busy": the third person to start studying wakes the members who are not here and have not opened it today (the daily cap and the quiet hours are checked per person when sending).
+const villageBusy = async (v, uid) => {
+  try {
+    const [n] = await sql.query("select count(distinct user_id)::int as n from village_focus_session where village_id = $1 and ended_at is null and started_at > now() - interval '3 hours'", [v.id])
+    if (n.n < 3) return
+    const here = (await notify(v.id, { kind: 'online', qid: 'online', userId: uid }))?.online
+    if (!here) return // cannot tell who is here: say nothing
+    const rows = await sql.query('select user_id as uid from village_member where village_id = $1 and banned_at is null', [v.id])
+    await pushMany(rows.map((r) => r.uid).filter((u) => !here.includes(u)), 'busy', { title: `${v.name} is busy`, body: `${n.n} friends are studying right now`, url: `/v/${v.slug}` }, { villageId: v.id })
+  } catch { /* a missing nudge never breaks starting a timer */ }
+}
 const no = (res) => res.status(403).json({ error: 'not_member' })
 
 const memberOf = async (slug, uid) => (await sql.query(
@@ -40,10 +53,14 @@ const memberOf = async (slug, uid) => (await sql.query(
     where v.slug = $1 and v.deleted_at is null and m.user_id = $2 and m.banned_at is null`, [slug, uid]))[0]
 
 export default async function handler(req, res) {
-  const uid = await userOf(req)
-  if (!uid) return res.status(401).json({ error: 'Sign in first' })
   const parts = new URL(req.url, 'http://x').pathname.replace(/^\/api\/village\/?/, '').split('/').filter(Boolean)
   const [first, second] = parts
+  if (first === 'cron' && !second) { // Vercel's daily cron (sends Authorization: Bearer $CRON_SECRET): deadline reminders and housekeeping, no user involved
+    if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: 'Not allowed' })
+    return res.json({ ok: true, ...(await dailyJob()) })
+  }
+  const uid = await userOf(req)
+  if (!uid) return res.status(401).json({ error: 'Sign in first' })
 
   if (first === 'mine' && !second && req.method === 'GET') {
     const rows = await sql.query(
@@ -100,8 +117,9 @@ export default async function handler(req, res) {
     const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
+  if (first === 'push' && !second) return pushRoutes({ req, res, uid })
   if (first === 'invite') return inviteRoutes({ req, res, uid, code: second, action: parts[2], ev, maxMembers: MAX_MEMBERS, defaultSharing })
-  if (!first || first === 'mine' || first === 'courses' || first === 'new') return res.status(404).json({ error: 'Not found' })
+  if (!first || first === 'mine' || first === 'courses' || first === 'new' || first === 'push') return res.status(404).json({ error: 'Not found' })
   const slug = first.slice(0, 64)
 
   if (second === 'restore' && req.method === 'POST') { // undo closing, within 7 days, owner only
@@ -172,6 +190,7 @@ export default async function handler(req, res) {
       const gid = typeof b.groupId === 'string' && /^[0-9a-f-]{36}$/.test(b.groupId) && (await sql.query('select 1 from village_group_participant p join village_group_session g on g.id = p.group_session_id where g.id = $1 and g.village_id = $2 and g.ended_at is null and p.user_id = $3 and p.left_at is null', [b.groupId, v.id, uid])).length ? b.groupId : null
       const [row] = await sql.query('insert into village_focus_session (village_id, user_id, started_at, group_session_id) values ($1, $2, now(), $3) returning id, started_at as "startedAt"', [v.id, uid, gid])
       await ev(v.id, uid, 'focus_started', { plannedMin: Number(b.plannedMin) })
+      await villageBusy(v, uid) // 3 or more studying now: tell members who have not been here today
       return res.json({ ok: true, sessionId: row.id, startedAt: row.startedAt })
     }
     if (b.action === 'end') {

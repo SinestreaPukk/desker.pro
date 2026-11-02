@@ -5,6 +5,7 @@ import { limit } from '../../../../api/_rate.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
 import { cleanGroup, phaseAt } from '../../../../packages/shared/src/groupSession.js'
 import { notify } from './_qa.js'
+import { pushMany } from './_push.js'
 
 const text = (v, n) => (typeof v === 'string' ? [...v.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()].slice(0, n).join('') : '')
 const COURSE = /^[A-Za-z]{2,6}\s?\d{2,5}$/
@@ -51,7 +52,7 @@ const state = async (v, uid, ev) => {
 export async function group({ req, res, uid, v, parts, ev }) {
   if (parts[0] !== 'group') return false
   const [, a] = parts
-  const tell = () => notify(v.id, { kind: 'update', qid: 'group', userId: uid })
+  const tell = () => notify(v.id, { kind: 'update', qid: 'group', userId: uid }) // -> { online } or null
 
   if (!a && req.method === 'GET') return res.json(await state(v, uid, ev)), true
 
@@ -65,7 +66,10 @@ export async function group({ req, res, uid, v, parts, ev }) {
     try { await sql.query('insert into village_group_session (village_id, started_by, focus_min, break_min, rounds) values ($1, $2, $3, $4, $5)', [v.id, uid, c.focusMin, c.breakMin, c.rounds]) }
     catch (e) { if (e?.code === '23505') return res.status(409).json({ error: 'running' }), true; throw e }
     await ev(v.id, uid, 'group_started', c)
-    await tell()
+    const r = await tell()
+    const [who] = await sql.query('select name from "user" where id = $1', [uid])
+    const rows = await sql.query('select user_id as uid from village_member where village_id = $1 and banned_at is null and user_id <> $2', [v.id, uid])
+    if (r?.online) await pushMany(rows.map((x) => x.uid).filter((u) => !r.online.includes(u)), 'group', { title: `${who?.name ?? 'Someone'} started a study session`, body: `${v.name} · ${c.focusMin}/${c.breakMin} × ${c.rounds}`, url: `/v/${v.slug}` }, { villageId: v.id }) // members who are not here get a nudge (max 2 a day per village)
     return res.json({ ok: true }), true
   }
 

@@ -74,3 +74,9 @@ export const joinGroup = (slug: string, b: { taskTitle: string; courseCode?: str
 export const leaveGroup = (slug: string) => call<{ ok: true }>(`${slug}/group/leave`, { method: 'POST', body: '{}' })
 export const finishGroup = (slug: string) => call<{ ok: true }>(`${slug}/group/finish`, { method: 'POST', body: '{}' })
 export const endGroup = (slug: string) => call<{ ok: true }>(`${slug}/group`, { method: 'DELETE' })
+
+import type { PushPrefs } from '@desker/shared'
+export type PushState = { configured: boolean; publicKey: string | null; subscribed: boolean; prefs: PushPrefs }
+export const pushState = () => call<PushState>('push')
+export const pushSave = (b: { sub?: unknown; prefs: PushPrefs; tz: string }) => call<{ ok: true }>('push', { method: 'PUT', body: JSON.stringify(b) })
+export const pushOff = () => call<{ ok: true }>('push', { method: 'DELETE' })

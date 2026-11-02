@@ -18,11 +18,11 @@ const TABS: [Tab, string][] = [['due', 'Due'], ['exam', 'Exams'], ['q', 'Questio
 const WHY: Record<string, string> = { bad_course: 'Pick one of the village courses.', bad_date: 'Pick a date that has not passed.', bad_item: 'Add a title (2 letters or more).', forbidden: 'You cannot do that here.', slow_down: 'Slow down a little.' }
 const why = (e: unknown) => WHY[(e as { code?: string })?.code ?? ''] ?? "That didn't work. Try again."
 
-type Props = { items: BoardItem[] | null; news: Announcement[]; members: Info['members']; slug: string; me: string; role: string; courseTags: string[]; rev: number; onChanged: () => void; onClose: () => void }
+type Props = { items: BoardItem[] | null; news: Announcement[]; members: Info['members']; slug: string; me: string; role: string; courseTags: string[]; rev: number; openQ?: string | null; onChanged: () => void; onClose: () => void }
 
-export default function Board({ items, news, members, slug, me, role, courseTags, rev, onChanged, onClose }: Props) {
+export default function Board({ items, news, members, slug, me, role, courseTags, rev, openQ, onChanged, onClose }: Props) {
   const now = Date.now(), by = new Map(members.map((m) => [m.userId, m]))
-  const [tab, setTab] = useState<Tab>('due'), [filter, setFilter] = useState<string | null>(null), [msg, setMsg] = useState('')
+  const [tab, setTab] = useState<Tab>(openQ ? 'q' : 'due'), [filter, setFilter] = useState<string | null>(null), [msg, setMsg] = useState('')
   const [adding, setAdding] = useState<null | 'due' | 'exam'>(null), [posting, setPosting] = useState(false)
   const tags = courseTags.map((c) => courseOf(c) ?? c)
   const say = (t: string) => { setMsg(t); setTimeout(() => setMsg(''), 4000) }
@@ -65,7 +65,7 @@ export default function Board({ items, news, members, slug, me, role, courseTags
       <div className="cols">
         {col('due', 'Due')}
         {col('exam', 'Exams')}
-        <div className={`bcol ${tab === 'q' ? 'on' : ''}`}><Questions slug={slug} me={me} role={role} rev={rev} /></div>
+        <div className={`bcol ${tab === 'q' ? 'on' : ''}`}><Questions slug={slug} me={me} role={role} rev={rev} openId={openQ} /></div>
         <section className={`bcol ${tab === 'news' ? 'on' : ''}`} aria-label="News">
           <h3>News{can(role, 'announce') && <button type="button" className="plus" aria-label="Post an announcement" onClick={() => setPosting(true)}>+</button>}</h3>
           {news.length === 0 && <p className="none">No announcements.</p>}

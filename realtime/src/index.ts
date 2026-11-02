@@ -102,7 +102,7 @@ export class VillageRoom extends DurableObject<Env> {
         else ws.serializeAttachment({ ...att, queue: [...(att.queue ?? []), { fromUserId: String(b.by ?? ''), name: by, text: 'answered your question', k: 'answer' as const }].slice(-QUEUE_MAX) })
       }
     } else if (b.kind === 'update') for (const { ws } of room) this.send(ws, { t: 'qupdate', qid: b.qid })
-    return new Response('ok')
+    return Response.json({ online: [...new Set(room.map((x) => x.att.member!.userId))] }) // who is here, so the API pushes only to people who are not
   }
 
   // Sockets that never said hello are closed (they cost memory and could be probing).

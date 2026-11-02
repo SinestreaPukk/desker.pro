@@ -4,6 +4,7 @@ import { sql } from '../../../../api/_store.js'
 import { limit } from '../../../../api/_rate.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
+import { sendPush } from './_push.js'
 import { cleanQuestion, cleanAnswer, canResolve, QUESTION_RATE, ANSWER_RATE } from '../../../../packages/shared/src/qa.js'
 
 const ID = /^[0-9a-f-]{36}$/
@@ -11,11 +12,12 @@ const ID = /^[0-9a-f-]{36}$/
 /** Tell the room (best effort: the question is saved either way and shows when the Board is opened). */
 export async function notify(vid, body) {
   const base = process.env.VILLAGE_REALTIME_HTTP ?? process.env.VITE_REALTIME_URL?.replace(/^ws/, 'http')
-  if (!base || !process.env.VILLAGE_ROOM_SECRET) return
+  if (!base || !process.env.VILLAGE_ROOM_SECRET) return null
   try {
     const t = await signToken({ sub: 'api', vid, role: 'notify' }, process.env.VILLAGE_ROOM_SECRET, 60)
-    await fetch(`${base}/room/${vid}/notify`, { method: 'POST', headers: { authorization: `Bearer ${t}`, 'content-type': 'application/json' }, body: JSON.stringify(body) })
-  } catch { /* best effort */ }
+    const r = await fetch(`${base}/room/${vid}/notify`, { method: 'POST', headers: { authorization: `Bearer ${t}`, 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    return await r.json() // { online: [user ids connected right now] }
+  } catch { return null /* best effort */ }
 }
 
 const recent = async (table, col, uid, windowMs) => (await sql.query(`select count(*)::int as n from ${table} where ${col} = $1 and created_at > now() - ($2 || ' milliseconds')::interval`, [uid, String(windowMs)]))[0].n
@@ -76,8 +78,10 @@ export async function qa({ req, res, uid, v, parts, ev }) {
     const [row] = await sql.query('insert into village_answer (question_id, user_id, text) values ($1, $2, $3) returning id', [b, uid, t.text])
     const [me] = await sql.query('select name from "user" where id = $1', [uid])
     await ev(v.id, uid, 'question_answered', {})
-    if (q.askerId !== uid) await notify(v.id, { kind: 'answered', qid: b, userId: q.askerId, by: uid, name: me?.name })
-    else await notify(v.id, { kind: 'update', qid: b, userId: uid })
+    if (q.askerId !== uid) {
+      const r = await notify(v.id, { kind: 'answered', qid: b, userId: q.askerId, by: uid, name: me?.name })
+      if (r?.online && !r.online.includes(q.askerId)) await sendPush(q.askerId, 'answered', { title: `${me?.name ?? 'Someone'} answered your question`, body: q.text, url: `/v/${v.slug}?q=${b}` }, { villageId: v.id }).catch(() => false) // here: toast or queue; not here: push
+    } else await notify(v.id, { kind: 'update', qid: b, userId: uid })
     return res.json({ ok: true, id: row.id }), true
   }
 

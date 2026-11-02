@@ -1,1 +1,14 @@
-{ "rewrites": [{ "source": "/((?!assets/|maps/|api/).*)", "destination": "/index.html" }] }
+{
+  "rewrites": [
+    {
+      "source": "/((?!assets/|maps/|api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/village/cron",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}

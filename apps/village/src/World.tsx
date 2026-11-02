@@ -5,6 +5,7 @@ import ChatLog from './ChatLog.tsx'
 import { track, board as fetchBoard, questions as fetchQuestions, claimDesk, endGroup, finishGroup, focusEnd, focusStart, getGroup, info, joinGroup, leaveGroup, startGroup, type GroupState, type GroupSummary, type Announcement, type BoardItem, type Info } from './api.ts'
 import Board from './Board.tsx'
 import { AskBox } from './Questions.tsx'
+import { NudgeCard, shouldAsk } from './Notifications.tsx'
 import { GroupBar, GroupStart, GroupSummaryCard } from './Group.tsx'
 import { TaskPicker, TimerHud, type Pick, type Timer } from './Focus.tsx'
 import Privacy from './Privacy.tsx'
@@ -50,7 +51,7 @@ export default function World({ slug }: { slug: string }) {
   const [membersOpen, setMembersOpen] = useState(false), [presence, setPresence] = useState<Presence>('available')
   const timerKey = `village.timer.${slug}`
   const [timer, setTimerState] = useState<Timer | null>(() => { try { const t = JSON.parse(localStorage.getItem(timerKey) ?? 'null') as Timer | null; return t && Date.now() < t.endsAt + 3_600_000 ? t : null } catch { return null } }) // a timer survives a reload
-  const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [qOpen, setQOpen] = useState(false), [qRev, setQRev] = useState(0), [now, setNow] = useState(Date.now())
+  const [pick, setPick] = useState(false), [ask, setAsk] = useState(false), [qOpen, setQOpen] = useState(false), [nudge, setNudge] = useState(false), [openQ, setOpenQ] = useState<string | null>(null), [qRev, setQRev] = useState(0), [now, setNow] = useState(Date.now())
   const timerRef = useRef<Timer | null>(timer), chimed = useRef(false)
   const setTimer = (t: Timer | null) => { timerRef.current = t; setTimerState(t); if (t) localStorage.setItem(timerKey, JSON.stringify(t)); else localStorage.removeItem(timerKey) }
   const [boardOpen, setBoardOpen] = useState(false), [boardItems, setBoardItems] = useState<BoardItem[] | null>(null), [news, setNews] = useState<Announcement[]>([])
@@ -98,6 +99,11 @@ export default function World({ slug }: { slug: string }) {
   }, [data])
   useEffect(() => { info(slug).then(setData).catch((e) => setErr(e.code ?? 'error')) }, [slug])
   useEffect(() => { const on = (e: KeyboardEvent) => e.key === 'Escape' && setPanel(null); window.addEventListener('keydown', on); return () => window.removeEventListener('keydown', on) }, [])
+  useEffect(() => { // a tapped notification lands here with ?q=<question id> (the thread) or ?board=1 (the Board)
+    const q = new URLSearchParams(location.search)
+    if (!data || !(q.has('q') || q.has('board'))) return
+    if (q.get('q')) setOpenQ(q.get('q')); setBoardOpen(true); history.replaceState(null, '', location.pathname)
+  }, [data])
   useEffect(() => { // just created: say hello once (the Kodama's line, as a toast until the NPC sprite exists)
     const q = new URLSearchParams(location.search)
     if (!data || !(q.has('new') || q.has('first'))) return
@@ -182,13 +188,14 @@ export default function World({ slug }: { slug: string }) {
     if (a === 'walk' || a === 'follow') setMembersOpen(false)
   }
   const toast = (text: string) => { const id = Math.random(); setToasts((t) => [...t, { id, text }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 6000) }
+  const askLater = () => { shouldAsk().then((ok) => ok && setNudge(true)) } // a good moment: right after a first question or a finished focus
   const endTimer = (done: boolean) => {
     const t = timerRef.current; if (!t) return
     send.current({ t: 'focus.stop' }); bridgeRef.current?.timer(false); setTimer(null); setAsk(false)
     const activeMin = Math.max(0, Math.round((Math.min(t.pausedAt ?? Date.now(), t.endsAt) - t.startedAt - (t.pausedMs ?? 0)) / 60000)) // paused time is not focus time
     time.current.focusMin += activeMin
     focusEnd(slug, { sessionId: t.sessionId, activeMin, plannedMin: t.plannedMin, pauses: t.pauses ?? 0, done, taskId: t.taskId }).then(
-      (r) => toast(r.again ? 'Already saved.' : r.reason && r.reason !== 'no_outcome' ? `Logged ${activeMin} min in Desker. Too short or long to teach it your pace.` : `Logged ${activeMin} min in Desker${done && t.taskId ? '. Task done!' : '.'}`),
+      (r) => { askLater(); toast(r.again ? 'Already saved.' : r.reason && r.reason !== 'no_outcome' ? `Logged ${activeMin} min in Desker. Too short or long to teach it your pace.` : `Logged ${activeMin} min in Desker${done && t.taskId ? '. Task done!' : '.'}`) },
       () => toast("Couldn't save that session to Desker."))
   }
   useEffect(() => { // count down, chime once at zero and ask the one question
@@ -272,13 +279,14 @@ export default function World({ slug }: { slug: string }) {
         </div>
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
-        {boardOpen && <Board items={boardItems} news={news} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} courseTags={data.village.courseTags} rev={qRev} onChanged={loadBoard} onClose={() => setBoardOpen(false)} />}
+        {boardOpen && <Board items={boardItems} news={news} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} courseTags={data.village.courseTags} rev={qRev} openQ={openQ} onChanged={loadBoard} onClose={() => setBoardOpen(false)} />}
         {group && <GroupBar g={group} now={gnow + offset} joined={joined} canEnd={group.startedBy === data.me.userId || can(data.me.role, 'moderate')} onJoin={() => setGPick(true)} onLeave={() => leaveGroup(slug).then(loadGroup, () => toast("Couldn't leave. Try again."))} onEnd={() => endGroup(slug).then(loadGroup, () => toast("Couldn't end it. Try again."))} />}
         {gStart && <GroupStart onStart={doStart} onClose={() => { setGStart(false); setGErr('') }} error={gErr} />}
         {gPick && <TaskPicker slug={slug} group onPick={doJoin} onClose={() => setGPick(false)} />}
         {deskPrompt && data.me.deskSpotId && <div className="knock-card" role="alert"><span>Back to your desk?</span><span className="row"><button onClick={() => { bridgeRef.current?.walkToDesk(data.me.deskSpotId!); setDeskPrompt(false) }}>Walk to my desk</button><button onClick={() => setDeskPrompt(false)}>Not now</button></span></div>}
         {summary && !group && <GroupSummaryCard s={summary} me={data.me.userId} onClose={() => { localStorage.setItem(`village.group.seen.${summary.id}`, '1'); setSummary(null) }} />}
-        {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.') }} onClose={() => setQOpen(false)} />}
+        {nudge && <NudgeCard onClose={() => setNudge(false)} />}
+        {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.'); askLater() }} onClose={() => setQOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
         {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
         {mapOn && !boardOpen && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}
