@@ -38,7 +38,7 @@ export async function board({ req, res, uid, v, parts, ev, auto }) {
 
   if (!a && req.method === 'POST') { // add a Due or Exam item
     if (!can(v.role, 'addBoard')) return res.status(403).json({ error: 'forbidden' }), true
-    if (!(await limit(req, res, { scope: 'village-board', max: 60, id: uid }))) return true
+    if (!(await limit(req, res, { scope: 'village-board', max: 10, id: uid }))) return true
     const x = req.body || {}, title = text(x.title, 120), dueAt = parseDue(x.date, x.time), courseCode = courseOf(String(x.courseCode ?? ''))
     if (!['due', 'exam'].includes(x.kind) || title.length < 2) return res.status(400).json({ error: 'bad_item' }), true
     if (!courseCode || !tagsOf(v).has(courseCode)) return res.status(400).json({ error: 'bad_course' }), true
@@ -57,7 +57,7 @@ export async function board({ req, res, uid, v, parts, ev, auto }) {
 
   if (a === 'announce' && req.method === 'POST') {
     if (!can(v.role, 'announce')) return res.status(403).json({ error: 'forbidden' }), true
-    if (!(await limit(req, res, { scope: 'village-board', max: 60, id: uid }))) return true
+    if (!(await limit(req, res, { scope: 'village-board', max: 10, id: uid }))) return true
     const x = req.body || {}, title = text(x.title, 120), body = text(x.body, 500)
     if (!title) return res.status(400).json({ error: 'bad_item' }), true
     const [row] = await sql.query(`insert into village_board_item (village_id, kind, title, title_norm, body, pinned, created_by) values ($1, 'announcement', $2, $3, $4, $5, $6) returning id`, [v.id, title, normTitle(title), body || null, x.pinned === true, uid])
@@ -98,6 +98,7 @@ export async function board({ req, res, uid, v, parts, ev, auto }) {
   if (!b && req.method === 'DELETE') { // soft delete
     if (!mayEdit) return res.status(403).json({ error: 'forbidden' }), true
     await sql.query('update village_board_item set deleted_at = now() where id = $1', [a])
+    if (it.createdBy !== uid) await ev(v.id, uid, 'mod_delete_item', {})
     await tell()
     return res.json({ ok: true }), true
   }

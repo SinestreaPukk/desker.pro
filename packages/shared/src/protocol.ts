@@ -32,6 +32,7 @@ export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('focus.stop') }),
   z.object({ t: z.literal('focus.pause') }), z.object({ t: z.literal('focus.resume') }),
   z.object({ t: z.literal('claimDesk'), spotId: id }),
+  z.object({ t: z.literal('mod.remove'), userId: id, at: z.number() }), // a moderator removes one bubble from everyone's 24 h log
   z.object({ t: z.literal('log') }), // ask for the last 24 hours of bubbles I was able to see
   z.object({ t: z.literal('ping'), ts: z.number() }),
 ])

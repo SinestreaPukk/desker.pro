@@ -11,10 +11,11 @@ import { sql, loadDoc, saveDoc } from '../../../../api/_store.js'
 import { finishSession, todaysTasks } from './_session.js'
 import { cleanEvent, CLIENT_EVENTS } from './_events.js'
 import { buildBoard, courseOf } from '../../../../packages/shared/src/board.js'
-import { inviteRoutes, manage, closeVillage } from './_manage.js'
+import { inviteRoutes, manage, closeVillage, revoke } from './_manage.js'
 import { qa } from './_qa.js'
 import { board } from './_board.js'
 import { group } from './_group.js'
+import { safety, blockedBy } from './_safety.js'
 import { dailyJob, pushMany, pushRoutes } from './_push.js'
 import { notify } from './_qa.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
@@ -114,11 +115,12 @@ export default async function handler(req, res) {
     const vid = req.body?.villageId
     if (typeof vid !== 'string' || !/^[0-9a-f-]{36}$/.test(vid)) return res.status(400).json({ error: 'Invalid village' })
     const m = (await sql.query(
-      `select m.role, m.desk_spot_id, m.status_sharing, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
+      `select m.role, m.desk_spot_id, m.status_sharing, v.settings, u.name, coalesce(m.settings->>'colour', 'snow') as colour from village_member m join village v on v.id = m.village_id join "user" u on u.id = m.user_id
         where m.village_id = $1 and m.user_id = $2 and m.banned_at is null and v.deleted_at is null`, [vid, uid]))[0]
     if (!m) return no(res)
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [vid, uid]) // "last seen" in the member list: refreshed every time a connection starts or renews
-    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }) }, process.env.VILLAGE_ROOM_SECRET, 600)
+    const bl = await blockedBy(uid) // the room hides these people from me and drops their knocks and emotes
+    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }), ...(bl.length && { bl }), ...(m.settings?.slow_mode && { sm: 1 }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
   if (first === 'push' && !second) return pushRoutes({ req, res, uid })
@@ -146,7 +148,7 @@ export default async function handler(req, res) {
       `select m.user_id as "userId", u.name, coalesce(m.settings->>'colour', 'snow') as colour, m.role, m.desk_spot_id as "deskSpotId", m.last_seen_at as "lastSeenAt"
          from village_member m join "user" u on u.id = m.user_id where m.village_id = $1 and m.banned_at is null order by m.joined_at`, [v.id])
     return res.json({
-      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false, whoCanInvite: v.settings?.who_can_invite === 'everyone' ? 'everyone' : 'admins' },
+      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false, whoCanInvite: v.settings?.who_can_invite === 'everyone' ? 'everyone' : 'admins', slowMode: v.settings?.slow_mode === true },
       me: { userId: uid, role: v.role, colour: v.mine?.colour ?? 'snow', statusSharing: v.status_sharing, shareDeadlines: v.share_deadlines, deskSpotId: v.desk_spot_id },
       members,
     })
@@ -167,6 +169,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, spotId: spot })
   }
 
+  if (await safety({ req, res, uid, v, parts: parts.slice(1), ev })) return
   if (await group({ req, res, uid, v, parts: parts.slice(1), ev })) return
   if (await board({ req, res, uid, v, parts: parts.slice(1), ev, auto: () => boardRows([v.id]) })) return // the Board: shared deadlines read live, plus items added by hand, announcements, planner
 
@@ -174,6 +177,7 @@ export default async function handler(req, res) {
     if (!(await limit(req, res, { scope: 'village-event', max: 600, id: uid }))) return
     const name = req.body?.name
     if (!CLIENT_EVENTS.includes(name)) return res.status(400).json({ error: 'Unknown event' })
+    if (name === 'mod_remove_bubble' && !can(v.role, 'moderate')) return res.status(403).json({ error: 'forbidden' })
     await ev(v.id, uid, name, req.body?.props)
     return res.json({ ok: true })
   }
@@ -221,9 +225,16 @@ export default async function handler(req, res) {
   if (!second && req.method === 'PATCH') { // village settings: owner and admins
     if (!can(v.role, 'changeSettings')) return res.status(403).json({ error: 'forbidden' })
     const b = req.body || {}, patch = {}
+    let slowChanged = false
     if (b.libraryAutoFocus !== undefined) { if (typeof b.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' }); patch.library_auto_focus = b.libraryAutoFocus }
     if (b.whoCanInvite !== undefined) { if (!['admins', 'everyone'].includes(b.whoCanInvite)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_invite = b.whoCanInvite }
     if (b.defaultSharing !== undefined) { if (!['basic', 'full'].includes(b.defaultSharing)) return res.status(400).json({ error: 'Invalid' }); patch.default_status_sharing = b.defaultSharing }
+    if (b.slowMode !== undefined) { // slow mode: one bubble per 30 s for everyone. Open connections reconnect (new token) so it takes effect within seconds.
+      if (typeof b.slowMode !== 'boolean') return res.status(400).json({ error: 'Invalid' })
+      patch.slow_mode = b.slowMode
+      await ev(v.id, uid, 'mod_slow_mode', { on: b.slowMode })
+      slowChanged = true
+    }
     if (b.addCourse !== undefined) { // a new course tag, so its deadlines can be added to the Board
       const tag = tagOf(b.addCourse); if (!/^[A-Z]{2,6}\d{2,5}$/.test(tag)) return res.status(400).json({ error: 'Invalid' })
       await sql.query('update village set course_tags = array_append(course_tags, $2) where id = $1 and not ($2 = any(course_tags)) and cardinality(course_tags) < $3', [v.id, tag, MAX_COURSE_TAGS])
@@ -231,6 +242,7 @@ export default async function handler(req, res) {
     }
     if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to change' })
     await sql.query('update village set settings = settings || $2::jsonb where id = $1', [v.id, JSON.stringify(patch)])
+    if (slowChanged) await revoke(v.id, '*', 'refresh')
     return res.json({ ok: true })
   }
 

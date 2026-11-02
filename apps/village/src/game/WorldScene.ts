@@ -133,9 +133,10 @@ export class WorldScene extends Phaser.Scene {
 
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
+  private hidden = new Set<string>()
   update(time: number, delta: number) {
     this.tickFollow(time); this.moveMe(time, Math.min(delta, 50)); this.arrived(); this.drawRemotes(time); this.followBubbles()
-    this.me.tick(time); for (const r of this.remotes.values()) r.k.tick(time)
+    this.me.tick(time); for (const [id, r] of this.remotes) { r.k.tick(time); const hide = this.data0.bridge.blocked.has(id); if (hide) { r.k.setAlpha(0); this.hidden.add(id) } else if (this.hidden.delete(id)) r.k.setAlpha(1) } // blocked: invisible (the ring may re-show itself each frame, so keep hiding)
     if (this.myPresence === 'available' && time - this.lastInput > this.awayMs) this.setPresence('away') // asleep after 5 quiet minutes; any input wakes you
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
       this.sendMove(); this.lastSend = time; this.dirty = false

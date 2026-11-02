@@ -18,7 +18,7 @@ import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
 import Manage from './Manage.tsx'
 import { can } from '@desker/shared'
-import { leaveVillage, closeVillage } from './api.ts'
+import { leaveVillage, closeVillage, blocks as fetchBlocks } from './api.ts'
 import { Bridge } from './game/bridge.ts'
 import { isTouchUi } from './game/touch.ts'
 
@@ -73,7 +73,8 @@ export default function World({ slug }: { slug: string }) {
   const touch = isTouchUi(), [more, setMore] = useState(false), [panel, setPanel] = useState<'invite' | 'manage' | 'leave' | 'close' | null>(null)
   const [wheel, setWheel] = useState(false), [mapOn, setMapOn] = useState(() => !isTouchUi()), [note, setNote] = useState(''), [knock, setKnock] = useState<{ from: string; name: string } | null>(null), [awayCard, setAwayCard] = useState<Extract<ServerMsg, { t: 'away' }>['items'] | null>(null), [following, setFollowing] = useState<string | null>(null), [actFor, setActFor] = useState<string | null>(null)
   const time = useRef({ since: Date.now() as number | null, focusMin: 0 }) // minutes present and focused, reported when the tab hides or closes
-  const bridgeRef = useRef<Bridge | null>(null)
+  const bridgeRef = useRef<Bridge | null>(null), [blocked, setBlockedSet] = useState<Set<string>>(new Set())
+  const setBlocked = (id: string, on: boolean) => setBlockedSet((b) => { const n = new Set(b); on ? n.add(id) : n.delete(id); if (bridgeRef.current) bridgeRef.current.blocked = n; return n })
   const send = useRef<(m: object) => void>(() => {}), lastText = useRef('')
   const pins = () => bridgeRef.current?.boardPin(redPin.current, qPin.current)
   const loadBoardRef = useRef<() => void>(() => {})
@@ -126,9 +127,11 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'knocked') { setKnock({ from: m.fromUserId, name: m.name }); blip(240, 180) }
       else if (m.t === 'away') setAwayCard(m.items)
       else if (m.t === 'error' && m.code.startsWith('knock_')) toast(m.message)
+      else if (m.t === 'error' && (m.code === 'slow_mode' || m.code === 'muted' || m.code === 'removed')) { setNotice(m.message); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 3500) }
       else if (m.t === 'error' && m.code === 'slow_down') { setNotice('Slow down a little'); setShake((n) => n + 1); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 2500) } // the box comes back with what you wrote
     }
     const bridge = new Bridge(); bridgeRef.current = bridge
+    fetchBlocks(slug).then((r) => { const n = new Set(r.blocks.map((x) => x.userId)); bridge.blocked = n; setBlockedSet(n) }, () => {})
     const net = connect(data.village.id, { message: (m) => { onMsg(m); bridge.fromServer(m) }, status: setStatus })
     bridge.out = net.send; send.current = net.send
     // Even pixel size only: an odd-sized canvas puts tile edges on half pixels at zoom 3 and draws faint seams. (Registered before Phaser's own resize listener.)
@@ -249,7 +252,7 @@ export default function World({ slug }: { slug: string }) {
   return (
     <div className={`${touch ? 'world touch' : 'world'}${mapOn ? ' mm' : ''}`}>
       <div ref={el} className="canvas" />
-      <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
+      <Hud name={data.village.name} zone={zone} pill={PILL[status]} settingsExtra={<Privacy slug={slug} onBlocked={setBlocked} me={data.me} libraryAutoFocus={data.village.libraryAutoFocus} />}>
         <div className="hud-online" aria-label="Online now (debug)">Online: {online.map((m) => m.name).join(', ') || '—'}</div>
         <div className="toasts" aria-live="polite">{toasts.map((t) => <p key={t.id}>📌 {t.text}</p>)}</div>
         <div className="bar-actions">
@@ -288,7 +291,7 @@ export default function World({ slug }: { slug: string }) {
         {nudge && <NudgeCard onClose={() => setNudge(false)} />}
         {qOpen && <AskBox slug={slug} courses={data.village.courseTags} course={timerRef.current?.courseCode} onDone={() => { setQOpen(false); toast('Question sent. Find it on the Board.'); askLater() }} onClose={() => setQOpen(false)} />}
         {talk && <BubbleBox names={names} me={data.members.find((m) => m.userId === data.me.userId)?.name ?? ''} initial={talk.text} shake={shake} notice={notice} onSend={say} onClose={() => { setTalk(null); setNotice('') }} />}
-        {membersOpen && bridgeRef.current && <Members members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
+        {membersOpen && bridgeRef.current && <Members slug={slug} blocked={blocked} onBlocked={setBlocked} log={log} needLog={() => send.current({ t: 'log' })} members={data.members} me={data.me.userId} roster={() => bridgeRef.current!.roster()} onLocate={(id) => bridgeRef.current?.locate(id)} open={actFor} onAct={act} onClose={() => { setMembersOpen(false); setActFor(null) }} />}
         {mapOn && !boardOpen && <Minimap positions={() => bridgeRef.current?.positions() ?? []} colours={Object.fromEntries([...data.members, ...online].map((m) => [m.userId, m.colour]))} me={data.me.userId} onGo={(x, y) => bridgeRef.current?.walkToTile(x, y)} />}
         {note && <div className="zone-note" role="status">{note}</div>}
         {wheel && <EmoteWheel onPick={(id) => { send.current({ t: 'emote', id }); setWheel(false) }} onClose={() => setWheel(false)} />}
@@ -296,7 +299,7 @@ export default function World({ slug }: { slug: string }) {
         {awayCard && <div className="away-card" role="dialog" aria-label="While you were away"><b>While you were away</b>{awayCard.length ? awayCard.map((q, i) => <span key={i}>{q.name ?? 'Someone'}: {q.text}</span>) : <span>Nothing missed.</span>}<span className="row"><button onClick={() => setAwayCard(null)}>OK</button></span></div>}
         {following && <div className="follow-pill" role="status">Following {following} · Esc to stop <button onClick={() => bridgeRef.current?.stopFollow()}>Stop</button></div>}
         {panel === 'invite' && <InvitePanel slug={slug} name={data.village.name} canGuest={can(data.me.role, 'moderate')} onClose={() => setPanel(null)} />}
-        {panel === 'manage' && <Manage slug={slug} villageName={data.village.name} myRole={data.me.role} me={data.me.userId} onClose={() => setPanel(null)} />}
+        {panel === 'manage' && <Manage slow={!!data.village.slowMode} slug={slug} villageName={data.village.name} myRole={data.me.role} me={data.me.userId} onClose={() => setPanel(null)} />}
         {(panel === 'leave' || panel === 'close') && (
           <div className="hud-modal" role="dialog" aria-label={panel === 'leave' ? 'Leave village' : 'Close village'} onClick={() => setPanel(null)}>
             <div className="hud-panel" onClick={(e) => e.stopPropagation()}>
@@ -306,7 +309,7 @@ export default function World({ slug }: { slug: string }) {
             </div>
           </div>
         )}
-        {logOpen && <ChatLog items={log} onClose={() => setLogOpen(false)} />}
+        {logOpen && <ChatLog items={log} canRemove={can(data.me.role, 'moderate')} onRemove={(r) => { send.current({ t: 'mod.remove', userId: r.userId, at: r.at }); setLog((l) => l && l.filter((x) => x !== r)); track(slug, 'mod_remove_bubble') }} onClose={() => setLogOpen(false)} />}
       </Hud>
     </div>
   )

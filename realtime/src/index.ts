@@ -1,6 +1,6 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
-import { can, emoteVisible, knockResult, EMOTE_RATE_LIMIT, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
+import { can, emoteVisible, knockResult, EMOTE_RATE_LIMIT, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, slowCheck, strike, muteLeftMin, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
 import { verifyToken } from '@desker/shared/src/token.js'
@@ -10,7 +10,7 @@ const WORLD = parseMap(campus as never) // the same map file the client draws, s
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
+interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; sm?: boolean; lastSay?: number; strikes?: number[]; muteUntil?: number; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -50,7 +50,7 @@ export class VillageRoom extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env)
     // the last 24 h of bubbles, one row per person who was able to see each one (SPEC §6.3). Lives with the room: no database credentials on the edge.
-    ctx.blockConcurrencyWhile(async () => { ctx.storage.sql.exec('create table if not exists chat (id integer primary key autoincrement, uid text not null, zone text not null, sid text not null, name text not null, text text not null, at integer not null)'); ctx.storage.sql.exec('create index if not exists chat_uid on chat (uid, at)') })
+    ctx.blockConcurrencyWhile(async () => { ctx.storage.sql.exec('create table if not exists chat (id integer primary key autoincrement, uid text not null, zone text not null, sid text not null, name text not null, text text not null, at integer not null)'); ctx.storage.sql.exec('create index if not exists chat_uid on chat (uid, at)'); ctx.storage.sql.exec('create table if not exists blocks (blocker text not null, blocked text not null, primary key (blocker, blocked))') })
   }
 
   private async wake(inMs: number) { const cur = await this.ctx.storage.getAlarm(); if (!cur || cur > Date.now() + inMs) await this.ctx.storage.setAlarm(Date.now() + inMs) }
@@ -58,6 +58,9 @@ export class VillageRoom extends DurableObject<Env> {
     const p = att.pos!, spot = att.sat ? WORLD.sitSpots.find((q) => q.id === att.sat!.spotId) : undefined
     return { x: p.x, y: p.y, zone: zoneAt(WORLD, p.x, p.y), table: spot?.table ?? null, focus: !!att.focus }
   }
+  /** Has `by` blocked `who`? Blocks live in the room's SQLite (filled from the token on connect, kept current by the API). A blocked person is never told. */
+  private blocked(by: string, who: string) { return this.ctx.storage.sql.exec('select 1 from blocks where blocker = ? and blocked = ?', by, who).toArray().length > 0 }
+  private setBlocks(uid: string, ids: string[]) { const q = this.ctx.storage.sql; q.exec('delete from blocks where blocker = ?', uid); for (const id of ids.slice(0, 20)) q.exec('insert or ignore into blocks values (?, ?)', uid, id) }
   private shown(att: Att) { return att.status ? maskStatus(att.status, att.share ?? 'basic') : null } // what friends may see of this member's status
   // Queued @mentions are handed over when the member is no longer studying: out of the Library and no timer running.
   private release(ws: WebSocket, att: Att) {
@@ -82,7 +85,8 @@ export class VillageRoom extends DurableObject<Env> {
   }
 
   /** A question was asked or answered (the API stored it). Bubbles follow the usual reach; the asker hears about answers by their state: now, after Focus, or on the "while you were away" card. */
-  private notify(b: { kind?: string; qid?: string; userId?: string; name?: string; text?: string; by?: string } | null) {
+  private notify(b: { kind?: string; qid?: string; userId?: string; name?: string; text?: string; by?: string; ids?: string[] } | null) {
+    if (b?.kind === 'blocks' && typeof b.userId === 'string' && Array.isArray(b.ids)) { this.setBlocks(b.userId, b.ids.filter((x) => typeof x === 'string')); return Response.json({ ok: true }) }
     if (!b || typeof b.qid !== 'string' || typeof b.userId !== 'string') return new Response('bad', { status: 400 })
     const room = this.authed(), asker = room.find((x) => x.att.member!.userId === b.userId)
     if (b.kind === 'asked' && asker) {
@@ -139,7 +143,8 @@ export class VillageRoom extends DurableObject<Env> {
       const free = desk && !this.authed().some((o) => o.att.sat?.spotId === desk.id)
       const from = free ? approaches(WORLD, desk)[0] : undefined
       if (free && from) { pos = { ...newMover(desk.x, desk.y, Date.now(), desk.facing) }; sat = { spotId: desk.id, from } }
-      ws.serializeAttachment({ ...att, authed: true, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat, presence: old?.presence ?? 'available', focus: old?.focus, status: old?.status, share: (['full', 'basic', 'off'] as const).find((x) => x === h.claims.s) ?? 'basic' })
+      this.setBlocks(me.userId, Array.isArray(h.claims.bl) ? h.claims.bl : [])
+      ws.serializeAttachment({ ...att, authed: true, sm: !!h.claims.sm, lastSay: old?.lastSay, strikes: old?.strikes, muteUntil: old?.muteUntil, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat, presence: old?.presence ?? 'available', focus: old?.focus, status: old?.status, share: (['full', 'basic', 'off'] as const).find((x) => x === h.claims.s) ?? 'basic' })
       const all = this.authed()
       const members = [...new Map(all.map((x) => [x.att.member!.userId, x.att.member!])).values()]
       const positions = Object.fromEntries(all.map((x) => [x.att.member!.userId, { x: x.att.pos!.x, y: x.att.pos!.y, dir: x.att.pos!.dir }]))
@@ -152,15 +157,30 @@ export class VillageRoom extends DurableObject<Env> {
       const rows = this.ctx.storage.sql.exec('select zone, sid, name, text, at from chat where uid = ? and at > ? order by at asc limit 200', att.member!.userId, Date.now() - LOG_TTL_MS).toArray()
       return this.send(ws, { t: 'log', items: rows.map((r) => ({ zoneId: r.zone as never, userId: String(r.sid), name: String(r.name), text: String(r.text), at: Number(r.at) })) })
     }
+    if (msg.t === 'mod.remove') { // an admin removes one bubble from every log
+      if (!can(att.member!.role, 'moderate')) return
+      this.ctx.storage.sql.exec('delete from chat where sid = ? and at = ?', msg.userId, msg.at)
+      return void this.send(ws, { t: 'error', code: 'removed', message: 'Removed.' })
+    }
     if (msg.t === 'say') {
       const text = cleanBubble(msg.text), now = Date.now(); if (!text) return
+      const left = muteLeftMin(att.muteUntil, now)
+      if (left > 0) return this.send(ws, { t: 'error', code: 'muted', message: `You are muted for ${left} more minute${left === 1 ? '' : 's'}.` })
+      const slow = slowCheck(att.lastSay, now, !!att.sm)
+      if (!slow.ok) return this.send(ws, { t: 'error', code: 'slow_mode', message: `Slow mode is on. Try again in ${Math.ceil(slow.waitMs / 1000)} s.` })
       const rate = rateCheck(att.says ?? [], now)
-      if (!rate.ok) return this.send(ws, { t: 'error', code: 'slow_down', message: 'Slow down a little' })
-      ws.serializeAttachment({ ...att, says: rate.times })
+      if (!rate.ok) { // hitting the limit is a strike; five in a minute is a 10-minute mute (not audited: the room has no database)
+        const s = strike(att.strikes ?? [], now)
+        ws.serializeAttachment({ ...att, strikes: s.strikes, muteUntil: s.muteUntil ?? att.muteUntil })
+        return this.send(ws, s.muteUntil ? { t: 'error', code: 'muted', message: 'You are muted for 10 minutes.' } : { t: 'error', code: 'slow_down', message: 'Slow down a little' })
+      }
+      const next: Att = { ...att, says: rate.times, lastSay: now }
+      ws.serializeAttachment(next)
       const me = att.member!, from = this.partyOf(att), room = this.authed()
       const mentioned = new Set(parseMentions(text, room.map((o) => o.att.member!.name)))
       for (const { ws: w, att: a } of room) {
         const self = a.member!.userId === me.userId, hit = !self && mentioned.has(a.member!.name)
+        if (!self && this.blocked(a.member!.userId, me.userId)) continue // they blocked me: nothing reaches them, and I am not told
         const v = self ? 'full' : a.presence === 'dnd' ? (hit ? 'queued' : 'none') : visibility(from, this.partyOf(a), hit) // Do Not Disturb: nothing is delivered, mentions are kept for the "while you were away" card
         if (v === 'full') {
           this.send(w, { t: 'said', userId: me.userId, text, zoneId: from.zone, ...(hit && { mentionsYou: true as const }) })
@@ -219,12 +239,14 @@ export class VillageRoom extends DurableObject<Env> {
       const me = att.member!.userId, from = this.partyOf(att)
       for (const { ws: w, att: a } of this.authed()) {
         const self = a.member!.userId === me
+        if (!self && this.blocked(a.member!.userId, me)) continue
         if (self || emoteVisible(from, this.partyOf(a), { receiverDnd: a.presence === 'dnd', aimedAtReceiver: msg.to === a.member!.userId })) this.send(w, { t: 'emoted', userId: me, id: msg.id, ...(msg.to && { to: msg.to }) })
       }
       return
     }
     if (msg.t === 'knock') { // a gentle "chat when free?": delivered now, held while the target is focusing, dropped in Do Not Disturb (and the knocker is told)
       const me = att.member!, now = Date.now(), target = this.authed().find((x) => x.att.member!.userId === msg.userId && x.ws !== ws)
+      if (target && this.blocked(msg.userId, me.userId)) return this.send(ws, { t: 'error', code: 'knock_sent', message: `Knocked ${target.att.member!.name}.` }) // blocked: looks sent, goes nowhere
       const key = `${me.userId}>${msg.userId}`
       const r = knockResult({ present: !!target, dnd: target?.att.presence === 'dnd', focusing: !!target && (!!target.att.focus || target.att.presence === 'focusing') }, this.knocks.get(key), now)
       if (r === 'gone') return this.send(ws, { t: 'error', code: 'knock_gone', message: 'They are not here right now' })

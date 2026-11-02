@@ -1,7 +1,7 @@
 // The village's own API (same origin as the app; the login cookie is on the shared parent domain).
 export type Mine = { slug: string; name: string; role: string; members: number; dots: string[]; studying: number; next: { title: string; courseCode: string | null; dueAt: number } | null }
 export type Info = {
-  village: { id: string; slug: string; name: string; courseTags: string[]; libraryAutoFocus: boolean; whoCanInvite: 'admins' | 'everyone' }
+  village: { id: string; slug: string; name: string; courseTags: string[]; libraryAutoFocus: boolean; whoCanInvite: 'admins' | 'everyone'; slowMode?: boolean }
   me: { userId: string; role: string; colour: string; statusSharing: string; shareDeadlines: boolean; deskSpotId: string | null }
   members: { userId: string; name: string; colour: string; role: string; deskSpotId: string | null; lastSeenAt: string }[]
 }
@@ -26,7 +26,7 @@ export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug
 export const focusStart = (slug: string, plannedMin: number, groupId?: string) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin, ...(groupId && { groupId }) }) })
 export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; plannedMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
-export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
+export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string; slowMode: boolean }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
 export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[]; confirmedBy: string[]; itemId?: string; createdBy?: string; inPlanner: boolean }
 export type Announcement = { id: string; title: string; body: string | null; pinned: boolean; createdAt: string; by: string }
 export const board = (slug: string) => call<{ items: BoardItem[]; announcements: Announcement[] }>(`${slug}/board`)
@@ -85,3 +85,14 @@ export type PushState = { configured: boolean; publicKey: string | null; subscri
 export const pushState = () => call<PushState>('push')
 export const pushSave = (b: { sub?: unknown; prefs: PushPrefs; tz: string }) => call<{ ok: true }>('push', { method: 'PUT', body: JSON.stringify(b) })
 export const pushOff = () => call<{ ok: true }>('push', { method: 'DELETE' })
+
+// Safety (CP9)
+export type Report = { id: string; reason: string; context: { note?: string; kind?: string; text?: string; lines?: { name: string; text: string }[] }; createdAt: string; resolvedAt: string | null; targetUserId: string; targetName: string; reporterName: string }
+export const blocks = (slug: string) => call<{ blocks: { userId: string; name: string }[] }>(`${slug}/blocks`)
+export const blockUser = (slug: string, userId: string) => call<{ ok: true }>(`${slug}/blocks`, { method: 'POST', body: JSON.stringify({ userId }) })
+export const unblockUser = (slug: string, userId: string) => call<{ ok: true }>(`${slug}/blocks/${userId}`, { method: 'DELETE' })
+export const fileReport = (slug: string, b: { targetUserId: string; reason: string; note?: string; kind: string; text?: string; context?: unknown[] }) => call<{ ok: true }>(`${slug}/reports`, { method: 'POST', body: JSON.stringify(b) })
+export const reports = (slug: string) => call<{ reports: Report[] }>(`${slug}/reports`)
+export const resolveReport = (slug: string, id: string) => call<{ ok: true }>(`${slug}/reports/${id}/resolve`, { method: 'POST', body: '{}' })
+export const deleteQuestion = (slug: string, id: string) => call<{ ok: true }>(`${slug}/questions/${id}`, { method: 'DELETE' })
+export const deleteAnswer = (slug: string, id: string) => call<{ ok: true }>(`${slug}/answers/${id}`, { method: 'DELETE' })

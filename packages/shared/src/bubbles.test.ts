@@ -55,6 +55,14 @@ test('word filter: English whole words and Thai terms become stars; innocent wor
   assert.equal(maskBadWords('ไอ้สัตว์ มาแล้ว'), '★★★★★★ มาแล้ว'.replace('★★★★★★', '★'.repeat([...'ไอ้สัตว์'].length)))
   assert.equal(maskBadWords('hello'), 'hello')
 })
+test('word filter: simple evasion is caught, course names and innocent words are not', () => {
+  assert.equal(maskBadWords('fuuuuck this'), '★★★★★★★ this')
+  assert.equal(maskBadWords('what a sh1t day'), 'what a ★★★★ day'); assert.equal(maskBadWords('$hit'), '★★★★')
+  assert.equal(maskBadWords('f u c k'), '★★★★★★★'); assert.equal(maskBadWords('s.h.i.t happens'), '★★★★★★★ happens')
+  assert.equal(maskBadWords('motherfucker'), '★'.repeat(12)); assert.equal(maskBadWords('Bullshit!'), '★★★★★★★★!')
+  for (const ok of ['DTIP 122', 'DTIP122 quiz', 'ANAT101', 'a b c', 'I am a student', 'pass it on', 'assess the class', 'Hancock', 'Dickens wrote', 'cocktail', 'p5 b4 are fine', 'ซาสุเกะ']) assert.equal(maskBadWords(ok), ok, ok)
+  assert.equal(maskBadWords('เชี่ยเอ๊ย'), '★★★★★เอ๊ย'.replace('★★★★★', '★'.repeat([...'เชี่ย'].length)))
+})
 test('rateCheck: 5 per 10 seconds, then it recovers', () => {
   let t: number[] = [], ok = true
   for (let i = 0; i < 5; i++) { ({ ok, times: t } = rateCheck(t, 1000 + i * 100)); assert.ok(ok) }

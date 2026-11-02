@@ -5,7 +5,7 @@ type Item = Extract<ServerMsg, { t: 'log' }>['items'][number]
 const ZONE: Record<ZoneId, string> = { plaza: 'Board Plaza', library: 'Library', tables: 'Group Tables', lounge: 'Lounge', garden: 'Garden' }
 const time = (at: number) => new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-export default function ChatLog({ items, onClose }: { items: Item[] | null; onClose: () => void }) {
+export default function ChatLog({ items, canRemove, onRemove, onClose }: { items: Item[] | null; canRemove?: boolean; onRemove?: (r: Item) => void; onClose: () => void }) {
   const byZone = new Map<ZoneId, Item[]>()
   for (const i of items ?? []) byZone.set(i.zoneId, [...(byZone.get(i.zoneId) ?? []), i])
   const groups = [...byZone]
@@ -14,7 +14,7 @@ export default function ChatLog({ items, onClose }: { items: Item[] | null; onCl
       <div className="hud-panel chatlog" onClick={(e) => e.stopPropagation()}>
         <h2>Chat log <small>last 24 hours</small></h2>
         {!items ? <p>Loading…</p> : !items.length ? <p>Nothing yet. Bubbles you can see will show up here.</p> : groups.map(([zone, rows]) => (
-          <section key={zone}><h3>{ZONE[zone]}</h3>{rows.map((r, i) => <p key={i}><time>{time(r.at)}</time> <b>{r.name}</b> {r.text}</p>)}</section>
+          <section key={zone}><h3>{ZONE[zone]}</h3>{rows.map((r, i) => <p key={i}><time>{time(r.at)}</time> <b>{r.name}</b> {r.text}{canRemove && <> <button type="button" onClick={() => onRemove?.(r)}>Remove</button></>}</p>)}</section>
         ))}
         <p><button onClick={onClose}>Close (Esc)</button></p>
       </div>

@@ -1,7 +1,7 @@
 // Questions (Phase 1 CP5): the Ask box (Q), the Questions column on the Board and the thread view.
 import { useEffect, useRef, useState } from 'react'
 import { QUESTION_MAX, ANSWER_MAX, canResolve } from '@desker/shared'
-import { ask, answer, markHelpful, questions, resolveQuestion, thread, type Answer, type Question } from './api.ts'
+import { ask, answer, deleteAnswer, deleteQuestion, markHelpful, questions, resolveQuestion, thread, type Answer, type Question } from './api.ts'
 
 const age = (iso: string) => { const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000)); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
 const WHY: Record<string, string> = { slow_down: 'Slow down a little. Try again in a minute.', forbidden: 'Guests cannot do that.', bad_question: 'Write a question first.', bad_answer: 'Write an answer first.' }
@@ -67,11 +67,13 @@ function Thread({ slug, id, me, role, rev, onBack }: { slug: string; id: string;
         <li key={a.id}>
           <span>{a.text}</span>
           <span className="meta">{a.name} · {age(a.createdAt)}{a.helpful ? ' · 👍 helped' : ''}
+            {(a.userId === me || role === 'owner' || role === 'admin') && <button type="button" onClick={() => deleteAnswer(slug, a.id).then(load, (e) => setErr(why(e)))}>Delete</button>}
             {mine && !a.helpful && a.userId !== me && <button type="button" onClick={() => markHelpful(slug, a.id).then(load, (e) => setErr(why(e)))}>This helped</button>}
           </span>
         </li>
       ))}</ul>
       {answers.length === 0 && <p className="none">No answers yet.</p>}
+      {(mine || role === 'owner' || role === 'admin') && <button type="button" onClick={() => deleteQuestion(slug, id).then(onBack, (e) => setErr(why(e)))}>Delete question</button>}
       {canResolve(role, mine) && <button type="button" onClick={() => resolveQuestion(slug, id, !q.resolved).then(load, (e) => setErr(why(e)))}>{q.resolved ? 'Reopen' : 'Mark resolved'}</button>}
       <div className="reply">
         <input value={text} onChange={(e) => setText([...e.target.value].slice(0, ANSWER_MAX).join(''))} onKeyDown={(e) => { e.nativeEvent.stopPropagation(); if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }} placeholder="Write an answer…" aria-label="Your answer" autoComplete="off" />

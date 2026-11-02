@@ -34,6 +34,15 @@ export async function qa({ req, res, uid, v, parts, ev }) {
     await notify(v.id, { kind: 'update', qid: r[0].qid, userId: uid })
     return res.json({ ok: true }), true
   }
+  if (a === 'answers' && !c && req.method === 'DELETE' && ID.test(b ?? '')) { // the writer, or an admin, removes an answer
+    const r = (await sql.query('select a.id, a.user_id as "userId", a.question_id as qid from village_answer a join village_question q on q.id = a.question_id where a.id = $1 and q.village_id = $2', [b, v.id]))[0]
+    if (!r) return res.status(404).json({ error: 'not_found' }), true
+    if (r.userId !== uid && !can(v.role, 'moderate')) return res.status(403).json({ error: 'forbidden' }), true
+    await sql.query('delete from village_answer where id = $1', [b])
+    if (r.userId !== uid) await ev(v.id, uid, 'mod_delete_answer', {})
+    await notify(v.id, { kind: 'update', qid: r.qid, userId: uid })
+    return res.json({ ok: true }), true
+  }
   if (a !== 'questions') return false
 
   if (!b && req.method === 'GET') { // open ones first, newest first; resolved ones follow
@@ -42,7 +51,7 @@ export async function qa({ req, res, uid, v, parts, ev }) {
               (select count(*)::int from village_answer where question_id = q.id) as answers,
               exists(select 1 from village_answer where question_id = q.id and helpful) as helped
          from village_question q join "user" u on u.id = q.asker_id
-        where q.village_id = $1 order by (q.resolved_at is not null), q.created_at desc limit 60`, [v.id])
+        where q.village_id = $1 and not exists (select 1 from village_block bl where bl.blocker_id = $2 and bl.blocked_id = q.asker_id) order by (q.resolved_at is not null), q.created_at desc limit 60`, [v.id, uid])
     return res.json({ questions: rows }), true
   }
 
@@ -64,7 +73,7 @@ export async function qa({ req, res, uid, v, parts, ev }) {
 
   if (!c && req.method === 'GET') {
     const answers = await sql.query(
-      `select a.id, a.user_id as "userId", u.name, a.text, a.helpful, a.created_at as "createdAt" from village_answer a join "user" u on u.id = a.user_id where a.question_id = $1 order by a.created_at`, [b])
+      `select a.id, a.user_id as "userId", u.name, a.text, a.helpful, a.created_at as "createdAt" from village_answer a join "user" u on u.id = a.user_id where a.question_id = $1 and not exists (select 1 from village_block bl where bl.blocker_id = $2 and bl.blocked_id = a.user_id) order by a.created_at`, [b, uid])
     const [asker] = await sql.query('select name from "user" where id = $1', [q.askerId])
     return res.json({ question: { ...q, askerName: asker?.name ?? 'Someone' }, answers }), true
   }
@@ -78,13 +87,22 @@ export async function qa({ req, res, uid, v, parts, ev }) {
     const [row] = await sql.query('insert into village_answer (question_id, user_id, text) values ($1, $2, $3) returning id', [b, uid, t.text])
     const [me] = await sql.query('select name from "user" where id = $1', [uid])
     await ev(v.id, uid, 'question_answered', {})
-    if (q.askerId !== uid) {
+    const hidden = (await sql.query('select 1 from village_block where blocker_id = $1 and blocked_id = $2', [q.askerId, uid])).length > 0 // the asker blocked me: they are not told about my answer
+    if (hidden) await notify(v.id, { kind: 'update', qid: b, userId: uid })
+    else if (q.askerId !== uid) {
       const r = await notify(v.id, { kind: 'answered', qid: b, userId: q.askerId, by: uid, name: me?.name })
       if (r?.online && !r.online.includes(q.askerId)) await sendPush(q.askerId, 'answered', { title: `${me?.name ?? 'Someone'} answered your question`, body: q.text, url: `/v/${v.slug}?q=${b}` }, { villageId: v.id }).catch(() => false) // here: toast or queue; not here: push
     } else await notify(v.id, { kind: 'update', qid: b, userId: uid })
     return res.json({ ok: true, id: row.id }), true
   }
 
+  if (!c && req.method === 'DELETE') { // the asker, or an admin, removes a question (its answers go with it)
+    if (q.askerId !== uid && !can(v.role, 'moderate')) return res.status(403).json({ error: 'forbidden' }), true
+    await sql.query('delete from village_question where id = $1', [b])
+    if (q.askerId !== uid) await ev(v.id, uid, 'mod_delete_question', {})
+    await notify(v.id, { kind: 'update', qid: b, userId: uid })
+    return res.json({ ok: true }), true
+  }
   if (c === 'resolve' && req.method === 'POST') { // the asker or an admin; saying it again reopens it
     if (!canResolve(v.role, q.askerId === uid)) return res.status(403).json({ error: 'forbidden' }), true
     const on = req.body?.resolved !== false

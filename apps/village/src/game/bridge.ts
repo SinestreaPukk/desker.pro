@@ -21,6 +21,8 @@ export class Bridge {
   walkToDesk: (spotId: string) => void = () => {}
   groupBreak: (on: boolean) => void = (on) => { this.breakOn = on } // remembered, so a scene that starts later still gets the warm light
   breakOn = false
+  /** People I blocked: their avatars are hidden (the room already sends me nothing from them). */
+  blocked = new Set<string>()
   /** Something new went on the Board while you are here: the pins pulse gently. */
   boardPulse: () => void = () => {}
   /** Phase 1 CP3: Do Not Disturb, and what you can do about another person (all set by the scene). */

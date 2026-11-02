@@ -1,11 +1,14 @@
 // Members panel for owner and admins (⋯ menu -> Manage members): change role, kick, ban, transfer ownership.
 import { useEffect, useState } from 'react'
 import { canModerate, canSetRole } from '@desker/shared'
-import { moderate, people, setRole, transfer, type Person } from './api.ts'
+import { moderate, patchVillage, people, reports as fetchReports, resolveReport, setRole, transfer, type Person, type Report } from './api.ts'
 
-export default function Manage({ slug, villageName, myRole, me, onClose }: { slug: string; villageName: string; myRole: string; me: string; onClose: () => void }) {
+export default function Manage({ slow, slug, villageName, myRole, me, onClose }: { slow: boolean; slug: string; villageName: string; myRole: string; me: string; onClose: () => void }) {
   const [list, setList] = useState<Person[] | null>(null), [err, setErr] = useState('')
   const [sure, setSure] = useState(''), [xfer, setXfer] = useState<{ id: string; typed: string } | null>(null)
+  const [slowOn, setSlowOn] = useState(slow), [reps, setReps] = useState<Report[] | null>(null)
+  const loadReps = () => fetchReports(slug).then((r) => setReps(r.reports), () => setReps([]))
+  useEffect(() => { loadReps() }, [slug])
   const load = () => people(slug).then((r) => setList(r.members), () => setErr("Couldn't load members."))
   useEffect(() => { load() }, [slug])
   const run = (p: Promise<unknown>, reload = true) => p.then(() => { setErr(''); setSure(''); setXfer(null); if (reload) load() }, (e) => setErr(e.code === 'name_mismatch' ? "That isn't the village name." : 'Not allowed, or something went wrong.'))
@@ -13,6 +16,15 @@ export default function Manage({ slug, villageName, myRole, me, onClose }: { slu
     <div className="hud-modal" role="dialog" aria-label="Manage members" onClick={onClose}>
       <div className="hud-panel manage" onClick={(e) => e.stopPropagation()}>
         <h2>Manage members</h2>
+        <label><input type="checkbox" checked={slowOn} onChange={(e) => { setSlowOn(e.target.checked); patchVillage(slug, { slowMode: e.target.checked }).catch(() => { setSlowOn(!e.target.checked); setErr('Not allowed, or something went wrong.') }) }} /> Slow mode: one bubble every 30 seconds for everyone</label>
+        <h3>Reports</h3>
+        {!reps ? <p>Loading…</p> : reps.length === 0 ? <p>No reports.</p> : <ul>{reps.map((r) => (
+          <li key={r.id} className={r.resolvedAt ? 'off' : ''}>
+            <b>{r.targetName}</b> <small>{r.reason} · by {r.reporterName}{r.resolvedAt ? ' · handled' : ''}</small>
+            {r.context?.note && <p>{r.context.note}</p>}
+            {(r.context?.lines ?? []).map((l, i) => <p key={i}><small>{l.name}: {l.text}</small></p>)}
+            {!r.resolvedAt && <button type="button" onClick={() => resolveReport(slug, r.id).then(loadReps, () => setErr('Something went wrong.'))}>Mark handled</button>}
+          </li>))}</ul>}
         {err && <p role="alert">{err}</p>}
         {!list ? <p>Loading…</p> : (
           <ul>{list.map((m) => {
