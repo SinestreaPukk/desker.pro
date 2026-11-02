@@ -87,7 +87,7 @@ function Detail({ t, goals = [], projects, deadlines, update, onDelete, onClose,
   )
 }
 
-export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines, rhythm }) {
+export default function Tasks({ data, goals, tasks, setTasks, goTab, setFocus, deleteTask, projects = [], deadlines = [], setDeadlines, rhythm }) {
   const startTask = (t) => setFocus({ taskId: t.id, title: t.title, method: 'Your choice', why: 'You started it from your task list.', minutes: t.hours ? Math.round(t.hours * 60) : undefined, at: Date.now() })
   const [list, setList] = useState('plan')
   const [sel, setSel] = useState(null) // task id open in the detail panel
@@ -191,7 +191,7 @@ export default function Tasks({ goals, tasks, setTasks, goTab, setFocus, deleteT
             <summary className="cursor-pointer text-base font-semibold">Deadlines <span className="font-normal text-slate-500">{shownDeadlines.length}</span></summary>
             <ul className="mt-2 space-y-3">
               {shownDeadlines.map((dl) => (
-                <DeadlineCard rhythm={rhythm} key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
+                <DeadlineCard data={data} rhythm={rhythm} key={dl.id} dl={dl} goals={goals} projects={projects} tasks={tasks} setTasks={setTasks} ratio={ratioOf(tasks)}
                   patch={(p) => setDeadlines(deadlines.map((x) => (x.id === dl.id ? { ...x, ...p } : x)))}
                   remove={() => setDeadlines(deadlines.filter((x) => x.id !== dl.id))} />
               ))}

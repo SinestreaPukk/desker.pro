@@ -1,9 +1,13 @@
 // Breaks a deadline into pickable task options. Prompt and key stay server-side.
 import { guard, askJSON } from './_ai.js'
 import project from './_project.js'
+import split from './_split.js'
+
+export const config = { maxDuration: 60 } // the scheduling answer is long
 
 export default async function handler(req, res) {
   if (req.body?.project) return project(req, res) // project breakdown shares this endpoint
+  if (req.body?.split) return split(req, res) // so does splitting a deadline's tasks into scheduled sessions
   if (!(await guard(req, res))) return
   const { goals, deadline, asked = 0, ratio } = req.body || {}
   if (!Array.isArray(goals) || goals.length > 50 || !deadline?.title || (deadline.date != null && !/^\d{4}-\d\d-\d\d$/.test(deadline.date))

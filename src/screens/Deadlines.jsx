@@ -3,12 +3,15 @@ import { post } from '../api.js'
 import { addTasks, timeRatio } from '../tasks.js'
 import { validType } from '../rhythm.js'
 import { BLUE, btn, input, ghost, panel, Q, LEVELS } from '../ui.js'
-import { ratioOf, fmtDate, readSource } from '../shared.jsx'
+import { ratioOf, fmtDate, readSource, plannerArgs, busyForAI, patternOf, freeTodayOf } from '../shared.jsx'
+import { planWeek, withSlot } from '../schedule.js'
+import { withPlanned } from '../taskTime.js'
+import { timeProfile } from '../rhythm.js'
 import { getTaskTime, timeLabel, workLeft, workLeftText } from '../taskTime.js'
 import SaveButton from '../components/SaveButton.jsx'
 import DateField from '../components/DateField.jsx'
 
-export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch, remove, ratio, rhythm }) {
+export function DeadlineCard({ data, dl, goals, projects = [], tasks, setTasks, patch, remove, ratio, rhythm }) {
   const [res, setRes] = useState(null) // { question } or { hours, summary, options }
   const [picked, setPicked] = useState([])
   const [answer, setAnswer] = useState('')
@@ -24,6 +27,48 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const finished = dl.done || (linked > 0 && mine.every((t) => t.done)) // crossed out once every linked task is done
   const left = finished ? null : linked ? workLeft(mine, rhythm) : dl.hours > 0 ? workLeft([{ title: dl.title, hours: dl.hours }], rhythm) : null // Desker's planned time for what is not done yet
   const [own, setOwn] = useState('')
+  const [sched, setSched] = useState(null) // { busy } | { error } | { options: [{ name, note, sessions }] }
+
+  // Ask the AI to split this deadline's open tasks into sessions and offer three schedules. Only the shape is checked here; the slots are checked again when one is applied.
+  const openMine = mine.filter((t) => !t.done)
+  const today = new Date().toLocaleDateString('sv')
+  const askSchedule = async () => {
+    setSched({ busy: true })
+    try {
+      const out = await post('/api/deadline', { split: {
+        deadline: { title: dl.title, date: dl.date, time: dl.time },
+        tasks: withPlanned(openMine, timeProfile(data)).map(({ id, title, hours, plannedMinutes, due }) => ({ id, title, hours, plannedMinutes, due })),
+        freeHours: data.freeHours, busy: busyForAI(data.busy), energy: patternOf(data), ratio, now: new Date().toLocaleString(),
+      } })
+      const ids = new Set(openMine.map((t) => t.id))
+      const options = (Array.isArray(out.options) ? out.options : []).map((o) => ({
+        name: String(o.name || 'Option').slice(0, 40), note: String(o.note || '').slice(0, 200),
+        sessions: (Array.isArray(o.sessions) ? o.sessions : []).filter((s) => ids.has(s?.id) && s.title && +s.hours > 0 && /^\d{4}-\d\d-\d\d$/.test(s.when) && s.when >= today && s.when <= dl.date)
+          .map((s) => ({ id: s.id, title: String(s.title).slice(0, 200), hours: Math.round(Math.min(+s.hours, 1.5) * 4) / 4, when: s.when, start: /^\d\d:\d\d$/.test(s.start) ? s.start : undefined }))
+          .sort((a, b) => (a.when + (a.start || '')).localeCompare(b.when + (b.start || ''))),
+      })).filter((o) => o.sessions.length)
+      if (!options.length) throw new Error('The AI gave no usable schedule. Try again.')
+      setSched({ options })
+    } catch (err) { setSched({ error: err.message }) }
+  }
+  // The first session of a task updates it, the rest become new tasks; then the planner places every session, honouring the AI's slots where they are free.
+  const applySchedule = (o) => {
+    const first = new Set()
+    let next = tasks.map((t) => {
+      const s = o.sessions.find((x) => x.id === t.id)
+      if (!s) return t
+      first.add(t.id)
+      return { ...t, title: s.title, hours: s.hours, when: undefined, start: undefined, pinned: undefined }
+    })
+    const slots = o.sessions.filter((s) => first.has(s.id)).filter((s, i, a) => a.findIndex((y) => y.id === s.id) === i).map(({ id, when, start }) => ({ id, when, start }))
+    const rest = o.sessions.filter((s) => !slots.some((x) => x.id === s.id && x.when === s.when && x.start === s.start))
+    const before = next.length
+    next = addTasks(next, rest.map((s) => { const src = tasks.find((t) => t.id === s.id); return { title: s.title, hours: s.hours, due: dl.date, deadlineId: dl.id, projectId: dl.projectId, goalId: dl.goalId, type: src?.type } }), 'ai')
+    rest.forEach((s, k) => slots.push({ id: next[before + k].id, when: s.when, start: s.start }))
+    const { plan } = planWeek({ tasks: next, busy: data.busy || [], deadlines: data.deadlines || [], freeHours: data.freeHours ?? 4, freeToday: freeTodayOf(data), aiPlan: slots, ...plannerArgs(data) })
+    setTasks(next.map((t) => { const p = plan.find((x) => x.id === t.id); return p ? withSlot(t, p) : t }), { auto: true })
+    setSched(null)
+  }
 
   const plan = async (context = dl.context) => {
     setBusy(true); setError('')
@@ -91,6 +136,30 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
           {finished ? '✓ Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
         </span>
       </div>
+      {openMine.length > 0 && !finished && (
+        <div className="px-4 pb-2">
+          <button className={`${btn} ${BLUE}`} disabled={sched?.busy} onClick={askSchedule}>{sched?.busy ? 'Planning…' : 'Split and schedule with AI'}</button>
+          {sched?.error && <p className="mt-2 text-base text-danger">{sched.error}</p>}
+          {sched?.options && (
+            <div className="mt-2 bg-pale p-3 text-base">
+              <p className="mb-2 font-medium">Pick a plan. Nothing changes until you do.</p>
+              <ul className="grid gap-2 md:grid-cols-3">
+                {sched.options.map((o) => (
+                  <li key={o.name} className="flex flex-col border border-line bg-white p-2">
+                    <b className="font-medium">{o.name}</b>
+                    <span className="text-xs text-slate-600">{o.note}</span>
+                    <ul className="my-2 flex-1 space-y-1 text-xs">
+                      {o.sessions.map((s, i) => <li key={i}><span className="text-slate-600">{fmtDate(s.when)}{s.start ? ` ${s.start}` : ''}, {s.hours}h</span> {s.title}</li>)}
+                    </ul>
+                    <button className={`${btn} ${BLUE}`} onClick={() => applySchedule(o)}>Use this plan</button>
+                  </li>
+                ))}
+              </ul>
+              <button className={`${btn} ${ghost} mt-2`} onClick={() => setSched(null)}>Cancel</button>
+            </div>
+          )}
+        </div>
+      )}
       <ul className="space-y-1 px-4 pb-1">
         {mine.map((t) => (
           <li key={t.id} className="flex min-h-11 flex-wrap items-center gap-x-1 gap-y-1 text-base">
