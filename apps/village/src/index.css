@@ -134,3 +134,6 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .group-bar.break { background: #fff5e0; border-color: #d89b3a } .group-bar .clock { font-variant-numeric: tabular-nums; font-weight: 700 } .group-bar .who-in { color: #5b6b86; font-size: 12px }
 .group-bar button { cursor: pointer } .group-bar kbd { font-size: 11px; margin-left: 2px }
 .sum { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px } .sum i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid #35599a; vertical-align: middle }
+.install { text-align: left; max-width: 300px; }
+.install ol { margin: 6px 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+.install .ico { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }

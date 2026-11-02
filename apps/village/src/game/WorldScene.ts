@@ -3,7 +3,7 @@ import Phaser from 'phaser'
 import { EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, clickRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
-import { isTouchUi } from './touch.ts'
+import { isTouchUi, lowFx } from './touch.ts'
 
 export interface SceneData {
   userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
@@ -35,6 +35,8 @@ export class WorldScene extends Phaser.Scene {
   private tip?: Phaser.GameObjects.Text; private dustAt = 0
   private route: { x: number; y: number }[] = [] // tiles still to walk after a tap
   private touchUi = isTouchUi()
+  private fx2 = lowFx()
+  private joy?: { id: number; x: number; y: number }; private joyG?: Phaser.GameObjects.Graphics
   private pin?: Phaser.GameObjects.Arc // a small red pin on the Board when something is due within 24 hours
   private myPresence: Presence = 'available'; private autoFocused = false; private lastInput = 0
   private awayMs = Number(new URLSearchParams(location.search).get('away')) || AWAY_AFTER_IDLE_MS // ?away=5000 previews falling asleep quickly
@@ -78,7 +80,7 @@ export class WorldScene extends Phaser.Scene {
     cam.setBounds(0, 0, W, H).startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP).setRoundPixels(true)
     this.fitZoom(); this.scale.on('resize', () => this.fitZoom())
 
-    this.snow(W, H); this.ambience(json); this.steam()
+    this.snow(W, H); this.ambience(json); if (!this.fx2) this.steam()
     this.keys = heldKeys(window)
     this.prompt = this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,233,168,0.92)', padding: { x: 2, y: 0 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 1).setVisible(false)
     const onKey = (e: KeyboardEvent) => {
@@ -92,9 +94,13 @@ export class WorldScene extends Phaser.Scene {
     this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
     this.lastInput = this.time.now
     this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.hover(p))
-    this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a click or tap on a person opens what you can do about them; a tap on a tile walks there
-      if (p.getDistance() > 12 || p.getDuration() > 500) return
+    this.joyG = this.add.graphics().setScrollFactor(0).setDepth(D.glow + 10)
+    this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (this.touchUi && !this.joy) this.joy = { id: p.id, x: p.x, y: p.y } }) // the joystick appears where the thumb lands
+    this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a click or tap on a person opens what you can do about them (a long press too); a tap on a tile walks there
+      if (this.joy?.id === p.id) { this.joy = undefined; this.joyG?.clear() }
+      if (p.getDistance() > 12) return
       const who = this.avatarAt(p); if (who && who !== this.data0.userId) return this.data0.onAvatar?.(who)
+      if (p.getDuration() > 500) return
       this.setFollow(null)
       const w = this.cameras.main.getWorldPoint(p.x, p.y)
       this.walkTo(Math.floor(w.x / TILE_PX), Math.floor(w.y / TILE_PX), !!(p.event as MouseEvent | undefined)?.shiftKey) // Shift held at click time = run there
@@ -146,8 +152,20 @@ export class WorldScene extends Phaser.Scene {
 
   // Free walking: the keys give a direction, we move at a fixed speed along it (diagonals are normalised, so every direction is the same speed),
   // and a small box around the feet slides along walls. No waiting for tile boundaries, no waiting for the room: it answers the instant a key goes down.
+  /** The thumb joystick: past an 8 px dead zone, the stronger axis wins, so it snaps to four directions. */
+  private joyVec() {
+    const j = this.joy, p = j && this.input.manager.pointers.find((q) => q.id === j.id)
+    this.joyG?.clear()
+    if (!j || !p || !p.isDown) return { dx: 0, dy: 0 }
+    const ox = p.x - j.x, oy = p.y - j.y, len = Math.hypot(ox, oy)
+    if (len < 8) return { dx: 0, dy: 0 }
+    const k = Math.min(len, 28) / len
+    this.joyG?.lineStyle(2, 0xffffff, 0.35).strokeCircle(j.x, j.y, 28).fillStyle(0xffffff, 0.45).fillCircle(j.x + ox * k, j.y + oy * k, 10)
+    return Math.abs(ox) >= Math.abs(oy) ? { dx: Math.sign(ox), dy: 0 } : { dx: 0, dy: Math.sign(oy) }
+  }
   private moveMe(time: number, dt: number) {
     let { dx, dy } = this.keys.vec()
+    if (!dx && !dy) ({ dx, dy } = this.joyVec())
     if (dx || dy) { this.route = []; this.routeActive = false; this.setFollow(null) } // a key press takes over from a tap, and ends following
     else if (this.route.length && !this.sitting) { // steer toward the next tile centre (the route is straight lines, so one axis at a time)
       let t = this.route[0]
@@ -169,7 +187,7 @@ export class WorldScene extends Phaser.Scene {
         this.fx = to.x; this.fy = to.y; this.dirty = true; this.phase += moved
         const z = zoneAt(this.world, this.tx, this.ty); if (z !== before || this.lastZone === null) this.enterZone(z)
         this.place(); this.hint('')
-        if (this.keys.run() && this.phase - this.dustAt > 0.33) { this.dustAt = this.phase; this.dust() } // little puffs under running feet
+        if (this.keys.run() && this.phase - this.dustAt > 0.33) { this.dustAt = this.phase; if (!this.fx2) this.dust() } // little puffs under running feet
         const c = this.phase % 1 // one full stride per tile walked: foot, passing, other foot, passing
         return this.me.walk(this.facing, c < 0.25 ? 1 : c < 0.5 ? 0 : c < 0.75 ? 2 : 0)
       }
@@ -449,7 +467,7 @@ export class WorldScene extends Phaser.Scene {
     this.add.particles(0, 0, 'snowflake', {
       emitZone: { type: 'random', source } as Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig,
       deathZone: { type: 'onEnter', source: { contains: inRoom } } as Phaser.Types.GameObjects.Particles.ParticleEmitterDeathZoneConfig,
-      lifespan: 14000, speedY: { min: 14, max: 30 }, speedX: { min: -6, max: 6 }, frequency: 70, scale: { min: 0.35, max: 0.6 }, alpha: { start: 0.95, end: 0.4 },
+      lifespan: 14000, speedY: { min: 14, max: 30 }, speedX: { min: -6, max: 6 }, frequency: this.fx2 ? 300 : 70, scale: { min: 0.35, max: 0.6 }, alpha: { start: 0.95, end: 0.4 },
     }).setDepth(D.snow)
   }
 

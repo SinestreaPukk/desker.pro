@@ -545,3 +545,10 @@ Known simplifications: tap-to-walk is straight lines; the Board is polled every 
 - **Auto-mute:** five "slow down" hits in a minute mute a person in the room for 10 minutes. Not audited, because the room has no database.
 - **Word filter:** English and Thai lists in `wordlist.js`, with leet and spaced-out spellings caught and course codes exempt. The Thai list needs a native reader's review (`th-review`).
 - Board posts are now limited to 10 an hour.
+## Phase 1, Checkpoint 10: phones, fully (built, compiles; not tried on a touch screen)
+- **Joystick:** on a touch layout, touch and hold on the world and drag past an 8 px dead zone; it snaps to four directions and draws a ring and thumb where the finger landed. Tap-to-walk still works (a drag over 12 px is never a tap). A key or the joystick cancels a tap route.
+- **Long-press** a kodama (any length) opens the same member actions as a tap (Locate, Walk to, Follow, Wave, Knock, Block, Report).
+- **Action bar** already had Talk, Ask, Sit, Focus, Board and More; More holds Emote, Map, Members, Chat log, Study together, DND, Invite, Manage, Leave.
+- **Installable:** `manifest.webmanifest` (standalone, portrait, icons 192/512, apple-touch-icon 180, theme colour). Icons are simple placeholders made with PIL; replace with Deskie/kodama art. On iPhone/iPad Safari, from the second browser session, a card shows the three Share > Add to Home Screen steps once (`Install.tsx`). Android Chrome uses its own install offer.
+- **Low effects:** Settings > Display, or on by default for touch devices with 4 cores or fewer. Less snow, no steam, no dust puffs. Applies on the next open.
+- Not done: a frame-time based automatic switch, and the 50 fps with 20 kodamas measurement on a real mid-range phone (yours to check).

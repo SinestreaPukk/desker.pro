@@ -17,6 +17,7 @@ import { connect, type Status } from './net/connection.ts'
 import Hud from './Hud.tsx'
 import InvitePanel from './InvitePanel.tsx'
 import Manage from './Manage.tsx'
+import Install from './Install.tsx'
 import { can } from '@desker/shared'
 import { leaveVillage, closeVillage, blocks as fetchBlocks } from './api.ts'
 import { Bridge } from './game/bridge.ts'
@@ -280,6 +281,7 @@ export default function World({ slug }: { slug: string }) {
             <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More">⋯</button>
           </>}
         </div>
+        {touch && <Install />}
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}
         {pick && <TaskPicker slug={slug} onPick={startTimer} onClose={() => setPick(false)} />}
         {boardOpen && <Board items={boardItems} news={news} members={data.members} slug={slug} me={data.me.userId} role={data.me.role} courseTags={data.village.courseTags} rev={qRev} openQ={openQ} onChanged={loadBoard} onClose={() => setBoardOpen(false)} />}
