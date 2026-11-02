@@ -8,7 +8,8 @@ import { Home, KodamaSettings } from '../components/KodamaHome.jsx'
 import Ritual from '../components/Ritual.jsx'
 import { track } from '../analytics.js'
 // The village app lives on its own host: village.desker.dev in production, village.desker.test:5174 when developing locally.
-const villageUrl = () => (/(^|\.)desker\.dev$/.test(location.hostname) ? 'https://village.desker.dev' : `http://village.desker.test:5174`)
+import { villageUrl, villageSummary } from '../village.js'
+const DOT = { snow: 'rgb(242 245 250)', sky: 'rgb(127 178 229)', moss: 'rgb(123 179 107)', rose: 'rgb(229 143 163)', amber: 'rgb(242 193 78)', plum: 'rgb(167 123 196)' } // the kodama colours
 import { nameOf, lineFor, ritualDue, sceneChoice, followUpDue, wrapReply, wrappedToday } from '../kodama.js'
 import FollowUp from '../components/FollowUp.jsx'
 import BoxHead from '../components/BoxHead.jsx'
@@ -47,6 +48,8 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
     if (askEnergy) setData((d) => record(d, (r) => ({ ...r, ask: { day: todayStr(), n: (r.ask?.day === todayStr() ? r.ask.n : 0) + 1 } })))
   }, [])
   const tap = (l, prompted) => { track('energy_logged', { prompted: !!prompted }); setEnergy(l); setAskEnergy(false); setData((d) => ({ ...d, energyLog: logEnergy(d.energyLog, l) })) }
+  const [vil, setVil] = useState(null) // friends studying in the village right now (null = none, or not reachable)
+  useEffect(() => { villageSummary().then((s) => setVil(s?.studying?.count > 0 ? s.studying : null)) }, [])
   const [opts, setOpts] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -160,7 +163,7 @@ export default function Today({ data, setData, tasks, goals, deadlines, focus, p
             <p className="line-clamp-2 min-w-0 flex-1 basis-40 break-words sm:line-clamp-none" role="status" title={lineFor(data, { focusing: !!focus })}><span className="block text-xs text-slate-700">{nameOf(data)}</span>{lineFor(data, { focusing: !!focus })}</p>
             <KodamaSettings data={data} setData={setData} focusing={!!focus} />
           </div>
-          <a className={`${btn} ${ghost} mt-3 inline-block max-sm:mt-2`} href={`${villageUrl()}/go`}>Study in the village</a> {/* opens the village you visited last, or the list of your villages */}
+          <a className={`${btn} ${ghost} mt-3 inline-block max-sm:mt-2`} href={`${villageUrl()}/go`}>Study in the village</a>{vil && <a className="ml-2 inline-flex items-center gap-1 align-middle text-base text-slate-700" href={`${villageUrl()}/v/${vil.slug}`} role="status"><span className="inline-flex" aria-hidden>{vil.colours.map((c, i) => <i key={i} className="-ml-1 first:ml-0 inline-block h-3 w-3 rounded-full border border-white" style={{ background: DOT[c] || DOT.snow }} />)}</span>{vil.count} {vil.count === 1 ? 'friend' : 'friends'} studying now</a>} {/* opens the village you visited last, or the list of your villages */}
           {(missed.length > 0 || clashes > 0 || check?.over) && <button className={`${btn} ${BLUE} mt-3 max-sm:mt-2`} onClick={onReplan}>Replan my week</button>}
         </div>
         <div className="order-1 max-sm:order-2 max-sm:h-[72px] max-sm:overflow-hidden lg:order-2">

@@ -16,6 +16,7 @@ import { qa } from './_qa.js'
 import { board } from './_board.js'
 import { group } from './_group.js'
 import { safety, blockedBy } from './_safety.js'
+import { cors, summary, exportMine } from './_desker.js'
 import { dailyJob, pushMany, pushRoutes } from './_push.js'
 import { notify } from './_qa.js'
 import { can } from '../../../../packages/shared/src/permissions.js'
@@ -64,9 +65,12 @@ export default async function handler(req, res) {
     if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ error: 'Not allowed' })
     return res.json({ ok: true, ...(await dailyJob()) })
   }
+  if ((first === 'summary' || first === 'export') && !second && cors(req, res)) return // desker.dev asks these two, with the shared cookie
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
 
+  if (first === 'summary' && !second && req.method === 'GET') return res.json(await summary(uid))
+  if (first === 'export' && !second && req.method === 'GET') return res.json(await exportMine(uid))
   if (first === 'mine' && !second && req.method === 'GET') {
     const rows = await sql.query(
       `select v.id, v.slug, v.name, v.course_tags, m.role,

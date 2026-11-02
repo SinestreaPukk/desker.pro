@@ -1,10 +1,14 @@
 import { profile, learnedThisWeek, accuracyByWeek } from '../rhythm.js'
 import { btn, ghost, panel } from '../ui.js'
+import { useEffect, useState } from 'react'
 import BoxHead from './BoxHead.jsx'
+import { villageSummary } from '../village.js'
 
 // Today's small view of Your rhythm. On Sundays it becomes the weekly report.
 export default function RhythmCard({ data, onOpen }) {
   const p = profile(data)
+  const [wk, setWk] = useState(null) // hours studied together in a village this week
+  useEffect(() => { if (new Date().getDay() === 0) villageSummary().then((s) => setWk(s?.week?.hours > 0 ? s.week : null)) }, [])
   const sunday = new Date().getDay() === 0
   const learned = sunday && !p.off ? learnedThisWeek(data) : []
   const last = accuracyByWeek(p.visible.outcomes).filter((w) => w.n).at(-1)
@@ -26,6 +30,7 @@ export default function RhythmCard({ data, onOpen }) {
           <p className="mt-1 text-base text-slate-700">Time a task with the timer, or tell Desker how long it took.</p>
         </div>
       ) : <p className="mt-2 text-base text-slate-700">{line}</p>}
+      {wk && <p className="mt-2 text-base text-slate-700">Studied with friends: {wk.hours}h in {wk.name}.</p>}
       {learned.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-700">{learned.slice(0, 3).map((l) => <li key={l}>{l}</li>)}</ul>}
     </section>
   )

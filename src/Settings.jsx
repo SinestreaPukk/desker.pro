@@ -1,3 +1,4 @@
+import { villageExport } from './village.js'
 import { useState, useEffect, useRef } from 'react'
 import { btn, BLUE, ghost, input, DANGER } from './ui.js'
 import { migrate } from './storage.js'
@@ -51,9 +52,10 @@ export default function Settings({ data, setData, row: inSidebar }) {
     store.set('reminders', '1'); setRem(true)
     setMsg('Reminders are on. They only fire while Desker is open in a tab.')
   }
-  const exportData = () => {
+  const exportData = async () => {
+    const village = await villageExport() // Kodama Village data, if you have any (null if not, or if the village can't be reached)
     const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })),
+      href: URL.createObjectURL(new Blob([JSON.stringify(village ? { ...data, village } : data, null, 2)], { type: 'application/json' })),
       download: `desker-backup-${new Date().toLocaleDateString('sv')}.json`,
     })
     a.click(); URL.revokeObjectURL(a.href)
