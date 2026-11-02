@@ -6,3 +6,4 @@
 2:26:51 pm [vite] vite.config.ts changed, restarting server...
 2:26:51 pm [vite] (client) Re-optimizing dependencies because vite config has changed
 2:26:51 pm [vite] server restarted.
+3:37:06 pm [vite] changed tsconfig file detected: /Users/sakditouchpukkanasut/Desktop/Desker.pro-village/apps/village/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.

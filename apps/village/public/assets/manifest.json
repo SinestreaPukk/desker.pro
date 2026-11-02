@@ -383,6 +383,12 @@
     {
       "key": "glow",
       "file": "glow.png"
+    },
+    {
+      "key": "decor",
+      "file": "decor/decor.png",
+      "atlas": "decor/decor.json",
+      "note": "59 items, frame names <id>:<rotation>:<frame>; catalogue in packages/shared/src/decor.manifest.json"
     }
   ]
 }

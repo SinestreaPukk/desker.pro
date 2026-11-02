@@ -22,46 +22,46 @@ const corridor = (): World => {
 
 test('place: the item blocks its tiles, and the version moves on', () => {
   let st = newState(real); const f = freeSpot(st)
-  const r = put(st, place('lantern', f.x, f.y)); assert.ok('st' in r); st = r.st
+  const r = put(st, place('paper_lantern', f.x, f.y)); assert.ok('st' in r); st = r.st
   assert.equal(st.version, 1); assert.equal(st.world.blocked[f.y * real.w + f.x], 1); assert.equal(real.blocked[f.y * real.w + f.x], 0)
 })
 test('place: unknown item, outside the map, on a wall, without permission', () => {
   const st = newState(real), f = freeSpot(st)
   assert.deepEqual(put(st, place('nope', f.x, f.y)), { ok: false, reason: 'unknown_item' })
-  assert.deepEqual(put(st, place('lantern', -1, 0)), { ok: false, reason: 'bounds' })
+  assert.deepEqual(put(st, place('paper_lantern', -1, 0)), { ok: false, reason: 'bounds' })
   assert.deepEqual(put(st, place('desk', real.w - 1, 2)), { ok: false, reason: 'bounds' }) // 2 wide, hangs over the edge
-  const wall = real.blocked.findIndex((b) => b); assert.deepEqual(put(st, place('rug', wall % real.w, Math.floor(wall / real.w))), { ok: false, reason: 'wall' })
-  assert.deepEqual(put(st, place('lantern', f.x, f.y), 0, { id: 'g', canBuild: false }), { ok: false, reason: 'permission' })
+  const wall = real.blocked.findIndex((b) => b); assert.deepEqual(put(st, place('rug_ice', wall % real.w, Math.floor(wall / real.w))), { ok: false, reason: 'wall' })
+  assert.deepEqual(put(st, place('paper_lantern', f.x, f.y), 0, { id: 'g', canBuild: false }), { ok: false, reason: 'permission' })
 })
 test('protected: the Board ring, spawns and existing seats refuse furniture', () => {
   const st = newState(real), sp = real.spawns[0]
-  assert.deepEqual(put(st, place('lantern', sp.x, sp.y)), { ok: false, reason: 'protected' })
-  const seat = real.sitSpots[0]; assert.deepEqual(put(st, place('plant', seat.x, seat.y)), { ok: false, reason: 'protected' })
-  const b = real.interactables.find((o) => o.kind === 'board')!; assert.deepEqual(put(st, place('plant', b.x - 1, b.y + b.h)), { ok: false, reason: 'protected' })
+  assert.deepEqual(put(st, place('paper_lantern', sp.x, sp.y)), { ok: false, reason: 'protected' })
+  const seat = real.sitSpots[0]; assert.deepEqual(put(st, place('plant_pot', seat.x, seat.y)), { ok: false, reason: 'protected' })
+  const b = real.interactables.find((o) => o.kind === 'board')!; assert.deepEqual(put(st, place('plant_pot', b.x - 1, b.y + b.h)), { ok: false, reason: 'protected' })
 })
 test('overlap: furniture on furniture refused, a lantern on a rug allowed, two rugs refused', () => {
   let st = newState(real); const f = freeSpot(st)
-  st = (put(st, place('rug', f.x, f.y)) as { st: MapState }).st
-  const a = put(st, place('lantern', f.x, f.y)); assert.ok('st' in a); st = a.st
-  assert.deepEqual(put(st, place('plant', f.x, f.y)), { ok: false, reason: 'overlap' })
-  assert.deepEqual(put(st, place('rug', f.x + 1, f.y)), { ok: false, reason: 'overlap' })
+  st = (put(st, place('rug_ice', f.x, f.y)) as { st: MapState }).st
+  const a = put(st, place('paper_lantern', f.x, f.y)); assert.ok('st' in a); st = a.st
+  assert.deepEqual(put(st, place('plant_pot', f.x, f.y)), { ok: false, reason: 'overlap' })
+  assert.deepEqual(put(st, place('rug_ice', f.x + 1, f.y)), { ok: false, reason: 'overlap' })
 })
 test('occupied: not on a tile where a friend is standing', () => {
   const st = newState(real), f = freeSpot(st), tile = f.y * real.w + f.x
-  assert.deepEqual(checkEdit(st, place('lantern', f.x, f.y), me, 0, { occupied: (t) => t === tile }), { ok: false, reason: 'occupied' })
+  assert.deepEqual(checkEdit(st, place('paper_lantern', f.x, f.y), me, 0, { occupied: (t) => t === tile }), { ok: false, reason: 'occupied' })
 })
 test('limit: 400 placements', () => {
-  const many: Placement[] = Array.from({ length: MAX_PLACEMENTS }, (_, i) => ({ id: `m${i}`, decorId: 'rug', x: 0, y: 0, rotation: 0, by: 'u' }))
-  assert.deepEqual(put(newState(real, many), place('lantern', freeSpot(newState(real)).x, freeSpot(newState(real)).y)), { ok: false, reason: 'limit' })
+  const many: Placement[] = Array.from({ length: MAX_PLACEMENTS }, (_, i) => ({ id: `m${i}`, decorId: 'rug_ice', x: 0, y: 0, rotation: 0, by: 'u' }))
+  assert.deepEqual(put(newState(real, many), place('paper_lantern', freeSpot(newState(real)).x, freeSpot(newState(real)).y)), { ok: false, reason: 'limit' })
 })
 test('reachability: a lantern in the one-tile corridor is refused, a rug is fine', () => {
   const st = newState(corridor()); st.keep // eslint-disable-line
-  assert.deepEqual(put(st, place('lantern', 3, 1)), { ok: false, reason: 'blocks_path' })
-  assert.ok('st' in put(st, place('rug', 3, 1)) === false) // 2x2 rug would cover walls: refused for another reason
-  const r = put(st, place('rug', 3, 0)); assert.ok(!('st' in r) && r.reason === 'wall')
+  assert.deepEqual(put(st, place('paper_lantern', 3, 1)), { ok: false, reason: 'blocks_path' })
+  assert.ok('st' in put(st, place('rug_ice', 3, 1)) === false) // 2x2 rug would cover walls: refused for another reason
+  const r = put(st, place('rug_ice', 3, 0)); assert.ok(!('st' in r) && r.reason === 'wall')
 })
 test('reachability: moving a blocker into the corridor is refused too', () => {
-  let st = newState(corridor()); st = put(st, { t: 'place', decorId: 'lantern', x: 0, y: 0, rotation: 0 }, 0) as never as MapState
+  let st = newState(corridor()); st = put(st, { t: 'place', decorId: 'paper_lantern', x: 0, y: 0, rotation: 0 }, 0) as never as MapState
   st = (st as unknown as { st: MapState }).st
   const p = [...st.placements.values()][0]
   assert.deepEqual(put(st, { t: 'move', placementId: p.id, x: 3, y: 1 }), { ok: false, reason: 'blocks_path' })
@@ -79,30 +79,30 @@ test('rotate, move and remove change the footprint; removing frees the tiles', (
 })
 test('a cushion adds a sit spot that turns with it', () => {
   let st = newState(real); const f = freeSpot(st)
-  st = (put(st, place('cushion', f.x, f.y, 90)) as { st: MapState }).st
+  st = (put(st, place('cushion_ice', f.x, f.y, 90)) as { st: MapState }).st
   const s = st.world.sitSpots.find((q) => q.id.startsWith('d:'))!
   assert.equal(s.x, f.x); assert.equal(s.y, f.y); assert.equal(s.facing, 'left') // 'down' turned 90 degrees clockwise
   assert.equal(buildWorld(real, []).sitSpots.length, real.sitSpots.length)
 })
 test('concurrent edits: other tiles go through, the same tile is "stale", an edit based on the newest version goes through', () => {
   let st = newState(real); const f = freeSpot(st)
-  st = (put(st, place('lantern', f.x, f.y)) as { st: MapState }).st // version 1; both friends were looking at version 0
-  const other = put(st, place('plant', f.x + 2, f.y), 0); assert.ok('st' in other) // a different tile
-  assert.deepEqual(put(st, place('plant', f.x, f.y), 0), { ok: false, reason: 'overlap' }) // same tile: simply taken (a freed-then-changed tile is 'stale', next test)
+  st = (put(st, place('paper_lantern', f.x, f.y)) as { st: MapState }).st // version 1; both friends were looking at version 0
+  const other = put(st, place('plant_pot', f.x + 2, f.y), 0); assert.ok('st' in other) // a different tile
+  assert.deepEqual(put(st, place('plant_pot', f.x, f.y), 0), { ok: false, reason: 'overlap' }) // same tile: simply taken (a freed-then-changed tile is 'stale', next test)
 })
 test('stale beats nothing: a freed tile that was changed after the base version is stale, then fine once the base catches up', () => {
   let st = newState(real); const f = freeSpot(st)
-  st = (put(st, place('lantern', f.x, f.y)) as { st: MapState }).st
+  st = (put(st, place('paper_lantern', f.x, f.y)) as { st: MapState }).st
   const p = [...st.placements.values()][0]
   st = (put(st, { t: 'remove', placementId: p.id }) as { st: MapState }).st // version 2
-  assert.deepEqual(put(st, place('plant', f.x, f.y), 1), { ok: false, reason: 'stale' })
-  assert.ok('st' in put(st, place('plant', f.x, f.y), 2))
+  assert.deepEqual(put(st, place('plant_pot', f.x, f.y), 1), { ok: false, reason: 'stale' })
+  assert.ok('st' in put(st, place('plant_pot', f.x, f.y), 2))
 })
 test('restore: ops turn today into a snapshot, as one version', () => {
   let st = newState(real); const f = freeSpot(st)
-  st = (put(st, place('lantern', f.x, f.y)) as { st: MapState }).st
+  st = (put(st, place('paper_lantern', f.x, f.y)) as { st: MapState }).st
   const snap = [...st.placements.values()]
-  st = (put(st, place('plant', f.x + 2, f.y)) as { st: MapState }).st
+  st = (put(st, place('plant_pot', f.x + 2, f.y)) as { st: MapState }).st
   st = (put(st, { t: 'remove', placementId: snap[0].id }) as { st: MapState }).st
   const ops = restoreOps(st, snap); assert.equal(ops.length, 2)
   const back = apply(st, ops, st.version + 1)

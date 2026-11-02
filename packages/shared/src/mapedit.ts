@@ -14,10 +14,10 @@ export type Edit =
   | { t: 'remove'; placementId: string }
   | { t: 'move'; placementId: string; x: number; y: number }
   | { t: 'rotate'; placementId: string; rotation: Rotation }
-export type Refusal = 'permission' | 'unknown_item' | 'gone' | 'bounds' | 'wall' | 'protected' | 'overlap' | 'occupied' | 'blocks_path' | 'limit' | 'stale'
+export type Refusal = 'permission' | 'unknown_item' | 'rotation' | 'gone' | 'bounds' | 'wall' | 'protected' | 'overlap' | 'occupied' | 'blocks_path' | 'limit' | 'stale'
 /** What the person sees when an edit is refused. */
 export const REFUSAL_TEXT: Record<Refusal, string> = {
-  permission: 'You cannot build in this village', unknown_item: 'That item does not exist', gone: 'That item is already gone', bounds: 'Outside the village',
+  permission: 'You cannot build in this village', unknown_item: 'That item does not exist', rotation: 'That item cannot turn that way', gone: 'That item is already gone', bounds: 'Outside the village',
   wall: 'Something is in the way', protected: 'Keep this spot clear', overlap: 'Something is already there', occupied: 'A friend is standing there',
   blocks_path: 'Blocks the path', limit: 'This village is full of decorations', stale: 'Someone just changed that spot',
 }
@@ -107,6 +107,7 @@ export function checkEdit(st: MapState, e: Edit, actor: Actor, baseVersion: numb
   if (old) for (const t of tilesIn(footprint(old), W)) touched.add(t)
   if (next) {
     const d = DECOR[next.decorId]; if (!d) return no('unknown_item')
+    if (!d.rot.includes(next.rotation)) return no('rotation')
     const f = footprint(next, d)
     if (f.x < 0 || f.y < 0 || f.x + f.w > st.base.w || f.y + f.h > st.base.h) return no('bounds')
     const mine = tilesIn(f, W)
@@ -114,7 +115,7 @@ export function checkEdit(st: MapState, e: Edit, actor: Actor, baseVersion: numb
     for (const t of mine) { touched.add(t); if (st.base.blocked[t]) return no('wall') }
     for (const q of st.placements.values()) {
       if (q.id === next.id) continue
-      const qd = DECOR[q.decorId]; if (!qd || (qd.walkable !== d.walkable)) continue // a rug under furniture is fine; two rugs, or two pieces of furniture, are not
+      const qd = DECOR[q.decorId]; if (!qd || qd.layer !== d.layer) continue // a lantern on a rug or lights over a path are fine; two rugs, or two pieces of furniture, are not
       const qt = new Set(tilesIn(footprint(q, qd), W)); if (mine.some((t) => qt.has(t))) return no('overlap')
     }
     if (!d.walkable && o.occupied && mine.some(o.occupied)) return no('occupied')

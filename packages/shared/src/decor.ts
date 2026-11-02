@@ -1,16 +1,21 @@
-// The decor catalogue as the logic sees it. Checkpoint 2 replaces this with the generated assets/decor/manifest.json; the fields are final.
+// The decor catalogue as the logic sees it, read from decor.manifest.json (the one source: art, database seed and rules all derive from it).
 import type { Dir } from './types.ts'
+import manifest from './decor.manifest.json' with { type: 'json' }
 
+export const DECOR_CATEGORIES = ['study', 'cosy', 'nature', 'lights', 'signs', 'seasonal'] as const
+export type DecorCategory = (typeof DECOR_CATEGORIES)[number]
 export interface Decor {
-  id: string; w: number; h: number; walkable: boolean
+  id: string; name: { en: string; th: string }; cat: DecorCategory; w: number; h: number
+  walkable: boolean
+  layer: 'floor' | 'object' | 'over' // things on different layers may share a tile (a lantern on a rug, string lights over a path); the same layer may not
+  rot: number[] // the rotations the art exists for; rotating to anything else is refused
   sit?: { dx: number; dy: number; facing: Dir }[] // offsets from the item's top-left corner, as drawn at rotation 0
-  price: number
+  interact: 'none' | 'light' | 'sign' | 'pennant'
+  price: number // Leaves
+  season: null | 'winter' | 'spring' | 'exam'
+  frames: number // 2 = a small idle animation
 }
-export const DECOR: Record<string, Decor> = Object.fromEntries(([
-  { id: 'lantern', w: 1, h: 1, walkable: false, price: 20 },
-  { id: 'plant', w: 1, h: 1, walkable: false, price: 15 },
-  { id: 'cushion', w: 1, h: 1, walkable: false, sit: [{ dx: 0, dy: 0, facing: 'down' }], price: 30 },
-  { id: 'rug', w: 2, h: 2, walkable: true, price: 50 },
-  { id: 'desk', w: 2, h: 1, walkable: false, price: 60 },
-  { id: 'bookshelf', w: 1, h: 2, walkable: false, price: 70 },
-] as Decor[]).map((d) => [d.id, d]))
+export const DECOR_LIST = manifest.items as Decor[]
+export const DECOR: Record<string, Decor> = Object.fromEntries(DECOR_LIST.map((d) => [d.id, d]))
+/** The longest sign text (filtered like a bubble before it is stored). */
+export const SIGN_MAX_CHARS = 40

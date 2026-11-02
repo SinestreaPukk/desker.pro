@@ -29,18 +29,18 @@ const edit = (ws, base, e) => ws.send(JSON.stringify({ t: 'map.edit', base, edit
 const owner = await join('owner', 'owner', true), guest = await join('guest', 'guest', false)
 assert.equal(owner.welcome.mapVersion, 0); assert.deepEqual(owner.welcome.placements, [])
 // a free plaza tile: scan the real map for one the room accepts
-edit(guest, 0, { t: 'place', decorId: 'lantern', x: 12, y: 20, rotation: 0 })
+edit(guest, 0, { t: 'place', decorId: 'paper_lantern', x: 12, y: 20, rotation: 0 })
 assert.equal((await until(() => guest.msgs.find((m) => m.t === 'mapRefused'))).reason, 'permission'); console.log('ok: no build right, refused')
 let placed
-for (let x = 2; x < 38 && !placed; x++) { const n = owner.msgs.length; edit(owner, db.version, { t: 'place', decorId: 'lantern', x, y: 22, rotation: 0 }); await new Promise((r) => setTimeout(r, 150)); placed = owner.msgs.slice(n).find((m) => m.t === 'mapPatch') }
+for (let x = 2; x < 38 && !placed; x++) { const n = owner.msgs.length; edit(owner, db.version, { t: 'place', decorId: 'paper_lantern', x, y: 22, rotation: 0 }); await new Promise((r) => setTimeout(r, 150)); placed = owner.msgs.slice(n).find((m) => m.t === 'mapPatch') }
 assert.ok(placed, 'some tile on row 22 accepted a lantern'); assert.equal(placed.version, 1)
 await until(() => guest.msgs.find((m) => m.t === 'mapPatch' && m.version === 1)); assert.equal(db.version, 1); assert.equal(db.rows.size, 1); console.log('ok: edit saved, version 1, everyone patched')
 const p = placed.ops[0].p
-edit(owner, 0, { t: 'place', decorId: 'plant', x: p.x, y: p.y, rotation: 0 }); await until(() => owner.msgs.filter((m) => m.t === 'mapRefused').length >= 1); console.log('ok: same tile refused')
+edit(owner, 0, { t: 'place', decorId: 'plant_pot', x: p.x, y: p.y, rotation: 0 }); await until(() => owner.msgs.filter((m) => m.t === 'mapRefused').length >= 1); console.log('ok: same tile refused')
 edit(owner, 1, { t: 'remove', placementId: p.id }); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 2)); assert.equal(db.rows.size, 0); console.log('ok: remove saved')
 const late = await join('late', 'member', true); assert.equal(late.welcome.mapVersion, 2); console.log('ok: a newcomer is welcomed at the current version')
 guest.send(JSON.stringify({ t: 'map.restore', version: 1 })); await until(() => guest.msgs.filter((m) => m.t === 'mapRefused').length >= 2); console.log('ok: restore is owner-only')
 owner.send(JSON.stringify({ t: 'map.snapshot' })); await until(() => db.snaps.has(2)); console.log('ok: owner snapshot saved')
-edit(owner, 2, { t: 'place', decorId: 'lantern', x: p.x, y: p.y, rotation: 0 }); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 3))
+edit(owner, 2, { t: 'place', decorId: 'paper_lantern', x: p.x, y: p.y, rotation: 0 }); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 3))
 owner.send(JSON.stringify({ t: 'map.restore', version: 2 })); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 4)); assert.equal(db.rows.size, 0); console.log('ok: restore put the map back as version 4')
 console.log('all ok'); api.close(); for (const w of [owner, guest, late]) w.close(); process.exit(0)
