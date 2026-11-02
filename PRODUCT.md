@@ -36,23 +36,24 @@ Short visits in a browser, on desktop or phone. The AI assistant chat is the one
 Decided:
 
 - Three pages: Now, Calendar and Goals. There is no separate Projects page; projects sit under their goal on Goals.
-- Now shows a top pick, 5 ranked alternatives that can each be started, and Coming up with due dates and today's meetings. Things due today with no goal appear in a line under the top card.
+- Now shows a top pick, 5 ranked alternatives that can each be started, and Coming up with everything on the calendar. Things due today with no goal appear in a line under the top card.
 - The four-box matrix is hidden behind "View matrix". Dragging a task there overrides its rank until "Let the app decide" is pressed.
-- Add is a button with a title and a Task or Project choice, and uses no AI. AI is used only in chat.
+- Add opens the same form as tapping a calendar slot: Task or Project, a title, No deadline or a day, and a goal. Once there is a day, the time and Meeting or Reminder appear. It uses no AI. AI is used only in chat.
 - Goals are ranked, and importance comes from that rank. Urgency can still put a lower-ranked goal first.
 - Goals has one vision sentence above a ranked list, with no pyramid and at most 5 goals.
 - People who do not know their goals get a goal finder of at most 5 multiple-choice questions, covering up to 3 areas. Their taps fill in goal titles and a vision they can keep or edit. It opens on the first visit and can be skipped.
 - A project is linked to a goal by picking from the user's goals. "Not in my goals" is a choice, and it makes the project less important.
-- Every project uses one Progress scale, 0 to 5. It is asked when the project is added and again when any task in it is finished. Ignoring it keeps the last number.
+- Every project uses one Progress scale, 0 to 5. A new project starts at 0. It can be set on the project's sheet, and is asked when any task in it is finished. Ignoring it keeps the last number.
 - Progress is compared with time left as days left per progress step left. A plain task counts as one step.
 - A project's task is simply what to do, such as "Review for the test". It is never a breakdown of how to do it.
-- The app never fixes a number of sessions, because that depends on the person. They keep coming until the deadline or 5/5, and the next one appears the following day.
-- The calendar holds only classes and meetings, added like Apple Calendar or imported, with a Day, Week and Month switch. Tasks, sessions and due dates stay off it, and nothing is sent out to other calendars.
+- The app never fixes a number of sessions, because that depends on the person. They keep coming until the deadline or 5/5. The next one appears the following day, and "Another session" is always there for one straight away.
+- The calendar holds classes and meetings, added like Apple Calendar or imported, and anything with a due date, like a reminder, with a Day, Week and Month switch. Sessions stay off it, and nothing is sent out to other calendars.
+- A repeating task shows on every later date on the calendar and in Coming up, like Apple Calendar. Only the current one can be ticked or moved, and ticking it makes the next one current.
 - English for now. Titles can be typed in any language.
 
 Technical:
 
-- Vercel Hobby allows 12 serverless functions, and the app uses all 12 today.
+- Vercel Hobby allows 12 serverless functions, and the app uses 6.
 - Data is tied to an anonymous browser ID. There is no login yet.
 
 Not decided yet: the items marked "still an assumption" in the upgrade plan's "Numbers and defaults" table, including the urgency values, the score formula, and the finder's areas and choices.
@@ -73,4 +74,4 @@ No testimonials, customer numbers or benchmarks are recorded in this repo. Do no
 4. **Suggest, never order, and never say how.** A top pick with a short reason, and ranked alternatives under it, so people can weigh what they have to do against how they feel. "Review for Statics midterm. Progress 2/5 with 3 days left." Nothing about chapters.
 5. **No rank button, and no AI outside chat.** The order is always live, instant and works without AI.
 6. **Never fix a number of sessions.** How much work something takes depends on the person. Sessions keep coming until the deadline or 5/5.
-7. **The calendar is for classes and meetings only.** Tasks, sessions and due dates stay off it.
+7. **Everything with a date is on the calendar and in Coming up.** Two separate choices decide what it is. Task or project: a task is one thing, a project has progress, sessions and its own tasks. Reminder or meeting: a reminder sits at one fixed time, a meeting runs from a start to an end, like an Apple Calendar event (10:00-12:00). So a task can be a reminder (homework due) or a meeting (a class, with no tick or ranking, just a glance in Coming up), and a project can be a reminder (Desker with a deadline) or a meeting (Statics test at 10:00-12:00), and it works as a project either way. Both can link to a goal. Two questions tell them apart: does it just happen at a set time (meeting), or can you do it any time before the deadline (reminder)? Does it have work to prepare (project), or not (task)? An appointment can still be saved as a reminder if that's all someone wants. Tapping anything on the calendar lets you switch reminder and meeting and change the time, and a task can become a project. Sessions have no date, so they stay off it.

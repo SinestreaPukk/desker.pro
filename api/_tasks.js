@@ -26,13 +26,14 @@ export function clean(body) {
   return out
 }
 
+// Setting important or urgent counts as a drag: rank() reads them directly. A planned day (`when`) counts as the due date if there is none.
 // op: 'create' | 'update' | 'delete'. Returns { tasks, task } or { error, status }.
 export function apply(tasks, op, id, body, now = Date.now()) {
-  if (tasks.length >= 50 && op === 'create') return { error: 'Task limit (50) reached', status: 409 }
+  if (op === 'create' && tasks.filter((t) => !t.done).length >= 50) return { error: 'Task limit (50) reached', status: 409 }
   if (op === 'create') {
     const f = clean(body)
     if (!f?.title) return { error: 'title is required; check field formats', status: 400 }
-    const task = { id: now, ...f }
+    const task = { id: now, ...f, ...(f.when && !f.due && { due: f.when }), ...(f.done && { doneAt: now }) }
     return { tasks: [...tasks, task], task }
   }
   const t = tasks.find((x) => x.id === id)
@@ -40,6 +41,7 @@ export function apply(tasks, op, id, body, now = Date.now()) {
   if (op === 'delete') return { tasks: tasks.filter((x) => x !== t), task: t }
   const f = clean(body)
   if (!f) return { error: 'Invalid field', status: 400 }
-  const task = { ...t, ...f }
+  const { doneAt, ...rest } = t
+  const task = { ...rest, ...f, ...(f.when && !f.due && !t.due && { due: f.when }), ...((f.done ?? t.done) && { doneAt: t.done ? doneAt : now }) } // the app's Done this week and sessions read doneAt
   return { tasks: tasks.map((x) => (x === t ? task : x)), task }
 }

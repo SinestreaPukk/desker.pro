@@ -1,7 +1,7 @@
 {
   "name": "Desker",
   "short_name": "Desker",
-  "description": "Goals, projects, deadlines and tasks with an AI planner.",
+  "description": "A low-friction to-do list and calendar that ranks what to do next.",
   "start_url": "/today",
   "scope": "/",
   "display": "standalone",

@@ -7,17 +7,21 @@ export const panel = 'rounded-2xl bg-panel p-5'
 export const rowCard = 'rounded-xl border border-line bg-white'
 
 // every task matters, just not equally: the four boxes rank by impact and timing, none means 'drop it'
-// quadrant tint + dot colour; the tint is used on chips in the calendar too
+// the matrix: another view of the ranking, with a tint for each box
 export const Q = [
   { name: 'Do First', hint: 'Due soon, high impact', cls: 'border border-line bg-[#fdf1ee]', dot: 'bg-[#e8a598]' },
   { name: 'Schedule', hint: 'High impact, not due yet', cls: 'border border-line bg-[#eaf0fc]', dot: 'bg-[#7fa3e0]' },
   { name: 'Fit it in', hint: 'Due soon, lighter impact', cls: 'border border-line bg-[#fbf5e6]', dot: 'bg-[#dcc084]' },
   { name: 'Later', hint: 'Lighter impact, no rush', cls: 'border border-line bg-[#f1f3f8]', dot: 'bg-[#a9b4cb]' },
 ]
-// Goals pyramid, narrowest (top) to widest (base): a pastel-blue ladder, deeper toward the near term
-export const LEVELS = [
-  { name: 'Vision', hint: 'Life purpose / who you want to be', w: 'md:w-1/3', cls: 'bg-[#f3f7fe]' },
-  { name: 'Long-term', hint: '5+ years', w: 'md:w-1/2', cls: 'bg-[#e6eefb]' },
-  { name: 'Mid-term', hint: '1-3 years', w: 'md:w-3/4', cls: 'bg-[#d3e0f6]' },
-  { name: 'Short-term', hint: 'This quarter', w: 'md:w-full', cls: 'bg-[#b4caf0]' },
-]
+// What each kind of calendar item looks like. Blue is a task and violet a project; an outline is a reminder and a fill is a meeting.
+// cls colours a block, ring colours its tick, and mark is the small sign in Coming up and the legend.
+export const TYPES = {
+  taskReminder: { name: 'Task reminder', cls: 'border-primary-hover bg-white text-ink', ring: 'border-accent', mark: 'rounded-full border border-accent' },
+  taskMeeting: { name: 'Class or meeting', cls: 'border-primary-hover bg-pale text-ink', mark: 'rounded-sm bg-accent' },
+  projectReminder: { name: 'Project reminder', cls: 'border-project-line bg-white text-ink', ring: 'border-project', mark: 'rounded-full border border-project' },
+  projectMeeting: { name: 'Project meeting', cls: 'border-project-line bg-project-pale text-ink', ring: 'border-project', mark: 'rounded-sm bg-project' },
+  imported: { name: 'From your calendar', cls: 'border-control bg-stone/20 text-slate-700', mark: 'rounded-sm bg-stone' },
+}
+// A tap choice: follow-up questions, areas, goals.
+export const chip = (on) => `chip min-h-11 rounded-full border px-4 py-2 text-sm transition ${on ? 'border-accent bg-pale text-ink' : 'border-control bg-white text-slate-700 hover:bg-pale'}`

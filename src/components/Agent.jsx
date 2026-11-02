@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
-import { BLUE, btn, input, LEVELS } from '../ui.js'
+import { BLUE, btn } from '../ui.js'
 import { weekReview } from '../review.js'
-import { patternOf, ratioOf, readSource, busyForAI, freeTodayOf, applyPlan, QUICK, todayStr } from '../shared.jsx'
+import { rank } from '../rank.js'
+import { validAdds } from '../lists.js'
+import { readSource, QUICK, todayStr, goalsForAI, fmtDate } from '../shared.jsx'
+import { visionOf } from '../goals.js'
 
-export default function Agent({ data, setData, onClose, onReplan, onGuide, reviewReq }) {
+const TASK_LIMIT = 50 // api/chat.js rejects more, so only the highest-ranked go
+const RECENT = 20 // and it rejects long histories, so a long chat sends its latest turns
+
+// The only place with AI and long typing. It can suggest things to add, and nothing is added until you tap.
+export default function Agent({ data, onAdd, onClose, onFinder }) {
   const [msgs, setMsgs] = useState([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -16,22 +23,17 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
     setMsgs(next); setText(''); setBusy(true); setError('')
     try {
       const out = await post('/api/chat', {
-        goals: data.goals.map(({ id, title, level, happiness }) => ({ id, level: LEVELS[level].name, kind: happiness ? 'happiness' : 'work', title })),
-        tasks: data.tasks.filter((t) => !t.done).map(({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId }) => ({ id, title, due, readiness, hours, when, start, fun, deadlineId, projectId })),
-        pattern: patternOf(data), ratio: ratioOf(data.tasks),
-        projects: (data.projects || []).map(({ id, title, kind, date }) => ({ id, title, kind, date })),
-        deadlines: (data.deadlines || []).map(({ id, title, date, hours }) => ({ id, title, date, hours })),
-        hobbies: (data.hobbies || []).map((h) => h.title), freeHours: data.freeHours, freeToday: freeTodayOf(data), busy: busyForAI(data.busy), mood: data.mood, messages: next.map(({ role, content }) => ({ role, content })),
+        today: todayStr(), vision: visionOf(data.goals)?.title, goals: goalsForAI(data.goals),
+        tasks: rank(data).slice(0, TASK_LIMIT).map(({ task: { id, title, due, projectId }, why }) => ({ id, title, due, projectId, why })),
+        projects: data.projects.map(({ id, title, date, progress, goalId }) => ({ id, title, date, progress, goalId })),
+        messages: next.slice(-RECENT).map(({ role, content: c }) => ({ role, content: c })),
       })
       if (typeof out.reply !== 'string') throw new Error('The AI gave an unreadable answer. Please try again.')
-      setData((d) => applyPlan(d, out))
-      const goals = (Array.isArray(out.goals) ? out.goals : []).filter((g) => g?.title && LEVELS.some((l) => l.name === g.level)).slice(0, 8)
-        .map((g) => ({ title: String(g.title).slice(0, 120), level: LEVELS.findIndex((l) => l.name === g.level), happiness: !!g.happiness }))
-      setMsgs([...next, { role: 'assistant', content: out.reply, goals }])
+      setMsgs([...next, { role: 'assistant', content: out.reply, adds: validAdds(out.adds) }])
     } catch (err) { setError(err.message) }
     setBusy(false)
   }
-  // Attach a file/photo, or auto-read a pasted link, then send the notes with the message.
+  // Attach a file or photo, or read a pasted link, then send the notes with the message.
   const attachFile = async (file) => {
     setBusy(true); setError('')
     try {
@@ -53,44 +55,40 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       await send(`${t}\n\n[Page content from ${url}]:\n${notes}`, t)
     } catch (err) { setError(`Could not read that link: ${err.message}`); setBusy(false); send(t) }
   }
-  const review = () => send(`Weekly review please. ${weekReview(data.tasks, data.goals).text}`, 'Weekly review')
-  useEffect(() => { if (reviewReq) review() }, [reviewReq])
-  const chipClick = (q) => (q === 'Replan my week' ? onReplan() : q === 'Weekly review' ? review() : q === 'Help me find my goals' ? onGuide() : send(q))
-  const addGoals = (mi, ks) => {
-    const picked = ks.map((k) => msgs[mi].goals[k])
-    setData((d) => ({ ...d, goals: [...d.goals, ...picked.map((g, n) => ({ id: Date.now() + n, title: g.title, level: g.level, happiness: g.happiness }))] }))
-    setMsgs(msgs.map((m, i) => (i === mi ? { ...m, goals: m.goals.map((g, k) => (ks.includes(k) ? { ...g, added: true } : g)) } : m)))
-  }
+  const chipClick = (q) => (q === 'Weekly review'
+    ? send(`Weekly review please. ${weekReview(data.tasks, data.goals, data.projects).text}`, 'Weekly review')
+    : onFinder())
+  const added = (mi, ks) => setMsgs(msgs.map((m, i) => (i === mi ? { ...m, adds: m.adds.map((a, k) => (ks.includes(k) ? { ...a, added: true } : a)) } : m)))
+  const addSome = (mi, ks) => { onAdd(ks.map((k) => msgs[mi].adds[k])); added(mi, ks) }
   const bubble = 'max-w-[80%] break-words px-3.5 py-2 text-[0.9375rem] leading-snug'
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-        <img src="/favicon.svg" alt="Desker AI agent" className="h-9 w-9" />
-        {onClose && <button className="flex min-h-11 items-center rounded-full px-4 text-accent hover:bg-pale" onClick={onClose}>Close</button>}
+        <img src="/favicon.svg" alt="Desker chat" className="h-9 w-9" />
+        <button className="flex min-h-11 items-center rounded-full px-4 text-accent hover:bg-pale" onClick={onClose}>Close</button>
       </header>
       <div role="log" aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-3">
         <div className={`${bubble} mr-auto rounded-2xl rounded-bl-md bg-panel text-ink`}>
-          Hi! I can help you plan around your tasks, deadlines and free time. How are you feeling today?
+          Hi! Tell me what's on your plate, or attach a syllabus, and I'll offer to add it.
         </div>
         {msgs.map((m, i) => (
           <div key={i} className={`${bubble} ${m.role === 'user' ? 'ml-auto rounded-2xl rounded-br-md bg-primary text-ink' : 'mr-auto rounded-2xl rounded-bl-md bg-panel text-ink'}`}>
             {m.label ?? m.content}
-            {m.goals?.length > 0 && (
+            {m.adds?.length > 0 && (
               <ul className="mt-2 space-y-1.5">
-                {m.goals.map((g, k) => (
+                {m.adds.map((a, k) => (
                   <li key={k} className="rounded-xl bg-white p-2 text-sm">
-                    <span className="text-xs text-slate-600">{LEVELS[g.level].name}{g.happiness ? ' · happiness' : ''}</span><br />{g.title}
-                    <button className={`${btn} mt-1 block !px-3 !py-1 ${g.added ? 'bg-slate-100 text-slate-600' : BLUE}`} disabled={g.added}
-                      onClick={() => addGoals(i, [k])}>{g.added ? 'Added' : 'Add goal'}</button>
+                    <span className="text-xs capitalize text-slate-600">{a.type}{a.due ? ` · due ${fmtDate(a.due)}` : ''}</span><br />{a.title}
+                    <button className={`${btn} mt-1 block ${a.added ? 'bg-slate-100 text-slate-600' : BLUE}`} disabled={a.added} onClick={() => addSome(i, [k])}>{a.added ? 'Added' : 'Add'}</button>
                   </li>
                 ))}
-                {m.goals.some((g) => !g.added) && <li><button className={`${btn} ${BLUE} !py-1.5`} onClick={() => addGoals(i, m.goals.flatMap((g, k) => (g.added ? [] : [k])))}>Add all</button></li>}
+                {m.adds.filter((a) => !a.added).length > 1 && <li><button className={`${btn} ${BLUE}`} onClick={() => addSome(i, m.adds.flatMap((a, k) => (a.added ? [] : [k])))}>Add all</button></li>}
               </ul>
             )}
           </div>
         ))}
         {busy && (
-          <div className="mr-auto flex gap-1 rounded-2xl rounded-bl-md bg-panel px-4 py-3" aria-label="AI agent is typing">
+          <div className="mr-auto flex gap-1 rounded-2xl rounded-bl-md bg-panel px-4 py-3" aria-label="Thinking">
             <span className="dot" /><span className="dot" style={{ animationDelay: '150ms' }} /><span className="dot" style={{ animationDelay: '300ms' }} />
           </div>
         )}
@@ -99,24 +97,11 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
       </div>
       {!msgs.length && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-          {QUICK.map((q) => (
-            <button key={q} className="rounded-full border border-control bg-white px-4 py-2 text-sm text-ink transition hover:bg-pale disabled:opacity-60" disabled={busy} onClick={() => chipClick(q)}>{q}</button>
-          ))}
+          {QUICK.map((q) => <button key={q} className="rounded-full border border-control bg-white px-4 py-2 text-sm text-ink transition hover:bg-pale disabled:opacity-60" disabled={busy} onClick={() => chipClick(q)}>{q}</button>)}
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-black/5 px-3 pt-2 text-xs text-slate-600">
-        <label className="flex items-center gap-2">Free time today (hours)
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder={String(data.freeHours ?? 4)} value={freeTodayOf(data) ?? ''}
-            onChange={(e) => setData((d) => ({ ...d, freeToday: e.target.value === '' ? undefined : { date: todayStr(), hours: +e.target.value } }))} />
-        </label>
-        <label className="flex items-center gap-2">Free time per day (hours)
-          <input type="number" min="0" max="24" step="0.5" className={`${input} w-16 !py-1`} placeholder="4" value={data.freeHours ?? ''}
-            onChange={(e) => setData((d) => ({ ...d, freeHours: e.target.value === '' ? undefined : +e.target.value }))} />
-        </label>
-        <p className="w-full">Leave today blank to use your daily number.</p>
-      </div>
       <form className="flex items-center gap-2 p-3" onSubmit={submit}>
-        <label className={`flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel text-slate-700 transition hover:bg-slate-300 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+        <label className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-panel text-slate-700 transition hover:bg-slate-300 ${busy ? 'pointer-events-none opacity-50' : ''}`}>
           <span className="sr-only">Attach a photo, PDF or text file</span>
           <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M8 3v10M3 8h10" /></svg>
           <input type="file" className="sr-only" accept="image/*,application/pdf,.txt,.md,.csv,.json,.ics" disabled={busy}
@@ -132,4 +117,3 @@ export default function Agent({ data, setData, onClose, onReplan, onGuide, revie
     </div>
   )
 }
-

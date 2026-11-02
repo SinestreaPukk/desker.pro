@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/(today|tasks|goals|projects|deadlines|dsb|calendar|do-now)", "destination": "/index.html" }
+    { "source": "/(now|calendar|goals|today|tasks|projects|deadlines|dsb|do-now)", "destination": "/index.html" }
   ]
 }

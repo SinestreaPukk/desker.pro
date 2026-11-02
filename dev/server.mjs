@@ -38,7 +38,7 @@ async function api(req, res, name) {
   req.query = Object.fromEntries(new URL(req.url, 'http://x').searchParams)
   const raw = await readBody(req)
   if (raw === null) return res.status(413).json({ error: 'Too large' })
-  if (raw && /application\/json/.test(req.headers['content-type'] || '')) {
+  if (raw && /^application\/json\s*(;|$)/i.test(req.headers['content-type'] || '')) {
     try { req.body = JSON.parse(raw) } catch { return res.status(400).json({ error: 'Invalid JSON' }) }
   }
   try {

@@ -20,6 +20,13 @@ test('hasContent', () => {
   assert.equal(hasContent(doc), true)
 })
 
+test('calendar data and a finder choice count as content, so they get saved for a new visitor', () => {
+  assert.equal(hasContent({ goals: [], tasks: [], events: [{ id: 1 }] }), true)
+  assert.equal(hasContent({ goals: [], tasks: [], busy: [{ t: 'x' }] }), true)
+  assert.equal(hasContent({ goals: [], tasks: [], finder: { skipped: true } }), true)
+  assert.equal(hasContent({ goals: [], tasks: [], events: [], busy: [], schema: 2 }), false)
+})
+
 test('toRows drops bad rows, keeps order and nulls dangling links', () => {
   const r = toRows(doc)
   assert.deepEqual(r.tasks.map((t) => t.id), [10, 11])

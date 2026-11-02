@@ -61,7 +61,6 @@ export default function Dsb() {
         <Tile label="Users" value={n(c.users)} sub={`${c.with_data} with data · ${c.active7} active in 7 days · anonymous browsers`} />
         <Tile label="Tasks" value={n(c.tasks)} sub={`${n(c.doneTasks)} done`} />
         <Tile label="Projects" value={n(c.projects)} />
-        <Tile label="Deadlines" value={n(c.deadlines)} />
         <Tile label="Goals" value={n(c.goals)} />
         <Tile label="Hobbies" value={n(c.hobbies)} />
       </div>
@@ -76,7 +75,7 @@ export default function Dsb() {
 
       <h2 className="mb-2 font-semibold">All AI usage divided by</h2>
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[['task', c.tasks], ['project', c.projects], ['deadline', c.deadlines], ['active user', c.with_data]].map(([name, d]) => (
+        {[['task', c.tasks], ['project', c.projects], ['active user', c.with_data]].map(([name, d]) => (
           <Tile key={name} label={`Per ${name}`} value={`${n(per(tokens, d))} tokens`} sub={`${usd(per(ai.cost, d))} estimated`} />
         ))}
       </div>

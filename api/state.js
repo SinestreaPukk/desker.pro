@@ -3,7 +3,7 @@ import { loadDoc, saveDoc, SETTINGS } from './_store.js'
 
 const UID = /^[0-9a-f-]{36}$/
 const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', ...SETTINGS] // anything else in a PUT is dropped
-const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy']
+const ARRAYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'events']
 
 export default async function handler(req, res) {
   const { uid } = req.query

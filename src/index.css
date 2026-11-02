@@ -20,6 +20,9 @@
   --color-leaf: #2e7d32;
   --color-amber: #8a5a14;
   --color-stone: #8a97b0;
+  --color-project: #5f4fa8;
+  --color-project-line: #b9aee6;
+  --color-project-pale: #e7e1f8;
   --color-white: #ffffff;
   --color-slate-50: #f8faff; --color-slate-100: #f3f6fc; --color-slate-200: #e1e8f4; --color-slate-300: #c9d3e8;
   --color-slate-400: #9aa6bf; --color-slate-500: #5f6b86; --color-slate-600: #4d5873; --color-slate-700: #3a4560;
@@ -46,13 +49,16 @@ input[type='range'] { appearance: none; height: 4px; border-radius: 9999px; back
 input[type='range']::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid var(--color-accent); }
 input[type='range']::-moz-range-thumb { width: 16px; height: 16px; border: 2px solid var(--color-accent); border-radius: 50%; background: #fff; }
 
+input[type='checkbox'].tick { border-radius: 50%; }
+.sheet { animation: sheet 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes sheet { from { transform: translateX(16px); opacity: 0; } }
 .cheer { animation: cheer 800ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes cheer { 30% { transform: translateY(-8px) rotate(-8deg); } 60% { transform: translateY(0) rotate(6deg); } }
 .enter { animation: enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1); }
 @keyframes enter { from { opacity: 0; transform: translateY(6px); } }
 @keyframes fade { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .enter { animation: fade 150ms ease; }
+  .enter, .sheet { animation: fade 150ms ease; }
   .cheer { animation: none; }
   button:not(:disabled):active, input[type='range']:active::-webkit-slider-thumb { transform: none; }
 }

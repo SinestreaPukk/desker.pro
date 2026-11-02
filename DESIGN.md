@@ -16,6 +16,9 @@ colors:
   leaf: "#2e7d32"
   amber: "#8a5a14"
   stone: "#8a97b0"
+  project: "#5f4fa8"
+  project-line: "#b9aee6"
+  project-pale: "#e7e1f8"
   white: "#ffffff"
   slate-50: "#f8faff"
   slate-100: "#f3f6fc"
@@ -80,6 +83,12 @@ One pastel-blue action on a white page, with tonal blue surfaces and blue-tinted
 - **Stone:** typing dots and the tint on imported calendar events.
 - **Slate 50 to 900:** blue-tinted greys, mainly for secondary text.
 
+### Calendar types
+
+Blue is a task and violet a project. An outline is a reminder and a fill is a meeting. The map is `TYPES` in `src/ui.js`.
+
+- **Project, Project line, Project pale:** the ring, border and fill of projects on the calendar and in Coming up. Added at the user's request.
+
 ### Status
 
 - **Danger:** errors and destructive actions.
@@ -103,7 +112,7 @@ Both load from Google Fonts in `index.html`: Instrument Sans at 400, 500 and 600
 
 ### Do:
 
-- **Do** keep these colours and fonts unchanged during the upgrade.
+- **Do** keep these colours and fonts unchanged during the upgrade, apart from the project violets the user asked for.
 
 ### Don't:
 

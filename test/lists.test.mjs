@@ -1,13 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { parseQuick, inList, groupByDate, groupSoon } from '../src/lists.js'
+import { parseQuick, quickDate, validAdds, isRealDate } from '../src/lists.js'
 
 const today = new Date('2026-10-29T09:00:00') // a Thursday
 const projects = [{ id: 7, title: 'Tax Return' }]
 
-test('parseQuick: date, time, hours, project; leaves the rest as the title', () => {
-  assert.deepEqual(parseQuick('Call dentist tomorrow 3pm for 1.5h #tax', projects, today),
-    { title: 'Call dentist', hours: 1.5, projectId: 7, due: '2026-10-30', when: '2026-10-30', start: '15:00' })
+test('parseQuick: date, time, project; leaves the rest as the title', () => {
+  assert.deepEqual(parseQuick('Call dentist tomorrow 3pm #tax', projects, today),
+    { title: 'Call dentist', projectId: 7, due: '2026-10-30', when: '2026-10-30', start: '15:00' })
+  assert.deepEqual(parseQuick('Call for 1h', [], today), { title: 'Call for 1h' }) // hours are gone, so the words stay
+  assert.deepEqual(parseQuick('Quiz 3 may 5', [], today), { title: 'Quiz 3', due: '2027-05-05' })
   assert.deepEqual(parseQuick('Buy milk', projects, today), { title: 'Buy milk' })
   assert.equal(parseQuick('Gym on monday', projects, today).due, '2026-11-02')
   assert.equal(parseQuick('Review at 14:30', projects, today).when, '2026-10-29')
@@ -16,34 +18,45 @@ test('parseQuick: date, time, hours, project; leaves the rest as the title', () 
   assert.equal(parseQuick('tomorrow', [], today).title, 'tomorrow') // nothing left: keep the text
 })
 
-test('smart lists and groups', () => {
-  const ts = [{ id: 1, due: '2026-10-28' }, { id: 2, when: '2026-10-29' }, { id: 3, due: '2026-10-30' }, { id: 4, due: '2026-12-01' },
-    { id: 5 }, { id: 6, projectId: 7 }, { id: 7, done: true, due: '2026-10-29' }]
-  const ids = (l) => ts.filter((t) => inList(t, l, '2026-10-29')).map((t) => t.id)
-  assert.deepEqual(ids('today'), [1, 2])
-  assert.deepEqual(ids('week'), [1, 2, 3])
-  assert.deepEqual(ids('inbox'), [5])
-  assert.deepEqual(ids('p:7'), [6])
-  assert.deepEqual(ids('done'), [7])
-  assert.deepEqual(groupByDate(ts.slice(0, 6), '2026-10-29').map((g) => g.name), ['Overdue', 'Today', 'Tomorrow', 'Later', 'No date'])
+const WED = new Date(2026, 10, 4, 12)
+
+test('parseQuick reads day and month in either order, next time it comes round', () => {
+  assert.deepEqual(parseQuick('IELTS 12 Nov', [], WED), { title: 'IELTS', due: '2026-11-12' })
+  assert.deepEqual(parseQuick('IELTS Nov 12', [], WED), { title: 'IELTS', due: '2026-11-12' })
+  assert.deepEqual(parseQuick('IELTS 3 March', [], WED), { title: 'IELTS', due: '2027-03-03' })
 })
 
-test('a task with a start date spans a range: listed Today from its start, in the Today group', () => {
-  const t = { id: 1, title: 'Thesis', from: '2026-10-20', due: '2026-12-01' }
-  assert.equal(inList(t, 'today', '2026-10-29'), true)
-  assert.equal(inList({ ...t, from: '2026-11-20' }, 'today', '2026-10-29'), false)
-  assert.equal(inList({ ...t, from: '2026-11-20' }, 'week', '2026-10-29'), false)
-  assert.deepEqual(groupByDate([t], '2026-10-29').map((g) => g.name), ['Today'])
+test('parseQuick reads whole weekday names, and leaves words that only start like one', () => {
+  assert.equal(parseQuick('Statics midterm wed', [], WED).due, '2026-11-04')
+  assert.equal(parseQuick('Statics midterm friday', [], WED).due, '2026-11-06')
+  for (const title of ['Save money', 'Fix the monitor', 'Read about Saturn', 'Buy sunscreen', 'Wash fridge', 'Learn thumb rule']) assert.deepEqual(parseQuick(title, [], WED), { title })
 })
 
-test('plan and inbox split open tasks: dated or in a project vs neither', () => {
-  const ts = [{ id: 1, due: '2026-12-01' }, { id: 2, projectId: 5 }, { id: 3 }, { id: 4, due: '2026-12-01', done: true }]
-  const ids = (l) => ts.filter((t) => inList(t, l, '2026-10-29')).map((t) => t.id)
-  assert.deepEqual(ids('plan'), [1, 2]); assert.deepEqual(ids('inbox'), [3]); assert.deepEqual(ids('done'), [4])
+test('quick dates land at the end of this week or next, weeks starting Monday', () => {
+  assert.equal(quickDate('today', WED), '2026-11-04')
+  assert.equal(quickDate('tomorrow', WED), '2026-11-05')
+  assert.equal(quickDate('thisWeek', WED), '2026-11-08')
+  assert.equal(quickDate('nextWeek', WED), '2026-11-15')
+  assert.equal(quickDate('thisWeek', new Date(2026, 10, 8, 12)), '2026-11-15') // tapped on a Sunday, it means next Sunday
+  assert.equal(quickDate('nextWeek', new Date(2026, 10, 8, 12)), '2026-11-22')
+  assert.equal(quickDate('thisWeek', new Date(2026, 10, 7, 12)), '2026-11-08') // on the Saturday, tomorrow
 })
 
-test('groupSoon: overdue and the next 7 days are due soon, the rest and undated are due later', () => {
-  const ts = [{ id: 1, due: '2026-10-20' }, { id: 2, due: '2026-11-04' }, { id: 3, due: '2026-11-20' }, { id: 4 }, { id: 5, from: '2026-10-25', due: '2026-12-01' }]
-  const g = groupSoon(ts, '2026-10-29')
-  assert.deepEqual(g.map((x) => [x.name, x.tasks.map((t) => t.id)]), [['Due soon', [1, 2, 5]], ['Due later', [3, 4]]])
+test('items proposed by chat are checked before they can be added', () => {
+  const out = validAdds([
+    { type: 'project', title: ' Statics midterm ', due: '2026-11-04' }, { type: 'task', title: 'Gym', due: 'tomorrow' }, { type: 'task', title: 'Call', due: null },
+    { type: 'event', title: 'Nope' }, { type: 'task', title: '' }, { type: 'task' }, null, 'x', { type: 'task', title: 'y'.repeat(500) },
+  ])
+  assert.deepEqual(out.slice(0, 3), [{ type: 'project', title: 'Statics midterm', due: '2026-11-04' }, { type: 'task', title: 'Gym' }, { type: 'task', title: 'Call' }])
+  assert.equal(out.length, 4)
+  assert.equal(out[3].title.length, 200)
+  assert.deepEqual(validAdds('nonsense'), [])
+  assert.equal(validAdds(Array(99).fill({ type: 'task', title: 'x' })).length, 40)
+})
+
+test('a date being typed is not real until its year is', () => {
+  assert.equal(isRealDate('0002-11-03'), false)
+  assert.equal(isRealDate('0202-11-03'), false)
+  assert.equal(isRealDate('2026-11-03'), true)
+  assert.equal(isRealDate(''), false)
 })

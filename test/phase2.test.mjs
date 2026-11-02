@@ -51,6 +51,19 @@ test('reminders fire at start, and 1 day / 1 hour before a deadline, once in win
   assert.equal(dueReminders(t('2026-10-28T10:00:00'), [], dl).length, 0)
 })
 
+test('reminders use the due dates on tasks and projects, skipping what is finished', () => {
+  const t = (s) => new Date(s).getTime()
+  const before = t('2026-10-27T08:30:00') // the day before, around 9am
+  const task = { id: 1, title: 'Fee', due: '2026-10-28' }
+  assert.equal(dueReminders(before + 36e5, [task], [])[0].body, 'Due in about 1 day.')
+  assert.equal(dueReminders(before + 36e5, [{ ...task, done: true }], []).length, 0)
+  assert.equal(dueReminders(before + 36e5, [{ ...task, session: true }], []).length, 0)
+  const p = { id: 2, title: 'Midterm', date: '2026-10-28', time: '10:00' }
+  assert.equal(dueReminders(t('2026-10-27T10:30:00'), [], [p])[0].title, 'Midterm')
+  assert.equal(dueReminders(t('2026-10-27T10:30:00'), [], [{ ...p, progress: 5 }]).length, 0)
+  assert.equal(dueReminders(t('2026-10-27T10:30:00'), [], [{ id: 3, title: 'No date' }]).length, 0)
+})
+
 test('lanes puts overlaps side by side and resets between clusters', () => {
   const r = lanes([{ s: 0, e: 60 }, { s: 30, e: 90 }, { s: 120, e: 180 }])
   assert.deepEqual(r.map((b) => [b.lane, b.lanes]), [[0, 2], [1, 2], [0, 1]])

@@ -18,7 +18,7 @@ export const SPEC = {
 }
 const ORDER = ['goals', 'hobbies', 'projects', 'deadlines', 'tasks'] // parents before children
 const SQLTYPE = { id: 'bigint', int: 'bigint', num: 'numeric', bool: 'boolean', text: 'text', date: 'date', json: 'jsonb' }
-export const SETTINGS = ['busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'guide']
+export const SETTINGS = ['busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'guide', 'legacyDeadlines', 'checkGoalOrder', 'schema', 'events', 'finder']
 
 const coerce = {
   id: (v) => (Number.isSafeInteger(v) ? v : null),
@@ -30,7 +30,8 @@ const coerce = {
   json: (v) => (v && typeof v === 'object' ? v : null),
 }
 
-export const hasContent = (doc) => ORDER.some((t) => Array.isArray(doc[t]) && doc[t].length > 0)
+// Some of what a visitor makes lives only in the settings, so it counts too.
+export const hasContent = (doc) => [...ORDER, 'events', 'busy'].some((t) => Array.isArray(doc[t]) && doc[t].length > 0) || !!doc.finder
 
 // Document -> rows for every table, with links to rows that do not exist nulled out (so foreign keys always hold).
 export function toRows(doc) {

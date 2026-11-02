@@ -2,18 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { btn } from './ui.js'
 
 const read = () => { try { return { work: 25, brk: 5, ...JSON.parse(localStorage.pomo || '{}') } } catch { return { work: 25, brk: 5 } } }
-const savedMode = () => { try { return localStorage.pomoMode || null } catch { return null } } // 'pomo' | 'free' once the user ticked "don't ask again"
+const pomodoro = () => { try { return localStorage.pomoMode === 'pomo' } catch { return false } } // set in Settings; a plain timer otherwise
 const FREE = 1e12 // plain focus never reaches the end of its phase; it just counts up
 const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` }
 
-// Pomodoro timer for one task. Focus time is logged on the task (task.spent, hours) every minute and whenever you pause or leave.
-export default function Focus({ title, estimate, spent = 0, logged, onLog, onDone, onStop }) { // onDone/onStop receive the last unlogged hours
+// The timer for one task. It starts straight away, and Settings can turn it into a Pomodoro. Focus time is logged on the task (task.spent, hours) every minute and whenever you pause or leave.
+export default function Focus({ title, spent = 0, logged, onLog, onDone, onStop }) { // onDone/onStop receive the last unlogged hours
   const [cfg, setCfg] = useState(read)
   const [phase, setPhase] = useState('work')
-  const [left, setLeft] = useState(() => (savedMode() === 'free' ? FREE : cfg.work * 6e4))
-  const [mode, setMode] = useState(savedMode) // null = still asking
-  const [remember, setRemember] = useState(false)
-  const [running, setRunning] = useState(() => savedMode() !== null)
+  const [free] = useState(() => !pomodoro())
+  const [left, setLeft] = useState(() => (free ? FREE : cfg.work * 6e4))
+  const [running, setRunning] = useState(true)
   const [cycles, setCycles] = useState(0)
   const [session, setSession] = useState(0) // focused ms this session
   const acc = useRef(0), last = useRef(Date.now()), st = useRef({})
@@ -47,36 +46,18 @@ export default function Focus({ title, estimate, spent = 0, logged, onLog, onDon
     try { localStorage.pomo = JSON.stringify(c) } catch { /* not saved */ }
     if ((k === 'work' && phase === 'work') || (k === 'brk' && phase === 'break')) setLeft(c[k] * 6e4)
   }
-  const choose = (m) => {
-    if (remember) try { localStorage.pomoMode = m } catch { /* not saved */ }
-    last.current = Date.now()
-    setMode(m); setLeft(m === 'free' ? FREE : cfg.work * 6e4); setRunning(true)
-  }
   const pause = () => { if (running) flush(); setRunning(!running) }
   const leave = (fn) => () => fn(take()) // the caller logs these last hours together with its own change
   const total = (phase === 'work' ? cfg.work : cfg.brk) * 6e4
-  const free = mode === 'free'
   const field = 'w-16 rounded-xl bg-white/10 px-2 py-1 text-white'
   const shell = 'fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 overflow-y-auto bg-ink p-6 text-center text-white'
-  if (mode === null) return (
-    <div className={shell} role="dialog" aria-label="Choose a timer">
-      <h2 className="max-w-md break-words text-2xl font-semibold leading-tight tracking-tight">{title}</h2>
-      <p className="text-slate-300">Use Pomodoro?</p>
-      <div className="flex w-full max-w-sm flex-col gap-2">
-        <button autoFocus className={`${btn} bg-white text-slate-900 hover:bg-slate-100`} onClick={() => choose('pomo')}>Pomodoro</button>
-        <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={() => choose('free')}>Just focus</button>
-        <button className={`${btn} text-slate-300 hover:bg-slate-700`} onClick={leave(onStop)}>Cancel</button>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />Don't ask again</label>
-    </div>
-  )
   return (
     <div className={shell} role="dialog" aria-label="Focus timer">
       <p className="text-sm text-slate-300">{free ? 'Focus' : phase === 'work' ? 'Focus' : 'Break'}{cycles ? ` · ${cycles} done` : ''}</p>
       <h2 className="max-w-md break-words text-2xl font-semibold leading-tight tracking-tight">{title}</h2>
       <p className="text-7xl font-semibold tabular-nums tracking-tight" role="timer" aria-live="off">{free ? mmss(session) : mmss(left)}</p>
       {!free && <div className="h-1.5 w-64 overflow-hidden rounded-full bg-white/15"><div className="h-full bg-slate-200" style={{ width: `${(1 - left / total) * 100}%` }} /></div>}
-      {logged && <p className="text-sm text-slate-300">Logged on this task: {Math.round((spent + session / 36e5) * 60)} min{estimate ? ` of ${Math.round(estimate * 60)} min estimated` : ''}</p>}
+      {logged && <p className="text-sm text-slate-300">Logged on this task: {Math.round((spent + session / 36e5) * 60)} min</p>}
       <div className="flex flex-wrap justify-center gap-2">
         <button className={`${btn} bg-white text-slate-900 hover:bg-slate-100`} onClick={pause}>{running ? 'Pause' : 'Resume'}</button>
         {!free && <button className={`${btn} border border-slate-500 hover:bg-slate-700`} onClick={() => { flush(); setPhase(phase === 'work' ? 'break' : 'work'); setLeft((phase === 'work' ? cfg.brk : cfg.work) * 6e4) }}>{phase === 'work' ? 'Skip to break' : 'Skip break'}</button>}

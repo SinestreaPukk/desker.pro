@@ -3,17 +3,54 @@ import { btn, BLUE, ghost } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { uid } from './api.js'
+import { importCalendar } from './shared.jsx'
 
-const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog']
+const KEYS = ['goals', 'tasks', 'hobbies', 'deadlines', 'projects', 'busy', 'focus', 'pick', 'freeHours', 'freeToday', 'mood', 'sync', 'energyLog', 'guide', 'legacyDeadlines', 'checkGoalOrder', 'schema', 'events', 'finder']
 const store = {
   get: (k) => { try { return localStorage[k] } catch { return undefined } },
   set: (k, v) => { try { localStorage[k] = v } catch { /* storage blocked: the toggle just will not persist */ } },
 }
 
-// Gear menu: reminders, backup export/import. Also runs the reminder timer (it is always mounted).
-// row: a labelled sidebar entry whose panel opens upward; otherwise a round icon button.
-export default function Settings({ data, setData, row: inSidebar }) {
+// Imported events only ever come in. Nothing is sent out to other calendars.
+function CalendarImport({ data, setData }) {
+  const [url, setUrl] = useState(data.sync?.url || '')
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const run = async (body) => {
+    setLoading(true); setMsg('')
+    try {
+      const events = await importCalendar(body)
+      setData((d) => ({ ...d, busy: events, sync: { url: body.url, at: Date.now() } }))
+      setMsg(`Imported ${events.length} event${events.length === 1 ? '' : 's'} for the next 5 weeks.`)
+    } catch (err) { setMsg(err.message) }
+    setLoading(false)
+  }
+  const small = `${btn} ${ghost}`
+  return (
+    <section className="space-y-2 text-xs text-slate-600" aria-label="Your calendar">
+      <p className="text-sm text-ink">Connect your calendar{data.sync ? ` (${(data.busy || []).length} events)` : ''}</p>
+      <p>Show your classes and meetings here. Paste your calendar's private iCal link (in Google: Settings, your calendar, Integrate calendar, "Secret address in iCal format"), or upload an .ics file. Nothing is sent back.</p>
+      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (url.trim()) run({ url: url.trim() }) }}>
+        <input className="min-w-0 flex-1 rounded-lg bg-panel px-2 py-1" aria-label="Calendar link" placeholder="https://… or webcal://…" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <button className={small} disabled={loading || !url.trim()}>{loading ? 'Reading…' : 'Import'}</button>
+      </form>
+      <div className="flex flex-wrap gap-2">
+        <label className={`${small} inline-flex cursor-pointer items-center ${loading ? 'pointer-events-none opacity-50' : ''}`}>Upload .ics
+          <input type="file" className="sr-only" accept=".ics,text/calendar" disabled={loading} onChange={async (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) run({ text: await f.text() }) }} />
+        </label>
+        {data.sync?.url && <button className={small} disabled={loading} onClick={() => run({ url: data.sync.url })}>Refresh</button>}
+        {data.sync && <button className={`${small} text-danger`} onClick={() => { setData((d) => ({ ...d, busy: [], sync: undefined })); setUrl(''); setMsg('Disconnected. Imported events removed.') }}>Disconnect</button>}
+      </div>
+      {msg && <p role="status" className="text-sm text-ink">{msg}</p>}
+    </section>
+  )
+}
+
+// Gear menu: reminders, the timer, your calendar, backup export/import. Also runs the reminder timer (it is always mounted).
+export default function Settings({ data, setData, openReq }) {
   const [open, setOpen] = useState(false)
+  useEffect(() => { if (openReq) setOpen(true) }, [openReq])
+  const [pomo, setPomo] = useState(() => store.get('pomoMode') === 'pomo')
   const [rem, setRem] = useState(() => store.get('reminders') === '1' && 'Notification' in window && Notification.permission === 'granted')
   const [msg, setMsg] = useState('')
   const [incoming, setIncoming] = useState(null)
@@ -25,7 +62,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
       if (store.get('reminders') !== '1' || !('Notification' in window) || Notification.permission !== 'granted') return
       let fired = []
       try { fired = JSON.parse(store.get('fired') || '[]') } catch { /* start fresh */ }
-      const due = dueReminders(Date.now(), latest.current.tasks, latest.current.deadlines || []).filter((r) => !fired.includes(r.key))
+      const due = dueReminders(Date.now(), latest.current.tasks, latest.current.projects || []).filter((r) => !fired.includes(r.key))
       due.forEach((r) => new Notification(r.title, { body: r.body, tag: r.key }))
       if (due.length) store.set('fired', JSON.stringify([...fired, ...due.map((r) => r.key)].slice(-200)))
     }
@@ -62,17 +99,24 @@ export default function Settings({ data, setData, row: inSidebar }) {
   const row = 'flex items-center justify-between gap-3 text-sm'
   return (
     <div className="relative shrink-0">
-      <button className={inSidebar ? 'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-sm text-slate-700 hover:bg-panel' : 'flex h-11 items-center gap-2 rounded-full px-4 text-sm text-slate-700 hover:bg-panel'} aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
+      <button className="flex h-11 items-center gap-2 rounded-full px-4 text-sm text-slate-700 hover:bg-panel" aria-label="Settings" aria-expanded={open} onClick={() => setOpen(!open)}
         onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}>
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6" /></svg>
         Settings
       </button>
       {open && (
-        <div className={`absolute z-40 w-72 ${inSidebar ? 'bottom-full left-0 mb-2' : 'right-0 top-full mt-2'} space-y-3 rounded-2xl bg-white p-3 shadow-lg border border-control`} role="dialog" aria-label="Settings">
+        <div className="absolute right-0 top-full z-40 mt-2 max-h-[80dvh] w-80 max-w-[calc(100vw-2rem)] space-y-3 overflow-y-auto rounded-2xl border border-control bg-white p-3 shadow-lg" role="dialog" aria-label="Settings">
           <label className={row}>Reminders
             <input type="checkbox" checked={rem} onChange={(e) => toggle(e.target.checked)} />
           </label>
-          <p className="text-xs text-slate-600">Notifies you at a task's start time, and 1 day and 1 hour before a deadline.</p>
+          <p className="text-xs text-slate-600">Notifies you at a task's reminder time, and 1 day and 1 hour before something is due.</p>
+          <hr className="border-black/5" />
+          <label className={row}>Pomodoro timer
+            <input type="checkbox" checked={pomo} onChange={(e) => { store.set('pomoMode', e.target.checked ? 'pomo' : ''); setPomo(e.target.checked) }} />
+          </label>
+          <p className="text-xs text-slate-600">Start opens a plain timer. Turn this on for focus and break rounds.</p>
+          <hr className="border-black/5" />
+          <CalendarImport data={data} setData={setData} />
           <hr className="border-black/5" />
           <p className="text-xs text-slate-600">Your data lives on our server under an anonymous id tied to this browser. Export a backup to keep it safe or to move it.</p>
           <div className="text-xs text-slate-600">

@@ -20,10 +20,10 @@ export default async function handler(req, res) {
     sql`select count(*)::int users,
       count(*) filter (where last_seen_at > now() - interval '7 days')::int active7,
       count(*) filter (where exists (select 1 from tasks t where t.user_id = u.id) or exists (select 1 from goals g where g.user_id = u.id)
-        or exists (select 1 from projects p where p.user_id = u.id) or exists (select 1 from deadlines d where d.user_id = u.id))::int with_data
+        or exists (select 1 from projects p where p.user_id = u.id))::int with_data
       from users u`,
     sql`select (select count(*) from tasks)::int tasks, (select count(*) from tasks where done)::int "doneTasks", (select count(*) from projects)::int projects,
-      (select count(*) from deadlines)::int deadlines, (select count(*) from goals)::int goals, (select count(*) from hobbies)::int hobbies`,
+      (select count(*) from goals)::int goals, (select count(*) from hobbies)::int hobbies`,
     sql`select kind, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls group by kind, model`,
     sql`select created_at::date::text as day, model, count(*)::int calls, sum(input_tokens)::bigint input, sum(output_tokens)::bigint output from ai_calls where created_at > now() - interval '14 days' group by 1, 2 order by 1`,
     sql`select count(*)::int calls, count(distinct user_id)::int users from ai_calls`,
