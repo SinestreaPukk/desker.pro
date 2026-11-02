@@ -38,7 +38,19 @@ const cors = (req, res) => {
   return new Response(req.method === 'OPTIONS' ? null : res.body, { status: req.method === 'OPTIONS' ? 204 : res.status, headers })
 }
 
-const handle = async (req) => cors(req, req.method === 'OPTIONS' ? new Response(null) : await route(req))
+// With COOKIE_DOMAIN set, the session cookie is shared across *.desker.dev. A browser that signed in before that still holds the old host-only cookie of the same name,
+// and the server may read that stale one (sign in, land back on the sign-in page). Whenever a response sets a session cookie, also expire the host-only copies, so nobody has to clear cookies by hand.
+const NAMES = ['better-auth.session_token', 'better-auth.session_data', 'better-auth.dont_remember']
+const healCookies = (res) => {
+  if (!process.env.COOKIE_DOMAIN || !res.headers.getSetCookie().some((c) => c.includes('session_token'))) return res
+  const real = res.headers.getSetCookie(), headers = new Headers(res.headers)
+  headers.delete('set-cookie')
+  // the expiries go FIRST, then the real cookies, so whichever way a browser compares the two, the new cookie is the one left standing
+  for (const n of NAMES) for (const pre of ['', '__Secure-']) headers.append('set-cookie', `${pre}${n}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${pre ? '; Secure' : ''}`) // no Domain attribute = only the host-only cookie
+  for (const c of real) headers.append('set-cookie', c)
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+}
+const handle = async (req) => cors(req, healCookies(req.method === 'OPTIONS' ? new Response(null) : await route(req)))
 const route = (req) => {
   const name = new URL(req.url).pathname.replace(/^\/api\//, '')
   if (name === 'auth/providers') return Response.json(socialProviders, { headers: { 'cache-control': 'public, max-age=300' } })

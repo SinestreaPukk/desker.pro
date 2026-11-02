@@ -4,6 +4,7 @@ import { applyPlan as applyReplan } from './replan.js'
 import Replan from './Replan.jsx'
 import Focus from './Focus.jsx'
 import Settings from './Settings.jsx'
+import { villageUrl } from './village.js'
 import { useSession } from './auth.js'
 import Welcome from './Welcome.jsx'
 import { startFrom } from './onboarding.js'
@@ -220,6 +221,7 @@ export default function App() {
             <span className="block text-base font-semibold leading-tight">Desker</span>
           </button>
           <div className="flex items-center gap-2">
+            <a className={`${btn} ${ghost} flex items-center gap-2`} href={`${villageUrl()}/go`}>Village</a>
             <button className={`${btn} ${ghost} flex items-center gap-2`} onClick={() => setAgentOpen(true)}><Icon name="Agent" />Talk to {nameOf(data)}</button>
             <Settings data={data} setData={setData} />
           </div>
@@ -237,6 +239,7 @@ export default function App() {
         <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
           <div className="flex items-center gap-2">{logo()}<span className="text-base font-semibold">{tab}</span></div>
           <div className="flex items-center gap-1">
+            <a className={`${btn} flex items-center gap-2 hover:bg-panel`} href={`${villageUrl()}/go`}>Village</a>
             <button className={`${btn} flex items-center gap-2 hover:bg-panel`} aria-label={`Talk to ${nameOf(data)}`} onClick={() => setAgentOpen(true)}><Icon name="Agent" /></button>
             <Settings data={data} setData={setData} />
           </div>
