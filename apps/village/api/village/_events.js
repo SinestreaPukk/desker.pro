@@ -18,10 +18,11 @@ const SPEC = {
   invite_accepted: {},
   report_filed: { reason: oneOf('harassment', 'spam', 'inappropriate', 'other') }, mod_report_resolved: {}, mod_slow_mode: { on: bool }, mod_remove_bubble: {}, mod_delete_question: {}, mod_delete_answer: {}, mod_delete_item: {},
   mod_kick: {}, mod_ban: {}, mod_unban: {}, mod_transfer: {},
+  client_error: { where: oneOf('render', 'script', 'promise'), build: (v) => (typeof v === 'string' && /^[\w.-]{1,24}$/.test(v) ? v : undefined) },
   session_minutes: { minutes: num(1440), focusMinutes: num(1440) },
 }
 /** Events a browser may report itself; the rest are recorded by the server when the thing happens. */
-export const CLIENT_EVENTS = ['village_opened', 'bubble_sent', 'board_opened', 'session_minutes', 'mod_remove_bubble']
+export const CLIENT_EVENTS = ['village_opened', 'bubble_sent', 'board_opened', 'session_minutes', 'mod_remove_bubble', 'client_error']
 
 /** -> the props to store, or null if the event name is unknown. Unknown props are dropped, bad values are left out. */
 export function cleanEvent(name, props) {

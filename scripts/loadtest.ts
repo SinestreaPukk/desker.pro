@@ -7,7 +7,7 @@ import { signToken } from '../packages/shared/src/token.js'
 import { parseMap, spawnFor, step } from '../packages/shared/src/world.ts'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d }
-const clients = Number(arg('clients', '30')), minutes = Number(arg('minutes', '3')), base = arg('url', 'ws://localhost:8787')
+const clients = Number(arg('clients', '30')), minutes = Number(arg('minutes', '3')), base = arg('url', 'ws://localhost:8788')
 const secret = process.env.VILLAGE_ROOM_SECRET; if (!secret) { console.error('VILLAGE_ROOM_SECRET missing (source realtime/.dev.vars)'); process.exit(1) }
 const world = parseMap(JSON.parse(readFileSync(new URL('../apps/village/public/maps/snowy_campus.json', import.meta.url), 'utf8')))
 const vid = crypto.randomUUID(), sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -15,7 +15,8 @@ const stat = { sent: 0, recv: 0, welcome: 0, moved: 0, said: 0, corrected: 0, er
 const dirs = ['up', 'down', 'left', 'right'] as const
 
 async function bot(i: number, until: number) {
-  const sub = `load-${i}`, token = await signToken({ sub, vid, role: 'member', n: `Bot ${i}`, c: 'sky' }, secret, 3600)
+  const sub = `load-${i}`, sitter = i < 24, chatty = i >= clients - Math.round(clients * 0.2) // the first 24 sit at their own desk and run a timer (24 desks exist); the last fifth talk a lot; the rest walk
+  const token = await signToken({ sub, vid, role: 'member', n: `Bot ${i}`, c: 'sky', ...(sitter && { d: `lib-desk-${String(i + 1).padStart(2, '0')}` }) }, secret, 3600)
   const ws = new WebSocket(`${base}/room/${vid}`, { headers: { origin: 'http://village.desker.test:5174' } } as never)
   let x = 0, y = 0, seq = 0, ready = false
   const send = (m: object) => { ws.send(JSON.stringify(m)); stat.sent++ }
@@ -31,18 +32,19 @@ async function bot(i: number, until: number) {
   ws.onclose = () => { if (Date.now() < until) stat.closed++ }
   await new Promise<void>((r) => { ws.onopen = () => { send({ t: 'hello', v: 1, token }); r() } })
   while (!ready) await sleep(50)
+  if (sitter) send({ t: 'focus.start', plannedMin: 25 })
   let nextSay = Date.now() + 5000 + Math.random() * 10000, nextPing = Date.now()
   while (Date.now() < until) {
-    const d = dirs[Math.floor(Math.random() * 4)], n = step(world, x, y, d)
+    const d = dirs[Math.floor(Math.random() * 4)], n = sitter ? null : step(world, x, y, d)
     if (n) { x = n.x; y = n.y; send({ t: 'move', x, y, dir: d, seq: ++seq }) }
-    if (Date.now() > nextSay) { send({ t: 'say', text: `hello from bot ${i}` }); nextSay = Date.now() + 9000 + Math.random() * 8000 } // under the 5-per-10-s limit
+    if (!sitter && Date.now() > nextSay) { send({ t: 'say', text: `hello from bot ${i}` }); nextSay = Date.now() + (chatty ? 3000 : 9000) + Math.random() * 3000 } // under the 5-per-10-s limit
     if (Date.now() > nextPing) { send({ t: 'ping', ts: Date.now() }); nextPing = Date.now() + 5000 }
     await sleep(155 + Math.random() * 60) // about a tile per 0.18 s, like walking
   }
   ws.close()
 }
 
-const pid = (() => { try { return execSync("lsof -ti tcp:8787 -sTCP:LISTEN | head -1").toString().trim() } catch { return '' } })()
+const pid = (() => { try { return execSync(`lsof -ti tcp:${new URL(base).port} -sTCP:LISTEN | head -1`).toString().trim() } catch { return '' } })()
 const proc = () => { try { const [cpu, rss] = execSync(`ps -o %cpu=,rss= -p ${pid}`).toString().trim().split(/\s+/); return { cpu: Number(cpu), mb: Math.round(Number(rss) / 1024) } } catch { return null } }
 console.log(`${clients} bots for ${minutes} min against ${base} (room ${vid})`)
 const until = Date.now() + minutes * 60_000, samples: { cpu: number; mb: number }[] = []

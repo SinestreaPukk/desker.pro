@@ -19,6 +19,7 @@ import InvitePanel from './InvitePanel.tsx'
 import Manage from './Manage.tsx'
 import Install from './Install.tsx'
 import Tour from './Tour.tsx'
+import { watchVersion, reportErrors } from './version.ts'
 import { t, useLang } from './i18n.ts'
 import { can } from '@desker/shared'
 import { leaveVillage, closeVillage, blocks as fetchBlocks } from './api.ts'
@@ -85,6 +86,8 @@ export default function World({ slug }: { slug: string }) {
   const loadBoard = () => fetchBoard(slug).then((r) => { setBoardItems(r.items); setNews(r.announcements); redPin.current = r.items.some((i) => urgency(i.dueAt, Date.now()) === 'red' && i.dueAt > Date.now()); pins() }, () => {})
   loadBoardRef.current = loadBoard
   const loadQPin = () => fetchQuestions(slug).then((r) => { qPin.current = r.questions.some((q) => !q.resolved && q.answers === 0); pins() }, () => {}) // a "?" on the Board in the world while a question waits for its first answer
+  const [fresh, setFresh] = useState(false)
+  useEffect(() => { const a = watchVersion(() => setFresh(true)), b = reportErrors(slug); return () => { a(); b() } }, [slug])
   useEffect(() => { if (data) loadQPin() }, [data, qRev])
   useEffect(() => { if (data) loadGroup() }, [data])
   useEffect(() => { if (!group) return; const t = setInterval(() => setGnow(Date.now()), 1000); return () => clearInterval(t) }, [group?.id])
@@ -284,6 +287,7 @@ export default function World({ slug }: { slug: string }) {
             <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More">⋯</button>
           </>}
         </div>
+        {fresh && <div className="knock-card" role="alert"><span>A new version is ready.</span><span className="row"><button onClick={() => location.reload()}>Refresh</button><button onClick={() => setFresh(false)}>Later</button></span></div>}
         <Tour touch={touch} />
         {touch && <Install />}
         {timer && <TimerHud timer={timer} now={now} ask={ask} onStop={() => setAsk(true)} onPause={pauseTimer} onAnswer={endTimer} onKeep={() => setAsk(false)} />}

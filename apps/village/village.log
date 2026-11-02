@@ -3,3 +3,6 @@
 
   ➜  Local:   http://localhost:5181/
   ➜  Network: http://10.203.131.67:5181/
+2:26:51 pm [vite] vite.config.ts changed, restarting server...
+2:26:51 pm [vite] (client) Re-optimizing dependencies because vite config has changed
+2:26:51 pm [vite] server restarted.

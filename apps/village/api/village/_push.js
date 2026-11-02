@@ -69,5 +69,9 @@ export async function dailyJob() {
   for (const r of rows) if (await sendPush(r.uid, 'deadline', { title: `Due within a day${r.course ? ` · ${r.course}` : ''}`, body: r.title, url: `/v/${r.slug}?board=1` }, { villageId: r.vid, ref: r.id }).catch(() => false)) out.sent++
   await sql.query("delete from village_push_log where sent_at < now() - interval '3 days' and kind <> 'deadline'")
   await sql.query("delete from village_push_log where sent_at < now() - interval '60 days'")
+  // housekeeping (SPEC §9): invites expired or revoked 30 days ago, handled reports after 180 days, villages closed more than 7 days ago (the undo window is over)
+  await sql.query("delete from village_invite where coalesce(revoked_at, expires_at) < now() - interval '30 days'")
+  await sql.query("delete from village_report where resolved_at < now() - interval '180 days'")
+  await sql.query("delete from village where deleted_at < now() - interval '7 days'")
   return out
 }
