@@ -175,7 +175,10 @@ export default function App() {
     const timed = r.finished.map((id) => r.tasks.find((t) => t.id === id)).filter((t) => t && !t.fun && !t.repeat)
     for (const t of r.tasks.filter((x) => r.finished.includes(x.id) && !x.fun)) track('task_completed', { timed: t.spent > 0 })
     for (const t of timed.filter((x) => x.spent > 0)) track('duration_logged', { source: 'timer' })
-    if (moved.length || timed.length) setData((d) => record(d, (x) => {
+    // minutes typed by hand on a task that was already done: the new figure replaces what Desker learned from the old one
+    const edited = r.tasks.filter((t) => t.done && !t.fun && !t.repeat && !r.finished.includes(t.id) && (before.get(t.id)?.spent || 0) !== (t.spent || 0))
+    if (moved.length || timed.length || edited.length) setData((d) => record(d, (x) => {
+      x = edited.reduce((acc, t) => { const clean = { ...acc, outcomes: acc.outcomes.filter((o) => o.task !== t.id) }; return t.spent > 0 ? addOutcome(clean, outcomeFor(t, d, t.spent, 'tap', t.doneAt)) : clean }, x)
       x = moved.reduce((acc, t) => addSignal(acc, { k: 'resched', at: Date.now(), task: t.id }), x)
       return timed.filter((t) => t.spent > 0).reduce((acc, t) => addOutcome(acc, outcomeFor(t, d, t.spent, 'timer', t.doneAt)), x)
     }))

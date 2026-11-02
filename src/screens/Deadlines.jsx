@@ -21,7 +21,8 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const days = Math.ceil((new Date(dl.date) - new Date(new Date().toLocaleDateString('sv'))) / 864e5)
   const mine = tasks.filter((t) => t.deadlineId === dl.id)
   const linked = mine.length
-  const left = dl.done ? null : linked ? workLeft(mine, rhythm) : dl.hours > 0 ? workLeft([{ title: dl.title, hours: dl.hours }], rhythm) : null // Desker's planned time for what is not done yet
+  const finished = dl.done || (linked > 0 && mine.every((t) => t.done)) // crossed out once every linked task is done
+  const left = finished ? null : linked ? workLeft(mine, rhythm) : dl.hours > 0 ? workLeft([{ title: dl.title, hours: dl.hours }], rhythm) : null // Desker's planned time for what is not done yet
   const [own, setOwn] = useState('')
 
   const plan = async (context = dl.context) => {
@@ -72,10 +73,10 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
   const toggle = (i) => setPicked(picked.includes(i) ? picked.filter((x) => x !== i) : [...picked, i])
 
   return (
-    <li className=" border border-line bg-white">
+    <li className={`border ${finished ? 'border-accent bg-panel' : 'border-line bg-white'}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 p-4 pb-2">
         <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-          <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${dl.done ? 'text-slate-500 line-through' : ''}`}
+          <input key={dl.title} size={Math.max(8, Math.min(40, dl.title.length + 1))} className={`min-w-0 max-w-full border border-transparent bg-transparent px-2 py-1 text-base font-semibold hover:border-control focus:border-accent focus:bg-white ${finished ? 'text-slate-500 line-through decoration-2' : ''}`}
             aria-label="Deadline name (click to rename)" defaultValue={dl.title} maxLength={200} onKeyDown={(e) => e.key === 'Enter' && e.target.blur() /* pixel-ok: DOM blur() method, not a CSS filter */}
             onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== dl.title) patch({ title: v }); else e.target.value = dl.title }} />
           <DateField className="w-36 border border-transparent bg-transparent px-1 py-1 text-base text-slate-600 hover:border-control focus:border-accent focus:bg-white" aria-label="Deadline date"
@@ -86,8 +87,8 @@ export function DeadlineCard({ dl, goals, projects = [], tasks, setTasks, patch,
         </span>
         <SaveButton />
         {linked > 0 && <span className="text-base tabular-nums text-slate-600">{mine.filter((t) => t.done).length}/{linked}</span>}
-        <span className={` px-3 py-0.5 text-base ${dl.done ? 'bg-panel text-slate-600' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
-          {dl.done ? 'Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
+        <span className={` px-3 py-0.5 text-base ${finished ? 'bg-accent text-yuki-0' : days <= 1 ? 'bg-beni text-yuki-0' : 'bg-pale text-accent-dark'}`}>
+          {finished ? '✓ Done' : days < 0 ? 'Passed' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
         </span>
       </div>
       <ul className="space-y-1 px-4 pb-1">

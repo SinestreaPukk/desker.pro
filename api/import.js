@@ -2,6 +2,8 @@
 // Works with Google ("secret address in iCal format"), Apple, Outlook and any app that publishes .ics.
 import ICAL from 'ical.js'
 import { fetchRaw } from './_fetchPage.js'
+import { userOf } from './_auth.js'
+import { limit } from './_rate.js'
 
 const DAYS = 35
 const MAX = 200
@@ -46,6 +48,9 @@ export function parseEvents(text, from = Date.now() - 864e5, to = Date.now() + D
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
+  const uid = await userOf(req)
+  if (!uid) return res.status(401).json({ error: 'Sign in first' })
+  if (!(await limit(req, res, { scope: 'import', max: 60, id: uid }))) return
   const { url, text } = req.body || {}
   try {
     const ics = typeof url === 'string'

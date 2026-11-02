@@ -1,6 +1,6 @@
 // Turns a photo, PDF or web page into short planning notes. Key and prompt stay server-side.
 import { fetchPage } from './_fetchPage.js'
-import { guard, record, MODEL } from './_ai.js'
+import { guard, record, MODEL, GUARD, fileProblem } from './_ai.js'
 
 const MEDIA = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'])
 
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   try {
     if (typeof url === 'string') {
       source = { type: 'text', text: `Web page ${url}:\n${await fetchPage(url)}` }
-    } else if (MEDIA.has(mediaType) && typeof data === 'string' && data.length < 4_300_000) {
+    } else if (MEDIA.has(mediaType) && !fileProblem(mediaType, data)) {
       source = mediaType === 'application/pdf'
         ? { type: 'document', source: { type: 'base64', media_type: mediaType, data } }
         : { type: 'image', source: { type: 'base64', media_type: mediaType, data } }
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 4000, messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: 4000, system: GUARD, messages: [{ role: 'user', content: [source, { type: 'text', text: prompt }] }] }),
     signal: AbortSignal.timeout(45_000),
   }).catch(() => null)
   const out = await r?.json().catch(() => ({}))

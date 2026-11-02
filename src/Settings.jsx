@@ -3,6 +3,7 @@ import { btn, BLUE, ghost, input, DANGER } from './ui.js'
 import { migrate } from './storage.js'
 import { dueReminders } from './reminders.js'
 import { authClient, useSession } from './auth.js'
+import { post } from './api.js'
 import { Icon } from './icons.jsx'
 import { preference, setPreference } from './theme.js'
 import { pushSupported, subscribe, unsubscribe } from './push.js'
@@ -23,7 +24,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
   const [rem, setRem] = useState(() => store.get('reminders') === '1' && 'Notification' in window && Notification.permission === 'granted')
   const [msg, setMsg] = useState('')
   const [del, setDel] = useState(false)
-  const [showKey, setShowKey] = useState(false)
+  const [apiKey, setApiKey] = useState('') // shown once, right after it is made (the server keeps only a hash)
   const [incoming, setIncoming] = useState(null)
   const latest = useRef(data)
   latest.current = data
@@ -108,7 +109,7 @@ export default function Settings({ data, setData, row: inSidebar }) {
           )}
           <hr />
           <p className="text-xs text-slate-700">Signed in as {user.displayUsername || user.name} ({user.email}). Your data is saved to your account and follows you to any device. <a className="underline" href="/privacy">Privacy</a> · <a className="underline" href="/terms">Terms</a></p>
-          <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => location.assign('/today'))}>Sign out</button>
+          <button className={`${btn} ${ghost}`} onClick={() => authClient.signOut().then(() => { Object.keys(localStorage).filter((k) => k.startsWith('desker.cache.')).forEach((k) => localStorage.removeItem(k)); location.assign('/today') })}>Sign out</button>
           <div className="flex flex-wrap gap-2">
             <button className={`${btn} ${ghost}`} onClick={exportData}>Export JSON</button>
             <label className={`${btn} inline-flex cursor-pointer items-center ${ghost}`}>Import JSON
@@ -127,11 +128,11 @@ export default function Settings({ data, setData, row: inSidebar }) {
           <details>
             <summary className="underline">Advanced</summary>
             <div className="mt-2 text-xs text-slate-700">
-              <p>Developer API key. It lets scripts add and read your tasks, so keep it private.</p>
+              <p>Developer API key. It lets scripts add and read your tasks, so keep it private. It is shown once; making a new one stops the old one.</p>
               <div className="mt-1 flex flex-wrap gap-1">
-                <input readOnly className={`${input} w-full text-xs`} aria-label="Your API key" value={showKey ? user.id : `••••-${user.id.slice(-5)}`} onFocus={(e) => e.target.select()} />
-                <button className={`${btn} ${ghost}`} aria-pressed={showKey} onClick={() => setShowKey(!showKey)}>{showKey ? 'Hide' : 'Reveal'}</button>
-                <button className={`${btn} ${ghost}`} onClick={() => navigator.clipboard?.writeText(user.id).then(() => setMsg('API key copied.'), () => setMsg('Could not copy. Reveal it and copy by hand.'))}>Copy</button>
+                {apiKey && <input readOnly className={`${input} w-full text-xs`} aria-label="Your API key" value={apiKey} onFocus={(e) => e.target.select()} />}
+                <button className={`${btn} ${ghost}`} onClick={() => post('/api/state?token=api', {}).then((r) => { setApiKey(r.token); setMsg('New API key made. Copy it now.') }, (e) => setMsg(e.message))}>{apiKey ? 'Make another' : 'Make API key'}</button>
+                {apiKey && <button className={`${btn} ${ghost}`} onClick={() => navigator.clipboard?.writeText(apiKey).then(() => setMsg('API key copied.'), () => setMsg('Could not copy. Select it and copy by hand.'))}>Copy</button>}
               </div>
             </div>
           </details>

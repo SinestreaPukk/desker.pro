@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { post } from '../api.js'
-import { useSession } from '../auth.js'
 import { BLUE, btn, input, ghost, panel, Q, CAL } from '../ui.js'
 import TimeGrid from '../TimeGrid.jsx'
 import { addTasks } from '../tasks.js'
@@ -66,9 +65,10 @@ function CalendarSync({ data, setData }) {
   const [url, setUrl] = useState(data.sync?.url || '')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
-  const uid = useSession().data.user.id
-  const feed = `${location.origin}/api/ics?uid=${uid}`
+  const [key, setKey] = useState('') // the calendar key exists in plain text only right after it is made (the server keeps a hash)
+  const feed = `${location.origin}/api/ics?key=${key}`
   const webcal = feed.replace(/^https?/, 'webcal')
+  const makeKey = () => post('/api/state?token=feed', {}).then((r) => setKey(r.token), (e) => setMsg(e.message))
   const local = ['localhost', '127.0.0.1'].includes(location.hostname)
   const run = async (body) => {
     setLoading(true); setMsg('')
@@ -90,6 +90,12 @@ function CalendarSync({ data, setData }) {
         <section>
           <h3 className="mb-1 text-base font-semibold">Send Desker to your calendar</h3>
           <p className="mb-2 text-base text-slate-600">Subscribe once and your tasks, planned days and deadlines show up in Google Calendar, Apple Calendar, Outlook or any app that takes a calendar link.</p>
+          {!key ? (
+            <div>
+              <button className={`${btn} ${BLUE}`} onClick={makeKey}>Make my calendar link</button>
+              <p className="mt-2 text-xs text-slate-600">The link is shown once. Making a new one stops the old link, so any calendar already subscribed needs the new one.</p>
+            </div>
+          ) : <>
           <div className="flex flex-wrap gap-2">
             <a className={link} href={`https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(webcal)}`} target="_blank" rel="noreferrer">Google Calendar</a>
             <a className={link} href={webcal}>Apple / Outlook</a>
@@ -97,7 +103,7 @@ function CalendarSync({ data, setData }) {
             <a className={link} href={`${feed}&download=1`}>Download .ics</a>
           </div>
           {local && import.meta.env.DEV && <p className="mt-2 text-xs text-slate-600">Development build: Google cannot reach localhost, so subscribing will not work here. Download does.</p>}
-          <p className="mt-2 text-xs text-slate-600">Changes reach your calendar app about once a day, because Google decides when to refresh. Keep this link private: anyone with it can see your tasks.</p>
+          <p className="mt-2 text-xs text-slate-600">Changes reach your calendar app about once a day, because Google decides when to refresh. Keep this link private: anyone with it can see your tasks.</p></>}
         </section>
         <section>
           <h3 className="mb-1 text-base font-semibold">Bring your calendar into Desker</h3>

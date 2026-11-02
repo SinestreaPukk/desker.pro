@@ -5,7 +5,7 @@
 // Without RESEND_API_KEY mails are printed to the server log and verification is not required (local dev); with it, sign-in needs a verified email.
 import { betterAuth } from 'better-auth'
 import { APIError, createAuthMiddleware, createEmailVerificationToken, isAPIError } from 'better-auth/api'
-import { haveIBeenPwned, username } from 'better-auth/plugins'
+import { captcha, haveIBeenPwned, username } from 'better-auth/plugins'
 import { mailHtml, mailText } from './_mail.js'
 import { Pool } from 'pg'
 
@@ -112,7 +112,9 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     sendVerificationEmail: ({ user, url }) => welcome(user, url),
   },
-  plugins: [username({ minUsernameLength: 3, maxUsernameLength: 30 }), haveIBeenPwned()], // usernames: letters, numbers, _ and . only
+  plugins: [username({ minUsernameLength: 3, maxUsernameLength: 30 }), haveIBeenPwned(),
+    // Bot protection: invisible reCAPTCHA v3 on sign-up, sign-in and reset requests. Only on when RECAPTCHA_SECRET_KEY is set (the site key goes in VITE_RECAPTCHA_SITE_KEY).
+    ...(process.env.RECAPTCHA_SECRET_KEY ? [captcha({ provider: 'google-recaptcha', secretKey: process.env.RECAPTCHA_SECRET_KEY, minScore: 0.5, endpoints: ['/sign-up/email', '/sign-in/email', '/sign-in/username', '/request-password-reset'] })] : [])], // usernames: letters, numbers, _ and . only
   rateLimit: {
     enabled: true, // on by default only in production
     storage: 'database',

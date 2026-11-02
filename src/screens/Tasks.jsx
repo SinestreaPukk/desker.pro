@@ -35,6 +35,9 @@ function Detail({ t, goals = [], projects, deadlines, update, onDelete, onClose,
             <button type="button" className={`${btn} ${ghost}`} disabled={bd?.busy} onClick={() => analyse(t)}>{bd?.busy ? 'Thinking…' : 'Estimate'}</button>
           </div>
         </div>
+        <label className={`${field} col-span-2`}>Minutes it took (if you forgot the timer)
+          <input type="number" min="0" step="5" className={`${input} w-28`} aria-label="Minutes it took" placeholder="Not logged" value={t.spent > 0 ? Math.round(t.spent * 60) : ''} onChange={(e) => update(t.id, { spent: e.target.value === '' ? undefined : Math.max(0, +e.target.value) / 60 })} />
+        </label>
       </div>
       {bd?.error && <p className="mt-2 text-base text-danger">{bd.error}</p>}
       {bd?.note && <p className="mt-2 text-base text-slate-700">{bd.note}</p>}

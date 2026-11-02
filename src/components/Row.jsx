@@ -80,6 +80,9 @@ export default function Row({ t, update, onEdit, onDelete, move, onStart, cover,
                 {Q.map((x, i) => <option key={x.name} value={i}>{x.name}</option>)}
               </select>
             </label>
+            <label className="flex items-center gap-2">Minutes it took
+              <input type="number" min="0" step="5" className={`${input} w-24`} aria-label="Minutes it took" placeholder="Not logged" value={t.spent > 0 ? Math.round(t.spent * 60) : ''} onChange={(e) => update(t.id, { spent: e.target.value === '' ? undefined : Math.max(0, +e.target.value) / 60 })} />
+            </label>
             <label className="flex items-center gap-2">Repeat
               <select className={input} value={t.repeat || ''} onChange={(e) => update(t.id, { repeat: e.target.value || undefined })}>
                 {REPEATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

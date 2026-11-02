@@ -1,4 +1,5 @@
 import { useState, useEffect, useId } from 'react'
+import { captchaOptions } from './captcha.js'
 import { authClient } from './auth.js'
 import { checkSignUp, deriveAccount } from './authForm.js'
 import { btn, BLUE, ghost, input, panel } from './ui.js'
@@ -81,7 +82,7 @@ export default function AuthScreen() {
     let out
     for (let n = 0; n < 5; n++) {
       const { name, username } = deriveAccount(f.email, n ? Math.floor(100 + Math.random() * 900) : 0)
-      out = await authClient.signUp.email({ name, username, email: f.email.trim(), password: f.password, callbackURL: '/today' })
+      out = await authClient.signUp.email({ name, username, email: f.email.trim(), password: f.password, callbackURL: '/today' }, await captchaOptions())
       if (!(out.error && /USERNAME/.test(out.error.code || '') && /TAKEN/.test(out.error.code))) break
     }
     return out
@@ -97,9 +98,10 @@ export default function AuthScreen() {
     }
     setBusy(true)
     const id = (f.identifier || '').trim()
-    const { data, error } = await (mode === 'in' ? (id.includes('@') ? authClient.signIn.email({ email: id, password: f.password, callbackURL: '/today' }) : authClient.signIn.username({ username: id, password: f.password }))
+    const cap = mode === 'in' || mode === 'forgot' ? await captchaOptions() : undefined
+    const { data, error } = await (mode === 'in' ? (id.includes('@') ? authClient.signIn.email({ email: id, password: f.password, callbackURL: '/today' }, cap) : authClient.signIn.username({ username: id, password: f.password }, cap))
       : mode === 'up' ? signUp(f)
-      : mode === 'forgot' ? authClient.requestPasswordReset({ email: f.email.trim(), redirectTo: '/reset-password' })
+      : mode === 'forgot' ? authClient.requestPasswordReset({ email: f.email.trim(), redirectTo: '/reset-password' }, cap)
       : authClient.resetPassword({ newPassword: f.password, token }))
     setBusy(false)
     if (error?.code === 'EMAIL_NOT_VERIFIED') return setSentTo(id.includes('@') ? id : '') // sign-in already sent a fresh link

@@ -25,6 +25,7 @@ export function useSync(userId) {
   const timer = useRef(0), retry = useRef(0)
   const chan = useRef(null)
   const store = `desker.unsaved.${userId || 'me'}`
+  const cache = `desker.cache.${userId || 'me'}`
   latest.current = data
 
   const keep = useCallback(() => { // unsaved edits survive closing the page
@@ -33,6 +34,10 @@ export function useSync(userId) {
       else localStorage.setItem(store, JSON.stringify({ base: base.current, data: latest.current }))
     } catch { /* storage full or blocked: the edits are still in the app */ }
   }, [store])
+
+  const remember = useCallback((doc) => { // last server copy, so the next visit shows the app at once while the real one loads
+    try { localStorage.setItem(cache, JSON.stringify(doc)) } catch { /* storage full: next visit just waits for the network */ }
+  }, [cache])
 
   const flush = useCallback(async () => {
     clearTimeout(retry.current)
@@ -48,7 +53,7 @@ export function useSync(userId) {
       if (!r.ok) throw new Error(String(r.status))
       const out = await r.json()
       const fresh = migrate(out.doc)
-      base.current = fresh; rev.current = out.rev ?? out.doc._rev ?? rev.current; fails.current = 0
+      base.current = fresh; rev.current = out.rev ?? out.doc._rev ?? rev.current; fails.current = 0; remember(fresh)
       // what the server now holds beyond what we sent (another device's edits), plus edits made while this save was on its way
       setData((d) => (isEmpty(diff(sent, fresh)) && isEmpty(diff(sent, d)) ? d : apply(fresh, diff(sent, d))))
       chan.current?.postMessage({ rev: rev.current })
@@ -61,7 +66,7 @@ export function useSync(userId) {
     if (fails.current === 0) {
       if (again.current) { again.current = false; flush() } else { setStatus('saved'); keep() }
     } else again.current = false
-  }, [keep])
+  }, [keep, remember])
 
   const refresh = useCallback(async () => {
     if (!base.current || busy.current) return
@@ -74,27 +79,29 @@ export function useSync(userId) {
       const doc = await full.json()
       const pending = diff(base.current, latest.current)
       const fresh = migrate(doc)
-      base.current = fresh; rev.current = doc._rev || 0
+      base.current = fresh; rev.current = doc._rev || 0; remember(fresh)
       setData(apply(fresh, pending))
     } catch { /* offline: try again at the next check */ }
-  }, [])
+  }, [remember])
 
-  // first load, with anything that was left unsaved last time
+  // first load: show the cached copy (plus anything left unsaved) at once, then lay the server's copy under whatever was edited meanwhile
   useEffect(() => {
     let stop = false
+    const read = (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null') } catch { return null } }
+    const cached = read(cache)
+    const left = read(store)
+    const withLeft = (doc) => (left?.base && left?.data ? apply(doc, diff(left.base, left.data)) : doc)
+    if (cached) { const c = migrate(cached); base.current = c; rev.current = cached._rev || 0; setData(withLeft(c)) }
     fetch(stateUrl).then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load your data')))).then((doc) => {
       if (stop) return
       const fresh = migrate(doc)
-      base.current = fresh; rev.current = doc._rev || 0
-      let mine = fresh
-      try {
-        const left = JSON.parse(localStorage.getItem(store) || 'null')
-        if (left?.base && left?.data) mine = apply(fresh, diff(left.base, left.data))
-      } catch { /* unreadable leftovers are ignored */ }
-      setData(mine)
-    }).catch((e) => !stop && setLoadError(e.message))
+      if (base.current && (doc._rev || 0) < rev.current) return // a save already brought something newer
+      const pending = base.current && latest.current ? diff(base.current, latest.current) : null
+      base.current = fresh; rev.current = doc._rev || 0; remember(fresh)
+      setData(pending ? apply(fresh, pending) : withLeft(fresh))
+    }).catch((e) => !stop && !base.current && setLoadError(e.message))
     return () => { stop = true }
-  }, [store])
+  }, [store, cache, remember])
 
   // save after edits
   useEffect(() => {

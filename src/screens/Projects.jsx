@@ -83,7 +83,7 @@ function ProjectCard({ p, goals, deadlines, tasks, setTasks, patch, remove, rati
         <ul className="mt-3 space-y-1 text-base">
           {deadlines.map((d) => {
             const n = tasks.filter((t) => t.deadlineId === d.id)
-            return <li key={d.id} className={`flex justify-between gap-2 bg-panel px-3 py-2 ${d.done ? 'text-slate-500 line-through' : ''}`}><span className="min-w-0 break-words font-medium">{d.title}</span><span className="shrink-0 text-xs text-slate-600">{fmtDate(d.date)}, {n.filter((t) => t.done).length}/{n.length} tasks</span></li>
+            return <li key={d.id} className={`flex justify-between gap-2 bg-panel px-3 py-2 ${d.done || (n.length > 0 && n.every((t) => t.done)) ? 'text-slate-500 line-through decoration-2' : ''}`}><span className="min-w-0 break-words font-medium">{d.title}</span><span className="shrink-0 text-xs text-slate-600">{fmtDate(d.date)}, {n.filter((t) => t.done).length}/{n.length} tasks</span></li>
           })}
         </ul>
       )}

@@ -4,6 +4,7 @@ import feed from './_ics.js'
 import push from './_push.js'
 import events from './_events.js'
 import feedback from './_feedback.js'
+import { rotate, KINDS } from './_token.js'
 import { loadDoc, saveDoc, hasContent, sql, SETTINGS } from './_store.js'
 import { apply, isEmpty } from '../src/sync.js'
 
@@ -18,6 +19,10 @@ export default async function handler(req, res) {
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
   if (!(await limit(req, res, { scope: 'state', max: 600, id: uid }))) return // autosave PUTs are frequent
   if (req.query.feedback) return feedback(req, res, uid) // the Feedback button (api/_feedback.js): emailed to the owner
+  if (req.query.token) { // Settings / Calendar: make a new API or calendar key (shown once, the old one stops working)
+    if (req.method !== 'POST' || !KINDS.includes(req.query.token)) return res.status(400).json({ error: 'Invalid request' })
+    return res.json({ token: await rotate(uid, req.query.token) })
+  }
   if (req.query.events) return events(req, res, uid) // analytics (api/_events.js), off unless ANALYTICS=on
   if (req.method === 'GET' && req.query.rev) { // cheap "has anything changed?" for the polling in other tabs and devices
     const [row] = await sql.query("select settings->>'_rev' as rev from users where id = $1", [uid])

@@ -1,18 +1,21 @@
 // Subscribable calendar feed of the user's tasks, deadlines and fun sessions (iCalendar).
 // Works with Google Calendar, Apple Calendar, Outlook and anything that can subscribe to a URL.
 import { loadDoc } from './_store.js'
+import { userOfToken } from './_token.js'
+import { limit } from './_rate.js'
 import { timeProfile } from '../src/rhythm.js'
 import { getTaskTime, fmtMin } from '../src/taskTime.js'
 
-const UID = /^[0-9a-f-]{36}$/
 const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
 const fold = (l) => l.match(/.{1,70}/gu).join('\r\n ')
 const ymd = (d) => d.replace(/-/g, '')
 const next = (d) => ymd(new Date(Date.parse(d) + 864e5).toISOString().slice(0, 10))
 
 export default async function handler(req, res) {
-  const { uid, download } = req.query
-  if (!UID.test(uid)) return res.status(400).send('bad uid')
+  const { key, download } = req.query
+  const uid = await userOfToken(key, 'feed') // the secret link made in Calendar > Connect (not the account id)
+  if (!uid) return res.status(404).send('unknown calendar link')
+  if (!(await limit(req, res, { scope: 'feed', max: 120, id: uid }))) return // calendar apps poll about hourly
   const doc = await loadDoc(uid)
   const { tasks, deadlines } = doc, tp = timeProfile(doc)
   const stamp = new Date().toISOString().replace(/[-:]|\.\d+/g, '')
