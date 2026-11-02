@@ -1,7 +1,7 @@
 // The village's own API (same origin as the app; the login cookie is on the shared parent domain).
 export type Mine = { slug: string; name: string; role: string; members: number; dots: string[]; studying: number; next: { title: string; courseCode: string | null; dueAt: number } | null }
 export type Info = {
-  village: { id: string; slug: string; name: string; courseTags: string[]; libraryAutoFocus: boolean; whoCanInvite: 'admins' | 'everyone'; slowMode?: boolean }
+  village: { id: string; slug: string; name: string; courseTags: string[]; libraryAutoFocus: boolean; whoCanInvite: 'admins' | 'everyone'; slowMode?: boolean; whoCanBuild: 'owner' | 'admins' | 'everyone' }
   me: { userId: string; role: string; colour: string; statusSharing: string; shareDeadlines: boolean; deskSpotId: string | null }
   members: { userId: string; name: string; colour: string; role: string; deskSpotId: string | null; lastSeenAt: string }[]
 }
@@ -26,7 +26,7 @@ export const todaysTasks = (slug: string) => call<{ tasks: PickTask[] }>(`${slug
 export const focusStart = (slug: string, plannedMin: number, groupId?: string) => call<{ sessionId: string; startedAt: string }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'start', plannedMin, ...(groupId && { groupId }) }) })
 export const focusEnd = (slug: string, b: { sessionId: string; activeMin: number; plannedMin: number; pauses: number; done: boolean; taskId?: string }) =>
   call<{ ok: true; minutes?: number; reason?: string | null; again?: boolean }>(`${slug}/focus`, { method: 'POST', body: JSON.stringify({ action: 'end', ...b }) })
-export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string; slowMode: boolean }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
+export const patchVillage = (slug: string, body: Partial<{ libraryAutoFocus: boolean; whoCanInvite: string; defaultSharing: string; addCourse: string; slowMode: boolean; whoCanBuild: string }>) => call<{ ok: true }>(slug, { method: 'PATCH', body: JSON.stringify(body) })
 export type BoardItem = { key: string; kind: 'due' | 'exam'; courseCode: string | null; title: string; dueAt: number; userIds: string[]; confirmedBy: string[]; itemId?: string; createdBy?: string; inPlanner: boolean }
 export type Announcement = { id: string; title: string; body: string | null; pinned: boolean; createdAt: string; by: string }
 export const board = (slug: string) => call<{ items: BoardItem[]; announcements: Announcement[] }>(`${slug}/board`)

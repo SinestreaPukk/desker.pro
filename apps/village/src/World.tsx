@@ -21,9 +21,10 @@ import Install from './Install.tsx'
 import Tour from './Tour.tsx'
 import { watchVersion, reportErrors } from './version.ts'
 import { t, useLang } from './i18n.ts'
-import { can } from '@desker/shared'
+import { can, canBuild } from '@desker/shared'
+import Build, { type Snapshot } from './Build.tsx'
 import { leaveVillage, closeVillage, blocks as fetchBlocks } from './api.ts'
-import { Bridge } from './game/bridge.ts'
+import { Bridge, NO_BUILD, type BuildView } from './game/bridge.ts'
 import { isTouchUi } from './game/touch.ts'
 
 const PILL: Record<Status, string> = {
@@ -87,6 +88,9 @@ export default function World({ slug }: { slug: string }) {
   loadBoardRef.current = loadBoard
   const loadQPin = () => fetchQuestions(slug).then((r) => { qPin.current = r.questions.some((q) => !q.resolved && q.answers === 0); pins() }, () => {}) // a "?" on the Board in the world while a question waits for its first answer
   const [fresh, setFresh] = useState(false)
+  const [buildView, setBuildView] = useState<BuildView>(NO_BUILD), [snaps, setSnaps] = useState<Snapshot[] | null>(null), [who, setWho] = useState<'owner' | 'admins' | 'everyone'>('everyone')
+  const mayBuild = !!data && canBuild(data.me.role, who), mayBuildRef = useRef(false); mayBuildRef.current = mayBuild
+  useEffect(() => { if (data) setWho(data.village.whoCanBuild) }, [data])
   useEffect(() => { const a = watchVersion(() => setFresh(true)), b = reportErrors(slug); return () => { a(); b() } }, [slug])
   useEffect(() => { if (data) loadQPin() }, [data, qRev])
   useEffect(() => { if (data) loadGroup() }, [data])
@@ -125,6 +129,7 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'joined') setOnline((o) => [...o.filter((x) => x.userId !== m.member.userId), m.member])
       else if (m.t === 'left') setOnline((o) => o.filter((x) => x.userId !== m.userId))
       else if (m.t === 'log') setLog(m.items)
+      else if (m.t === 'snapshots') setSnaps(m.items)
       else if (m.t === 'said' && m.text && m.userId !== data.me.userId) blip()
       else if (m.t === 'queued') for (const q of m.items) { const id = Math.random(); setToasts((t) => [...t, { id, text: `${q.name ?? 'Someone'}: ${q.text ?? ''}` }]); setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 12000) }
       else if (m.t === 'qupdate' && m.qid === 'group') loadGroupRef.current() // the group changed: someone started, joined, left or it ended
@@ -137,7 +142,7 @@ export default function World({ slug }: { slug: string }) {
       else if (m.t === 'error' && (m.code === 'slow_mode' || m.code === 'muted' || m.code === 'removed')) { setNotice(m.message); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 3500) }
       else if (m.t === 'error' && m.code === 'slow_down') { setNotice('Slow down a little'); setShake((n) => n + 1); setTalk({ text: lastText.current }); setTimeout(() => setNotice(''), 2500) } // the box comes back with what you wrote
     }
-    const bridge = new Bridge(); bridgeRef.current = bridge
+    const bridge = new Bridge(); bridgeRef.current = bridge; bridge.onBuild = setBuildView
     fetchBlocks(slug).then((r) => { const n = new Set(r.blocks.map((x) => x.userId)); bridge.blocked = n; setBlockedSet(n) }, () => {})
     const net = connect(data.village.id, { message: (m) => { onMsg(m); bridge.fromServer(m) }, status: setStatus })
     bridge.out = net.send; send.current = net.send
@@ -148,6 +153,7 @@ export default function World({ slug }: { slug: string }) {
     const name = data.members.find((m) => m.userId === data.me.userId)?.name ?? 'You'
     // the name tags use the pixel font, so it must be loaded before the first tag is drawn
     Promise.all([import('./game/start.ts'), document.fonts.load('7px VT323')]).then(([{ startGame }]) => { if (!gone) game = startGame(box, {
+      canBuild: () => mayBuildRef.current,
       userId: data.me.userId, name, colour: data.me.colour as Colour, bridge, onZone: (z) => { setZone(z); const t = zoneNote(zoneAt.current, z, Date.now()); if (t) { setNote(t); clearTimeout(noteTimer.current); noteTimer.current = setTimeout(() => setNote(''), 2500) } }, onPresence: setPresence, libraryAutoFocus: data.village.libraryAutoFocus,
       desks: data.members.flatMap((m) => (m.deskSpotId ? [{ userId: m.userId, spotId: m.deskSpotId }] : [])), names: Object.fromEntries(data.members.map((m) => [m.userId, m.name])),
       claimDesk: (spotId) => claimDesk(slug, spotId).then(() => true, () => false),
@@ -269,6 +275,7 @@ export default function World({ slug }: { slug: string }) {
             <button onClick={() => { setWheel(true); setMore(false) }}><i aria-hidden>😊</i>{t('bar.emote')}<kbd>E</kbd></button>
             <button onClick={() => { bridgeRef.current?.toggleDnd(); setMore(false) }} aria-pressed={presence === 'dnd'}><i aria-hidden>🎧</i>{presence === 'dnd' ? 'DND on' : 'DND'}<kbd>G</kbd></button>
             {can(data.me.role, 'invite', data.village.whoCanInvite) && <button onClick={() => { setPanel('invite'); setMore(false) }}><i aria-hidden>✉</i>Invite</button>}
+            {mayBuild && <button disabled={!!timer} title={timer ? 'Finish your timer to decorate' : ''} onClick={() => { bridgeRef.current?.build.set(true); setMore(false) }}><i aria-hidden>🔨</i>Decorate{!touch && <kbd>Ctrl B</kbd>}</button>}
             {can(data.me.role, 'moderate') && <button onClick={() => { setPanel('manage'); setMore(false) }}><i aria-hidden>🛠</i>Manage</button>}
             {data.me.role !== 'owner' ? <button onClick={() => { setPanel('leave'); setMore(false) }}><i aria-hidden>🚪</i>Leave</button> : <button onClick={() => { setPanel('close'); setMore(false) }}><i aria-hidden>🗑</i>Close village</button>}
           </>}
@@ -287,6 +294,7 @@ export default function World({ slug }: { slug: string }) {
             <button onClick={() => setMore((m) => !m)} aria-expanded={more} aria-label="More">⋯</button>
           </>}
         </div>
+        {bridgeRef.current && <Build view={buildView} bridge={bridgeRef.current} slug={slug} owner={data.me.role === 'owner'} villageName={data.village.name} who={who} onWho={setWho} snaps={snaps} mapOn={mapOn} />}
         {fresh && <div className="knock-card" role="alert"><span>A new version is ready.</span><span className="row"><button onClick={() => location.reload()}>Refresh</button><button onClick={() => setFresh(false)}>Later</button></span></div>}
         <Tour touch={touch} />
         {touch && <Install />}

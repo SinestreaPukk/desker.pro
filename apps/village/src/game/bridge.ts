@@ -1,5 +1,8 @@
 import type { Presence, ServerMsg, Status, ZoneId } from '@desker/shared'
 
+/** What the React tray needs to know about build mode. */
+export interface BuildView { on: boolean; item: string | null; moving: boolean; sel: { id: string; decorId: string; text: string } | null; ok: boolean; reason: string; undo: number; redo: number }
+export const NO_BUILD: BuildView = { on: false, item: null, moving: false, sel: null, ok: false, reason: '', undo: 0, redo: 0 }
 export interface RosterItem { userId: string; zone: ZoneId; atDesk: boolean; presence: Presence; status?: Status; endsAt?: number }
 
 /** The seam between React (which owns the network connection) and the Phaser scene. Messages that arrive before the scene is ready are held. */
@@ -32,6 +35,9 @@ export class Bridge {
   walkToTile: (x: number, y: number) => void = () => {}
   follow: (userId: string, once?: boolean) => void = () => {} // once = walk over and stop ("Walk to"); otherwise keep following until a movement key or Esc
   stopFollow: () => void = () => {}
+  /** Phase 2 CP3: build mode. React calls these; the scene fills them in and reports back through `onBuild`. */
+  build = { set: (_on: boolean) => {}, pick: (_id: string | null) => {}, rotate: () => {}, act: (_a: 'move' | 'rotate' | 'away' | 'text', _text?: string) => {}, undo: () => {}, redo: () => {}, escape: () => {} }
+  onBuild: (v: BuildView) => void = () => {}
   fromServer(m: ServerMsg) { if (this.handler) this.handler(m); else this.held.push(m) }
   attach(h: (m: ServerMsg) => void) { this.handler = h; this.held.splice(0).forEach(h) }
 }

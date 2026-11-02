@@ -3,10 +3,11 @@ import Phaser from 'phaser'
 import { apply as applyOps, newState, footprint, DECOR, type MapState, EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, clickRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
+import { Builder } from './Builder.ts'
 import { isTouchUi, lowFx } from './touch.ts'
 
 export interface SceneData {
-  userId: string; name: string; colour: Colour; bridge: Bridge; onZone?: (z: ZoneId) => void
+  userId: string; name: string; colour: Colour; bridge: Bridge; canBuild: () => boolean; onZone?: (z: ZoneId) => void
   libraryAutoFocus: boolean; desks: { userId: string; spotId: string }[]; names: Record<string, string>
   claimDesk: (spotId: string) => Promise<boolean>; onPresence?: (p: Presence) => void
   openBoard: () => void
@@ -18,9 +19,10 @@ const D = { ground: 0, floor: 1, walls: 2, below: 3, entity: DEPTH.entity, above
 
 export class WorldScene extends Phaser.Scene {
   private world!: World
-  private decor = new Map<string, { img: Phaser.GameObjects.Image; key: string; id: string; rot: number; two: boolean }>() // placement id -> its picture
+  private decor = new Map<string, { img: Phaser.GameObjects.Image; key: string; id: string; rot: number; two: boolean; label?: Phaser.GameObjects.Text }>() // placement id -> its picture
   private map!: MapState // the template plus this village's decorations; `world` is always map.world (what collision and sitting use)
   private me!: Avatar
+  private builder!: Builder; private timerOn = false
   private remotes = new Map<string, Remote>()
   private seq = 0; private lastSend = 0; private dirty = false
   private keys!: ReturnType<typeof heldKeys>
@@ -89,28 +91,45 @@ export class WorldScene extends Phaser.Scene {
     this.prompt = this.add.text(0, 0, '', { fontFamily: 'VT323', fontSize: '7px', color: '#14213d', backgroundColor: 'rgba(255,233,168,0.92)', padding: { x: 2, y: 0 } }).setOrigin(0.5, 1).setResolution(4).setDepth(DEPTH.tag + 1).setVisible(false)
     const onKey = (e: KeyboardEvent) => {
       this.touched()
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !isTyping()) { // Ctrl/Cmd+B toggles build mode; Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y undo and redo while building
+        const k = e.key.toLowerCase()
+        if (k === 'b' && this.data0.canBuild()) { e.preventDefault(); if (!e.repeat) this.setBuild(!this.builder.on); return }
+        if (this.builder.on && (k === 'z' || k === 'y')) { e.preventDefault(); if (e.repeat) return; if (k === 'y' || e.shiftKey) this.builder.redoLast(); else this.builder.undoLast(); return }
+      }
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
-      if (e.key === 'Escape') this.setFollow(null)
+      if (this.builder.on && !isTyping()) {
+        if (e.key === 'r' || e.key === 'R') return this.builder.rotate()
+        if (e.key === 'Delete' || e.key === 'Backspace') return this.builder.act('away')
+      }
+      if (e.key === 'Escape') { this.setFollow(null); if (this.builder.on) this.builder.escape() }
       const a = actionOf(e.key, isTyping(), 1); if (a === 'interact') this.interact(); else if (a === 'focus') this.toggleFocus(); else if (a === 'dnd') this.toggleDnd(); else if (a === 'emote') this.data0.onEmoteKey?.()
     }
     const touched = () => this.touched()
     window.addEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.addEventListener(t, touched, { passive: true })
     this.events.once('shutdown', () => { this.keys.destroy(); window.removeEventListener('keydown', onKey); for (const t of ['pointerdown', 'pointermove', 'touchstart', 'wheel']) window.removeEventListener(t, touched) })
     this.lastInput = this.time.now
-    this.input.on('pointermove', (p: Phaser.Input.Pointer) => this.hover(p))
+    this.input.on('pointermove', (p: Phaser.Input.Pointer) => { this.hover(p); if (this.builder.on) this.builder.point(this.tileAt(p)) })
     this.joyG = this.add.graphics().setScrollFactor(0).setDepth(D.glow + 10)
     this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (this.touchUi && !this.joy) this.joy = { id: p.id, x: p.x, y: p.y } }) // the joystick appears where the thumb lands
     this.input.on('pointerup', (p: Phaser.Input.Pointer) => { // a click or tap on a person opens what you can do about them (a long press too); a tap on a tile walks there
       if (this.joy?.id === p.id) { this.joy = undefined; this.joyG?.clear() }
       if (p.getDistance() > 12) return
+      if (this.builder.on) return this.builder.click(this.tileAt(p)) // building: a click picks, places or selects; walking is by key
       const who = this.avatarAt(p); if (who && who !== this.data0.userId) return this.data0.onAvatar?.(who)
       if (p.getDuration() > 500) return
       this.setFollow(null)
       const w = this.cameras.main.getWorldPoint(p.x, p.y)
       this.walkTo(Math.floor(w.x / TILE_PX), Math.floor(w.y / TILE_PX), !!(p.event as MouseEvent | undefined)?.shiftKey) // Shift held at click time = run there
     })
-    for (const d of this.data0.desks) this.setDesk(d.userId, d.spotId)
     const b = this.data0.bridge
+    this.builder = new Builder({
+      scene: this, map: () => this.map, me: this.data0.userId, nameOf: (id) => this.data0.names[id] ?? 'Someone', avatar: (id) => { const a = this.who(id); return a ? { x: a.x, y: a.y } : undefined },
+      send: (m) => b.out(m), mine: () => ({ x: this.tx, y: this.ty, facing: this.facing }), focusing: () => this.myPresence === 'focusing', touch: this.touchUi, calm: this.fx2, publish: (v) => b.onBuild(v),
+      occupied: () => { const s = new Set<number>([this.ty * this.world.w + this.tx]); for (const r of this.remotes.values()) s.add(Math.round(r.shown.y) * this.world.w + Math.round(r.shown.x)); return (t) => s.has(t) },
+    })
+    b.build = { set: (on) => this.setBuild(on), pick: (id) => this.builder.pick(id), rotate: () => this.builder.rotate(), act: (a, t) => this.builder.act(a, t), undo: () => this.builder.undoLast(), redo: () => this.builder.redoLast(), escape: () => this.builder.escape() }
+    this.events.once('shutdown', () => this.builder.destroy())
+    for (const d of this.data0.desks) this.setDesk(d.userId, d.spotId)
     b.toggleFocus = () => this.toggleFocus()
     b.locate = (id) => { const t = this.who(id); if (!t || t === this.me) return; const cam = this.cameras.main; cam.startFollow(t.sprite, true, CAMERA_LERP, CAMERA_LERP); this.time.delayedCall(2000, () => cam.startFollow(this.me.sprite, true, CAMERA_LERP, CAMERA_LERP)) } // locate only; walking to them comes in Phase 1
     const bd = this.world.interactables.find((o) => o.kind === 'board')
@@ -127,7 +146,8 @@ export class WorldScene extends Phaser.Scene {
     b.positions = () => [{ userId: this.data0.userId, x: this.fx, y: this.fy }, ...[...this.remotes].map(([userId, r]) => ({ userId, x: r.shown.x, y: r.shown.y }))]
     b.toggleDnd = () => this.toggleDnd(); b.follow = (id, once) => this.setFollow(id, !!once); b.stopFollow = () => this.setFollow(null)
     b.roster = () => this.roster()
-    b.timer = (on) => { // a village timer started or ended: the room has already set Focusing / Available for everyone; follow it here
+    b.timer = (on) => { // a village timer started or ended
+      this.timerOn = on; if (on) this.builder.set(false) // studying is protected: no decorating while a timer runs: the room has already set Focusing / Available for everyone; follow it here
       if (on) { this.autoFocused = false; this.setPresence('focusing', false) }
       else { this.setPresence('available', false); if (this.lastZone === 'library' && this.data0.libraryAutoFocus) { this.autoFocused = true; this.setPresence('focusing') } } // still in the Library: back to quiet focus
     }
@@ -141,11 +161,18 @@ export class WorldScene extends Phaser.Scene {
     this.cameras.main.setZoom(w >= 900 ? 3 : w >= 640 ? 2 : Math.max(1, Math.round((w / 240) * 4) / 4))
   }
 
+  private tileAt(p: Phaser.Input.Pointer) { const w = this.cameras.main.getWorldPoint(p.x, p.y); return { x: Math.floor(w.x / TILE_PX), y: Math.floor(w.y / TILE_PX) } }
+  private setBuild(on: boolean) {
+    if (on && this.timerOn) return this.data0.onNote?.('Finish your timer to decorate')
+    if (on && this.sitting) this.stand() // you can still walk, so start from your feet
+    this.setFollow(null); this.builder.set(on)
+  }
+
   private place() { this.me.put(this.fx * TILE_PX + TILE_PX / 2, this.fy * TILE_PX + TILE_PX) }
 
   private hidden = new Set<string>()
   update(time: number, delta: number) {
-    this.tickFollow(time); this.moveMe(time, Math.min(delta, 50)); this.arrived(); this.drawRemotes(time); this.followBubbles()
+    this.tickFollow(time); this.builder.tick(); this.moveMe(time, Math.min(delta, 50)); this.arrived(); this.drawRemotes(time); this.followBubbles()
     this.me.tick(time); for (const [id, r] of this.remotes) { r.k.tick(time); const hide = this.data0.bridge.blocked.has(id); if (hide) { r.k.setAlpha(0); this.hidden.add(id) } else if (this.hidden.delete(id)) r.k.setAlpha(1) } // blocked: invisible (the ring may re-show itself each frame, so keep hiding)
     if (this.myPresence === 'available' && time - this.lastInput > this.awayMs) this.setPresence('away') // asleep after 5 quiet minutes; any input wakes you
     if (this.dirty && time - this.lastSend >= 1000 / MOVE_SEND_MAX_HZ) { // at most 10 updates a second, and only after something changed
@@ -342,17 +369,19 @@ export class WorldScene extends Phaser.Scene {
     if (tell) this.data0.bridge.out({ t: 'stand' })
   }
 
-  /** Make the pictures match the map: add new placements, move or turn changed ones, drop removed ones. Floor things lie under people, hanging things over them, the rest sort by their bottom edge. */
-  private drawDecor() {
-    for (const [id, d] of this.decor) if (!this.map.placements.has(id)) { d.img.destroy(); this.decor.delete(id) }
+  /** Make the pictures match the map: add new placements, move or turn changed ones, drop removed ones. Floor things lie under people, hanging things over them, the rest sort by their bottom edge. `pop`: a change happened now, so it bounces a little. */
+  private drawDecor(pop = false) {
+    for (const [id, d] of this.decor) if (!this.map.placements.has(id)) { d.img.destroy(); d.label?.destroy(); this.decor.delete(id) }
     for (const p of this.map.placements.values()) {
       const def = DECOR[p.decorId]; if (!def) continue
-      const f = footprint(p, def), key = `${p.x},${p.y},${p.rotation}`, have = this.decor.get(p.id)
+      const f = footprint(p, def), key = `${p.x},${p.y},${p.rotation},${p.text ?? ''}`, have = this.decor.get(p.id)
       if (have?.key === key) continue
-      have?.img.destroy()
+      have?.img.destroy(); have?.label?.destroy()
       const depth = def.layer === 'floor' ? D.below : def.layer === 'over' ? D.above - 1 : D.entity + (f.y + f.h) * TILE_PX - 2
       const img = this.add.image(f.x * TILE_PX, f.y * TILE_PX, 'decor', `${p.decorId}:${p.rotation}:0`).setOrigin(0, 0).setDepth(depth)
-      this.decor.set(p.id, { img, key, id: p.decorId, rot: p.rotation, two: def.frames > 1 })
+      const label = def.interact === 'sign' && p.text ? this.add.text((f.x + f.w / 2) * TILE_PX, (f.y + f.h) * TILE_PX - 3, p.text, { fontFamily: 'VT323', fontSize: '6px', color: '#14213d', backgroundColor: 'rgba(255,248,225,0.92)', padding: { x: 1, y: 0 }, wordWrap: { width: 60 }, align: 'center' }).setOrigin(0.5, 1).setResolution(4).setDepth(depth + 1) : undefined
+      if (pop && !this.fx2) { img.y -= 3; this.tweens.add({ targets: img, y: f.y * TILE_PX, duration: 140, ease: 'Back.Out' }) }
+      this.decor.set(p.id, { img, key, id: p.decorId, rot: p.rotation, two: def.frames > 1, label })
     }
   }
 
@@ -360,7 +389,8 @@ export class WorldScene extends Phaser.Scene {
   private onServer(m: ServerMsg) {
     const now = this.time.now
     if (m.t === 'welcome') { // a fresh welcome replaces local state (first connect and every reconnect)
-      this.map = newState(this.map.base, m.placements, m.mapVersion); this.world = this.map.world; this.drawDecor()
+      this.map = newState(this.map.base, m.placements, m.mapVersion); this.world = this.map.world; this.drawDecor(); this.builder.reset()
+      for (const uid of m.building ?? []) if (uid !== this.data0.userId) this.builder.remote(uid, true)
       for (const r of this.remotes.values()) r.k.destroy()
       this.remotes.clear()
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
@@ -377,7 +407,7 @@ export class WorldScene extends Phaser.Scene {
     } else if (m.t === 'joined') { if (m.member.userId !== this.data0.userId) this.addRemote(m.member, undefined, now, true) }
     else if (m.t === 'left') {
       const r = this.remotes.get(m.userId); if (!r) return
-      this.remotes.delete(m.userId); this.release(m.userId); this.dropBubble(m.userId)
+      this.remotes.delete(m.userId); this.release(m.userId); this.dropBubble(m.userId); this.builder.remote(m.userId, false)
       r.k.fade(this, 1, 0, 400, () => r.k.destroy()) // a soft fade
     } else if (m.t === 'moved') {
       for (const mv of m.moves) {
@@ -402,7 +432,12 @@ export class WorldScene extends Phaser.Scene {
     else if (m.t === 'deskClaimed') { if (m.userId !== this.data0.userId) this.setDesk(m.userId, m.spotId) }
     else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
     else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
-    else if (m.t === 'mapPatch') { this.map = applyOps(this.map, m.ops, m.version); this.world = this.map.world; this.drawDecor() } // collision, sit spots and pictures all follow the patch
+    else if (m.t === 'mapPatch') {
+      const prev = this.map; this.map = applyOps(this.map, m.ops, m.version); this.world = this.map.world; this.drawDecor(true)
+      const at = m.ops.find((o) => o.k === 'put')?.p ?? (() => { const o = m.ops[0]; return o?.k === 'del' ? prev.placements.get(o.id) : undefined })()
+      this.builder.patch(m.ops, prev); this.builder.feedback(at ? { x: at.x, y: at.y } : null)
+    } else if (m.t === 'building') { if (m.userId !== this.data0.userId) this.builder.remote(m.userId, m.on, m.g) }
+    else if (m.t === 'mapRefused') this.builder.refused(m.reason) // collision, sit spots and pictures all follow the patch
     else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
   }
 

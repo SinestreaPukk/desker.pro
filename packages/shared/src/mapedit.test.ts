@@ -108,3 +108,15 @@ test('restore: ops turn today into a snapshot, as one version', () => {
   const back = apply(st, ops, st.version + 1)
   assert.deepEqual([...back.placements.values()], snap); assert.equal(back.version, st.version + 1)
 })
+
+test('text: only signs take words, trimmed to 40, and restore brings the words back', () => {
+  let st = newState(real); const f = freeSpot(st)
+  let r = put(st, place('sign_wood', f.x, f.y)); assert.ok('st' in r); st = r.st
+  const sign = [...st.placements.values()][0]
+  r = put(st, { t: 'text', placementId: sign.id, text: `  ${'x'.repeat(50)}  ` }); assert.ok('st' in r); st = r.st
+  assert.equal([...st.placements.values()][0].text, 'x'.repeat(40))
+  const lamp = put(st, place('paper_lantern', f.x + 2, f.y)); assert.ok('st' in lamp)
+  assert.deepEqual(put(lamp.st, { t: 'text', placementId: [...lamp.st.placements.keys()][1], text: 'hi' }), { ok: false, reason: 'not_sign' })
+  const empty = put(st, { t: 'text', placementId: sign.id, text: '   ' }); assert.ok('st' in empty); assert.equal([...empty.st.placements.values()][0].text, undefined)
+  assert.equal(restoreOps(empty.st, [...st.placements.values()]).length, 1) // the words differ, so restore puts the sign back as it was
+})

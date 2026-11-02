@@ -154,7 +154,7 @@ export default async function handler(req, res) {
       `select m.user_id as "userId", u.name, coalesce(m.settings->>'colour', 'snow') as colour, m.role, m.desk_spot_id as "deskSpotId", m.last_seen_at as "lastSeenAt"
          from village_member m join "user" u on u.id = m.user_id where m.village_id = $1 and m.banned_at is null order by m.joined_at`, [v.id])
     return res.json({
-      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false, whoCanInvite: v.settings?.who_can_invite === 'everyone' ? 'everyone' : 'admins', slowMode: v.settings?.slow_mode === true },
+      village: { id: v.id, slug: v.slug, name: v.name, courseTags: v.course_tags, libraryAutoFocus: v.settings?.library_auto_focus !== false, whoCanInvite: v.settings?.who_can_invite === 'everyone' ? 'everyone' : 'admins', slowMode: v.settings?.slow_mode === true, whoCanBuild: WHO_CAN_BUILD.includes(v.settings?.who_can_build) ? v.settings.who_can_build : 'everyone' },
       me: { userId: uid, role: v.role, colour: v.mine?.colour ?? 'snow', statusSharing: v.status_sharing, shareDeadlines: v.share_deadlines, deskSpotId: v.desk_spot_id },
       members,
     })
@@ -234,7 +234,7 @@ export default async function handler(req, res) {
     let refresh = false
     if (b.libraryAutoFocus !== undefined) { if (typeof b.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' }); patch.library_auto_focus = b.libraryAutoFocus }
     if (b.whoCanInvite !== undefined) { if (!['admins', 'everyone'].includes(b.whoCanInvite)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_invite = b.whoCanInvite }
-    if (b.whoCanBuild !== undefined) { if (!WHO_CAN_BUILD.includes(b.whoCanBuild)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_build = b.whoCanBuild; refresh = true } // new tokens carry the new right
+    if (b.whoCanBuild !== undefined) { if (v.role !== 'owner') return res.status(403).json({ error: 'forbidden' }); if (!WHO_CAN_BUILD.includes(b.whoCanBuild)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_build = b.whoCanBuild; refresh = true } // new tokens carry the new right
     if (b.defaultSharing !== undefined) { if (!['basic', 'full'].includes(b.defaultSharing)) return res.status(400).json({ error: 'Invalid' }); patch.default_status_sharing = b.defaultSharing }
     if (b.slowMode !== undefined) { // slow mode: one bubble per 30 s for everyone. Open connections reconnect (new token) so it takes effect within seconds.
       if (typeof b.slowMode !== 'boolean') return res.status(400).json({ error: 'Invalid' })

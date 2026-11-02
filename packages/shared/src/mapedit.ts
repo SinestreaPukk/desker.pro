@@ -1,26 +1,29 @@
 // Decorating (Phase 2, checkpoint 1): the template map plus a list of placements. One pure function decides every edit, so the room, the tests and
 // the client's green/red ghost agree. State is replaced, never mutated, so a refused edit leaves nothing behind.
-import { DECOR, type Decor } from './decor.ts'
+import { DECOR, SIGN_MAX_CHARS, type Decor } from './decor.ts'
 import { inBounds, reachable, type Spot, type World } from './world.ts'
 import type { Dir } from './types.ts'
 
 export const MAX_PLACEMENTS = 400
 export const SNAPSHOT_EVERY = 50
 export type Rotation = 0 | 90 | 180 | 270
-export interface Placement { id: string; decorId: string; x: number; y: number; rotation: Rotation; by: string }
+export interface Placement { id: string; decorId: string; x: number; y: number; rotation: Rotation; by: string; text?: string }
 export type MapOp = { k: 'put'; p: Placement } | { k: 'del'; id: string }
 export type Edit =
   | { t: 'place'; decorId: string; x: number; y: number; rotation: Rotation }
   | { t: 'remove'; placementId: string }
   | { t: 'move'; placementId: string; x: number; y: number }
   | { t: 'rotate'; placementId: string; rotation: Rotation }
-export type Refusal = 'permission' | 'unknown_item' | 'rotation' | 'gone' | 'bounds' | 'wall' | 'protected' | 'overlap' | 'occupied' | 'blocks_path' | 'limit' | 'stale'
+  | { t: 'text'; placementId: string; text: string } // signs only; the room filters it like a bubble first
+export type Refusal = 'permission' | 'unknown_item' | 'rotation' | 'gone' | 'bounds' | 'wall' | 'protected' | 'overlap' | 'occupied' | 'blocks_path' | 'limit' | 'stale' | 'not_sign'
 /** What the person sees when an edit is refused. */
 export const REFUSAL_TEXT: Record<Refusal, string> = {
   permission: 'You cannot build in this village', unknown_item: 'That item does not exist', rotation: 'That item cannot turn that way', gone: 'That item is already gone', bounds: 'Outside the village',
   wall: 'Something is in the way', protected: 'Keep this spot clear', overlap: 'Something is already there', occupied: 'A friend is standing there',
-  blocks_path: 'Blocks the path', limit: 'This village is full of decorations', stale: 'Someone just changed that spot',
+  blocks_path: 'Blocks the path', limit: 'This village is full of decorations', stale: 'Someone just changed that spot', not_sign: 'Only signs have text',
 }
+/** Reasons only the room or the connection can give. */
+export const ROOM_REFUSAL_TEXT: Record<string, string> = { focusing: 'Finish your timer to decorate', save_failed: 'Could not save. Try again', unavailable: 'Decorating is not available right now', permission: REFUSAL_TEXT.permission, text: 'That text is not allowed' }
 
 export interface MapState {
   base: World; keep: ReadonlySet<number>; placements: ReadonlyMap<string, Placement>; version: number
@@ -103,6 +106,10 @@ export function checkEdit(st: MapState, e: Edit, actor: Actor, baseVersion: numb
     next = { id: (o.newId ?? (() => crypto.randomUUID()))(), decorId: e.decorId, x: e.x, y: e.y, rotation: e.rotation, by: actor.id }
   } else if (e.t === 'move') next = { ...old!, x: e.x, y: e.y }
   else if (e.t === 'rotate') next = { ...old!, rotation: e.rotation }
+  else if (e.t === 'text') {
+    if (DECOR[old!.decorId]?.interact !== 'sign') return no('not_sign')
+    const text = e.text.trim().slice(0, SIGN_MAX_CHARS); next = { ...old!, text: text || undefined }
+  }
   const touched = new Set<number>()
   if (old) for (const t of tilesIn(footprint(old), W)) touched.add(t)
   if (next) {
@@ -144,6 +151,6 @@ export function apply(st: MapState, ops: MapOp[], version: number): MapState {
 export function restoreOps(st: MapState, target: Placement[]): MapOp[] {
   const want = new Map(target.map((p) => [p.id, p])), ops: MapOp[] = []
   for (const id of st.placements.keys()) if (!want.has(id)) ops.push({ k: 'del', id })
-  for (const p of target) { const c = st.placements.get(p.id); if (!c || c.decorId !== p.decorId || c.x !== p.x || c.y !== p.y || c.rotation !== p.rotation) ops.push({ k: 'put', p }) }
+  for (const p of target) { const c = st.placements.get(p.id); if (!c || c.decorId !== p.decorId || c.x !== p.x || c.y !== p.y || c.rotation !== p.rotation || c.text !== p.text) ops.push({ k: 'put', p }) }
   return ops
 }

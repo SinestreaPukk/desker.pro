@@ -148,3 +148,22 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .hc button:focus-visible, .hc input:focus-visible, .hc select:focus-visible { outline: 3px solid #ffd400; outline-offset: 2px }
 .cb .board li.u-red::before { content: "⚠ "; font-weight: 700 } .cb .board li.u-amber::before { content: "⏰ " }
 .big .bubblebox input { font-size: 20px } .big .hud-panel, .big .board { font-size: 17px }
+
+/* Build mode (Phase 2 CP3) */
+.b-top, .b-note, .b-menu, .b-tray { position: absolute; pointer-events: auto; z-index: 15; background: rgba(255,255,255,.96); border: 2px solid #35599a; border-radius: 8px; font-size: 13px }
+.b-top { top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; padding: 4px 10px } .b-top b { margin-right: 4px }
+.b-top button, .b-menu button, .b-head button, .b-menu form button { padding: 3px 9px; border: 2px solid #35599a; border-radius: 6px; background: #fff; font-size: 13px; cursor: pointer } .b-top button:disabled { opacity: .4; cursor: default }
+.b-note { top: 56px; left: 50%; transform: translateX(-50%); padding: 3px 10px; background: #fff } .b-note.bad { background: #fde9e6; border-color: #b8453a; color: #7d2a22 }
+.b-menu { left: 50%; transform: translateX(-50%); bottom: 252px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 10px; max-width: min(94vw, 520px) } .b-menu form { display: flex; gap: 6px } .b-menu input { padding: 3px 6px; border: 2px solid #b4c6de; border-radius: 6px; width: 200px }
+.b-tray { left: 50%; transform: translateX(-50%); bottom: 64px; width: min(94vw, 760px); padding: 6px 8px; display: grid; gap: 6px }
+.b-head { display: flex; gap: 6px; align-items: center } .b-tabs { display: flex; gap: 4px; flex: 1; overflow-x: auto } .b-tabs button { padding: 3px 9px; border: 2px solid #b4c6de; border-radius: 14px; background: #fff; font-size: 13px; cursor: pointer; white-space: nowrap } .b-tabs button[aria-selected=true] { border-color: #35599a; background: #dfe9f5; font-weight: 600 }
+.b-head input { width: 110px; padding: 3px 6px; border: 2px solid #b4c6de; border-radius: 6px }
+.b-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; max-height: 150px; overflow-y: auto }
+.b-grid button { width: 100%; display: grid; justify-items: center; gap: 2px; padding: 4px 2px; border: 2px solid #b4c6de; border-radius: 6px; background: #fff; font-size: 11px; cursor: pointer; line-height: 1.15 } .b-grid button.on { border-color: #35599a; background: #dfe9f5 }
+.b-icon { width: 40px; height: 40px; display: grid; place-items: center } .b-icon > span { display: block; transform-origin: center }
+.b-none { grid-column: 1 / -1; color: #5b6b86 }
+@media (max-width: 640px) {
+  .b-tray { bottom: calc(76px + env(safe-area-inset-bottom)); width: 100vw; max-width: none; border-radius: 12px 12px 0 0; border-width: 2px 0 0 } .b-grid { max-height: 28vh } .b-head input { width: 80px }
+  .b-menu { bottom: calc(76px + 28vh + 70px) } .b-top { top: calc(8px + env(safe-area-inset-top)) }
+}
+@media (prefers-reduced-motion: reduce) { .b-top, .b-tray { transition: none } }

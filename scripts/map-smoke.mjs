@@ -12,6 +12,7 @@ const api = http.createServer(async (req, res) => {
   const t = await verifyToken((req.headers.authorization ?? '').replace(/^Bearer /, ''), S, vid)
   if (!t.ok || t.claims.role !== 'map') return res.writeHead(403).end('{}')
   const q = new URL(req.url, 'http://x').searchParams, json = (o, c = 200) => res.writeHead(c, { 'content-type': 'application/json' }).end(JSON.stringify(o))
+  if (req.method === 'GET' && q.get('snapshots')) return json({ snapshots: [...db.snaps].map(([version, rows]) => ({ version, createdAt: new Date().toISOString(), items: rows.length })) })
   if (req.method === 'GET') return q.get('snapshot') ? json({ placements: db.snaps.get(Number(q.get('snapshot'))) ?? [] }) : json({ version: db.version, placements: [...db.rows.values()] })
   let body = ''; for await (const c of req) body += c
   const b = JSON.parse(body); if (b.ops.length ? b.version !== db.version + 1 : b.version !== db.version) return json({ error: 'version', version: db.version }, 409)
@@ -43,4 +44,18 @@ guest.send(JSON.stringify({ t: 'map.restore', version: 1 })); await until(() => 
 owner.send(JSON.stringify({ t: 'map.snapshot' })); await until(() => db.snaps.has(2)); console.log('ok: owner snapshot saved')
 edit(owner, 2, { t: 'place', decorId: 'paper_lantern', x: p.x, y: p.y, rotation: 0 }); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 3))
 owner.send(JSON.stringify({ t: 'map.restore', version: 2 })); await until(() => owner.msgs.find((m) => m.t === 'mapPatch' && m.version === 4)); assert.equal(db.rows.size, 0); console.log('ok: restore put the map back as version 4')
+// CP3: build presence, sign text, snapshots list, reset, and no decorating while a timer runs
+const send = (ws, m) => ws.send(JSON.stringify(m))
+send(owner, { t: 'build', on: true, g: { decorId: 'paper_lantern', x: 5, y: 5, rotation: 0, ok: true } })
+const seen = await until(() => late.msgs.find((m) => m.t === 'building' && m.userId === 'owner')); assert.equal(seen.on, true); assert.equal(seen.g.x, 5)
+send(guest, { t: 'build', on: true }); await new Promise((r) => setTimeout(r, 150)); assert.ok(!late.msgs.some((m) => m.t === 'building' && m.userId === 'guest')); console.log('ok: builders are shown to friends; a guest cannot build')
+const late2 = await join('late2', 'member', true); assert.deepEqual(late2.welcome.building, ['owner']); console.log('ok: a newcomer is told who is decorating')
+const n0 = owner.msgs.length; edit(owner, db.version, { t: 'place', decorId: 'sign_wood', x: p.x, y: p.y, rotation: 0 }); const signOp = (await until(() => owner.msgs.slice(n0).find((m) => m.t === 'mapPatch'))).ops[0].p
+edit(owner, db.version, { t: 'text', placementId: signOp.id, text: '  quiet please  ' }); await until(() => db.rows.get(signOp.id)?.text === 'quiet please'); console.log('ok: sign text saved, trimmed')
+edit(owner, db.version, { t: 'text', placementId: signOp.id, text: 'x'.repeat(100) }); await until(() => db.rows.get(signOp.id)?.text?.length === 40); console.log('ok: sign text capped at 40')
+send(owner, { t: 'map.snapshots' }); assert.ok((await until(() => owner.msgs.find((m) => m.t === 'snapshots'))).items.length >= 1); console.log('ok: snapshots listed')
+send(owner, { t: 'focus.start', plannedMin: 25 }); await new Promise((r) => setTimeout(r, 150)); const r0 = owner.msgs.filter((m) => m.t === 'mapRefused').length
+edit(owner, db.version, { t: 'remove', placementId: signOp.id }); await until(() => owner.msgs.filter((m) => m.t === 'mapRefused').length > r0); assert.equal(owner.msgs.filter((m) => m.t === 'mapRefused').at(-1).reason, 'focusing'); assert.ok(db.rows.has(signOp.id)); console.log('ok: no decorating while a timer runs')
+send(owner, { t: 'focus.stop' }); await new Promise((r) => setTimeout(r, 150))
+send(owner, { t: 'map.reset' }); await until(() => db.rows.size === 0); console.log('ok: reset to template removed everything')
 console.log('all ok'); api.close(); for (const w of [owner, guest, late]) w.close(); process.exit(0)

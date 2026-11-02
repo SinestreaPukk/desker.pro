@@ -1,6 +1,7 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
 import { can, emoteVisible, knockResult, EMOTE_RATE_LIMIT, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, slowCheck, strike, muteLeftMin, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
+import { SIGN_MAX_CHARS } from '@desker/shared'
 import { apply as applyOps, checkEdit, newState, restoreOps, REFUSAL_TEXT, type MapState, type MapOp, type Placement } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
@@ -11,7 +12,7 @@ const BASE = parseMap(campus as never) // the same map file the client draws, so
 const MOVED_BATCH_MS = 50
 
 export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string; VILLAGE_API_URL?: string }
-interface Att { vid: string; authed: boolean; build?: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; sm?: boolean; lastSay?: number; strikes?: number[]; muteUntil?: number; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
+interface Att { vid: string; authed: boolean; build?: boolean; building?: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; sm?: boolean; lastSay?: number; strikes?: number[]; muteUntil?: number; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -113,16 +114,28 @@ export class VillageRoom extends DurableObject<Env> {
       this.broadcast({ t: 'stood', userId: att.member!.userId }); this.send(w, { t: 'correct', x: from.x, y: from.y })
     }
   }
-  private mapMessage(ws: WebSocket, att: Att, msg: Extract<import('@desker/shared').ClientMsg, { t: 'map.edit' | 'map.restore' | 'map.snapshot' }>) {
+  private mapMessage(ws: WebSocket, att: Att, msg: Extract<import('@desker/shared').ClientMsg, { t: 'map.edit' | 'map.restore' | 'map.snapshot' | 'map.snapshots' | 'map.reset' }>) {
     const run = async () => {
       const me = att.member!, W = this.map.base.w
       if (!(await this.ensureMap(att.vid))) return this.refuse(ws, 'unavailable')
       if (msg.t === 'map.edit') {
+        if (att.focus) return this.refuse(ws, 'focusing') // studying is protected: no decorating while a timer runs
+        let edit = msg.edit
+        if (edit.t === 'text') { // sign text is filtered like a bubble; text that is only filtered words is refused
+          const text = cleanBubble(edit.text).slice(0, SIGN_MAX_CHARS)
+          if (edit.text.trim() && !text) return this.refuse(ws, 'text')
+          edit = { ...edit, text }
+        }
         const standing = new Set(this.authed().flatMap((x) => (x.att.pos ? [Math.round(x.att.pos.y) * W + Math.round(x.att.pos.x)] : [])))
-        const r = checkEdit(this.map, msg.edit, { id: me.userId, canBuild: !!att.build }, msg.base, { occupied: (t) => standing.has(t) })
+        const r = checkEdit(this.map, edit, { id: me.userId, canBuild: !!att.build }, msg.base, { occupied: (t) => standing.has(t) })
         return r.ok ? this.commit(ws, att.vid, r.ops, me.userId) : this.refuse(ws, r.reason)
       }
       if (me.role !== 'owner') return this.refuse(ws, 'permission')
+      if (msg.t === 'map.snapshots') {
+        try { const r = await this.api(att.vid, undefined, '?snapshots=1'); if (!r.ok) return this.refuse(ws, 'unavailable'); this.send(ws, { t: 'snapshots', items: ((await r.json()) as { snapshots: { version: number; createdAt: string; items: number }[] }).snapshots.map((x) => ({ version: x.version, at: x.createdAt, items: x.items })) }) } catch { this.refuse(ws, 'unavailable') }
+        return
+      }
+      if (msg.t === 'map.reset') { const ops = restoreOps(this.map, []); if (ops.length) await this.commit(ws, att.vid, ops, me.userId); return }
       if (msg.t === 'map.snapshot') { if (!(await this.persist(att.vid, this.map.version, [], me.userId, true))) this.refuse(ws, 'save_failed'); return }
       try { // restore: today's placements become the snapshot's, as one new version (so it can be undone)
         const r = await this.api(att.vid, undefined, `?snapshot=${msg.version}`); if (!r.ok) return this.refuse(ws, 'gone')
@@ -213,12 +226,17 @@ export class VillageRoom extends DurableObject<Env> {
       const all = this.authed()
       const members = [...new Map(all.map((x) => [x.att.member!.userId, x.att.member!])).values()]
       const positions = Object.fromEntries(all.map((x) => [x.att.member!.userId, { x: x.att.pos!.x, y: x.att.pos!.y, dir: x.att.pos!.dir }]))
-      this.send(ws, { t: 'welcome', self: me, members, positions, presence: Object.fromEntries(all.map((x) => [x.att.member!.userId, x.att.presence ?? 'available'])), statuses: Object.fromEntries(all.flatMap((x) => { const s = this.shown(x.att); return s ? [[x.att.member!.userId, s]] : [] })), focus: Object.fromEntries(all.flatMap((x) => (x.att.focus ? [[x.att.member!.userId, x.att.focus]] : []))), desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: this.map.version, placements: [...this.map.placements.values()] })
+      this.send(ws, { t: 'welcome', self: me, members, positions, presence: Object.fromEntries(all.map((x) => [x.att.member!.userId, x.att.presence ?? 'available'])), statuses: Object.fromEntries(all.flatMap((x) => { const s = this.shown(x.att); return s ? [[x.att.member!.userId, s]] : [] })), focus: Object.fromEntries(all.flatMap((x) => (x.att.focus ? [[x.att.member!.userId, x.att.focus]] : []))), desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: this.map.version, placements: [...this.map.placements.values()], building: all.filter((x) => x.att.building).map((x) => x.att.member!.userId) })
       this.broadcast({ t: 'joined', member: me }, ws)
       return
     }
     if (msg.t === 'ping') return this.send(ws, { t: 'pong', ts: msg.ts })
-    if (msg.t === 'map.edit' || msg.t === 'map.restore' || msg.t === 'map.snapshot') return this.mapMessage(ws, att, msg)
+    if (msg.t === 'map.edit' || msg.t === 'map.restore' || msg.t === 'map.snapshot' || msg.t === 'map.snapshots' || msg.t === 'map.reset') return this.mapMessage(ws, att, msg)
+    if (msg.t === 'build') { // build mode on/off and my ghost, shown to everyone so friends see what each other are doing
+      if (!att.build) return
+      if (!!att.building !== msg.on) ws.serializeAttachment({ ...att, building: msg.on })
+      return this.broadcast({ t: 'building', userId: att.member!.userId, on: msg.on, g: msg.on ? msg.g ?? null : null }, ws)
+    }
     if (!this.mapOk) await this.ensureMap(att.vid) // a room that woke from hibernation reloads the decorations before judging moves
     if (msg.t === 'log') {
       const rows = this.ctx.storage.sql.exec('select zone, sid, name, text, at from chat where uid = ? and at > ? order by at asc limit 200', att.member!.userId, Date.now() - LOG_TTL_MS).toArray()
