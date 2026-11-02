@@ -5,7 +5,7 @@ import { ask, answer, markHelpful, questions, resolveQuestion, thread, type Answ
 
 const age = (iso: string) => { const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000)); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago` }
 const WHY: Record<string, string> = { slow_down: 'Slow down a little. Try again in a minute.', forbidden: 'Guests cannot do that.', bad_question: 'Write a question first.', bad_answer: 'Write an answer first.' }
-const why = (e: unknown) => WHY[(e as { code?: string })?.code ?? ''] ?? "That didn't work. Try again."
+const why = (e: unknown) => WHY[(e as { code?: string })?.code ?? ''] ?? `That didn't work (${(e as Error)?.message ?? 'unknown'}). Try again.`
 
 /** Q opens this. The course chip starts as the course you are working on. */
 export function AskBox({ slug, courses, course, onDone, onClose }: { slug: string; courses: string[]; course?: string; onDone: () => void; onClose: () => void }) {
