@@ -45,3 +45,7 @@ export function inviteVerdict(inv, ctx) {
   if (ctx.joined >= ctx.maxJoined) return 'too_many_joined'
   return 'ok'
 }
+
+/** Decorating (Phase 2): who_can_build is 'owner', 'admins' (owner + admins) or 'everyone' (every member; guests never build). */
+export const WHO_CAN_BUILD = ['owner', 'admins', 'everyone']
+export const canBuild = (role, whoCanBuild = 'everyone') => role === 'owner' || (role === 'admin' && whoCanBuild !== 'owner') || (role === 'member' && whoCanBuild === 'everyone')

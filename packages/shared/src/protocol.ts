@@ -14,6 +14,15 @@ export const status = z.object({
   taskId: id.optional(), taskTitle: z.string().max(120).optional(), endsAt: z.string().datetime().optional(),
 })
 const member = z.object({ userId: id, name: z.string().max(60), colour: z.enum(COLOURS), role: z.enum(['owner', 'admin', 'member', 'guest']) })
+const rotation = z.union([z.literal(0), z.literal(90), z.literal(180), z.literal(270)])
+const placement = z.object({ id: id, decorId: id, x: tile, y: tile, rotation, by: id })
+const mapOp = z.discriminatedUnion('k', [z.object({ k: z.literal('put'), p: placement }), z.object({ k: z.literal('del'), id })])
+const mapEdit = z.discriminatedUnion('t', [
+  z.object({ t: z.literal('place'), decorId: id, x: tile, y: tile, rotation }),
+  z.object({ t: z.literal('remove'), placementId: id }),
+  z.object({ t: z.literal('move'), placementId: id, x: tile, y: tile }),
+  z.object({ t: z.literal('rotate'), placementId: id, rotation }),
+])
 const boardItem = z.object({
   key: z.string(), kind: z.enum(['due', 'exam']), courseCode: z.string().nullable(), title: z.string(), dueAt: z.string(), userIds: z.array(id),
 })
@@ -34,6 +43,9 @@ export const clientMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('claimDesk'), spotId: id }),
   z.object({ t: z.literal('mod.remove'), userId: id, at: z.number() }), // a moderator removes one bubble from everyone's 24 h log
   z.object({ t: z.literal('log') }), // ask for the last 24 hours of bubbles I was able to see
+  z.object({ t: z.literal('map.edit'), base: z.number().int().min(0), edit: mapEdit }), // base = the map version the person was looking at
+  z.object({ t: z.literal('map.restore'), version: z.number().int().min(1) }), // owner only: put the map back to a snapshot (itself a new version)
+  z.object({ t: z.literal('map.snapshot') }), // owner only: save a snapshot now
   z.object({ t: z.literal('ping'), ts: z.number() }),
 ])
 export type ClientMsg = z.infer<typeof clientMsg>
@@ -42,7 +54,7 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({
     t: z.literal('welcome'), self: member, members: z.array(member),
     positions: z.record(z.object({ x: tile, y: tile, dir })), presence: z.record(presence), statuses: z.record(status),
-    desks: z.record(id), focus: z.record(z.object({ startedAt: z.number(), endsAt: z.number(), pausedAt: z.number().optional() })), sitting: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(),
+    desks: z.record(id), focus: z.record(z.object({ startedAt: z.number(), endsAt: z.number(), pausedAt: z.number().optional() })), sitting: z.record(id), board: z.array(boardItem), mapVersion: z.number().int(), placements: z.array(placement),
   }),
   z.object({ t: z.literal('joined'), member }),
   z.object({ t: z.literal('left'), userId: id }),
@@ -66,6 +78,8 @@ export const serverMsg = z.discriminatedUnion('t', [
   z.object({ t: z.literal('knocked'), fromUserId: id, name: z.string().max(60) }),
   z.object({ t: z.literal('away'), items: z.array(z.object({ kind: z.enum(['mention', 'knock', 'answer']), fromUserId: id, name: z.string().max(60).optional(), text: z.string().max(BUBBLE_MAX_CHARS).optional() })) }), // what you missed while in Do Not Disturb
   z.object({ t: z.literal('log'), items: z.array(z.object({ zoneId: zone, userId: id, name: z.string().max(60), text: z.string().max(BUBBLE_MAX_CHARS), at: z.number() })) }),
+  z.object({ t: z.literal('mapPatch'), version: z.number().int(), ops: z.array(mapOp) }), // every change to the map, in order; applying them to version-1 gives version
+  z.object({ t: z.literal('mapRefused'), reason: z.string().max(30), version: z.number().int() }), // an edit was refused; `version` is the room's current one
   z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
   z.object({ t: z.literal('pong'), ts: z.number() }),
 ])

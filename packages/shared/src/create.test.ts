@@ -32,3 +32,7 @@ test('rules default to admins-invite, library auto-focus on, basic sharing', () 
   assert.deepEqual(s.ok && s.value.settings, { library_auto_focus: false, who_can_invite: 'everyone', default_status_sharing: 'full' })
   assert.deepEqual(ok({ whoCanInvite: 'x', defaultSharing: 'off' }).ok && (ok({ whoCanInvite: 'x', defaultSharing: 'off' }) as any).value.settings.default_status_sharing, 'basic')
 })
+
+test('slug: words the API uses as its own routes are refused', () => {
+  for (const slug of ['room', 'mine', 'token']) assert.deepEqual(ok({ slug }), { ok: false, error: 'bad_slug' })
+})

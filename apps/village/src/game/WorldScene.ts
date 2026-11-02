@@ -1,6 +1,6 @@
 // The village world: map, collision, free walking in any direction, sitting, other people, camera, snow, day/night.
 import Phaser from 'phaser'
-import { EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, clickRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
+import { apply as applyOps, newState, type MapState, EMOTES, EMOTE_VISIBLE_MS, AWAY_AFTER_IDLE_MS, BODY_HALF_H, BODY_HALF_W, CAMERA_LERP, MOVE_SEND_MAX_HZ, REMOTE_INTERP_DELAY_MS, RUN_TILES_PER_MS, TILE_PX, WALK_MS_PER_TILE, WALK_TILES_PER_MS, actionOf, ambientAt, appearanceFor, heldKeys, interpolate, isTyping, minuteOfDay, parseMap, spawnFor, spotNear, clickRoute, tooFar, trim, walkBody, zoneAt, type Colour, type Dir, type Member, type Presence, type Spot, type ServerMsg, type Status, type Snap, type World, type ZoneId } from '@desker/shared'
 import type { Bridge, RosterItem } from './bridge.ts'
 import { Avatar, DEPTH } from './Avatar.ts'
 import { isTouchUi, lowFx } from './touch.ts'
@@ -18,6 +18,7 @@ const D = { ground: 0, floor: 1, walls: 2, below: 3, entity: DEPTH.entity, above
 
 export class WorldScene extends Phaser.Scene {
   private world!: World
+  private map!: MapState // the template plus this village's decorations; `world` is always map.world (what collision and sitting use)
   private me!: Avatar
   private remotes = new Map<string, Remote>()
   private seq = 0; private lastSend = 0; private dirty = false
@@ -65,7 +66,7 @@ export class WorldScene extends Phaser.Scene {
 
   create() {
     const json = this.cache.tilemap.get('map').data
-    this.world = parseMap(json)
+    this.map = newState(parseMap(json)); this.world = this.map.world
     const map = this.make.tilemap({ key: 'map' })
     const ts = map.addTilesetImage('tiles', 'tiles')!
     for (const [name, depth] of [['ground', D.ground], ['floor', D.floor], ['walls', D.walls], ['furniture_below', D.below], ['furniture_above', D.above]] as const) map.createLayer(name, ts)!.setDepth(depth)
@@ -342,6 +343,7 @@ export class WorldScene extends Phaser.Scene {
   private onServer(m: ServerMsg) {
     const now = this.time.now
     if (m.t === 'welcome') { // a fresh welcome replaces local state (first connect and every reconnect)
+      this.map = newState(this.map.base, m.placements, m.mapVersion); this.world = this.map.world
       for (const r of this.remotes.values()) r.k.destroy()
       this.remotes.clear()
       for (const mem of m.members) if (mem.userId !== this.data0.userId) this.addRemote(mem, m.positions[mem.userId], now, false)
@@ -383,6 +385,7 @@ export class WorldScene extends Phaser.Scene {
     else if (m.t === 'deskClaimed') { if (m.userId !== this.data0.userId) this.setDesk(m.userId, m.spotId) }
     else if (m.t === 'sat') { if (m.userId !== this.data0.userId) this.seat(m.userId, m.spotId, false) }
     else if (m.t === 'stood') { if (m.userId !== this.data0.userId) this.release(m.userId) }
+    else if (m.t === 'mapPatch') { this.map = applyOps(this.map, m.ops, m.version); this.world = this.map.world } // drawing the decorations is checkpoint 2; collision and sit spots follow now
     else if (m.t === 'correct') this.snapMe(m.x, m.y) // the room says that is not where you are
   }
 

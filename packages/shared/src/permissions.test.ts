@@ -44,3 +44,11 @@ test('a banned person is refused first; an existing member just goes in, even on
   assert.equal(inviteVerdict(dead, { ...ctx, banned: true, member: true }), 'banned')
   assert.equal(inviteVerdict(dead, { ...ctx, member: true, members: 50 }), 'already')
 })
+
+test('canBuild: owner always, admins unless owner-only, members only when everyone, guests never', async () => {
+  const { canBuild } = await import('./permissions.js')
+  assert.deepEqual(['owner', 'admin', 'member', 'guest'].map((r) => canBuild(r, 'owner')), [true, false, false, false])
+  assert.deepEqual(['owner', 'admin', 'member', 'guest'].map((r) => canBuild(r, 'admins')), [true, true, false, false])
+  assert.deepEqual(['owner', 'admin', 'member', 'guest'].map((r) => canBuild(r, 'everyone')), [true, true, true, false])
+  assert.equal(canBuild('member'), true) // default: everyone
+})

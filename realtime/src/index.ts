@@ -1,16 +1,17 @@
 // Cloudflare Worker + Durable Object: one VillageRoom per village. Checkpoint 3: hello -> welcome, joined/left, ping/pong. Movement etc. come later.
 import { DurableObject } from 'cloudflare:workers'
 import { can, emoteVisible, knockResult, EMOTE_RATE_LIMIT, applyMove, approaches, canSit, cleanBubble, maskStatus, newMover, parseMap, parseMentions, rateCheck, spawnFor, visibility, zoneAt, CHAT_LOG_TTL_HOURS, slowCheck, strike, muteLeftMin, type Colour, type Dir, type Member, type Mover, type Party, type Role, type Status, type StatusSharing } from '@desker/shared'
+import { apply as applyOps, checkEdit, newState, restoreOps, REFUSAL_TEXT, type MapState, type MapOp, type Placement } from '@desker/shared'
 import type { ServerMsg } from '@desker/shared'
 import { checkHello, countBad, parseClient } from './logic.ts'
-import { verifyToken } from '@desker/shared/src/token.js'
+import { verifyToken, signToken } from '@desker/shared/src/token.js'
 import campus from '../../apps/village/public/maps/snowy_campus.json'
 
-const WORLD = parseMap(campus as never) // the same map file the client draws, so both sides agree on every wall
+const BASE = parseMap(campus as never) // the same map file the client draws, so both sides agree on every wall; decorations are layered on top of it per village
 const MOVED_BATCH_MS = 50
 
-export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string }
-interface Att { vid: string; authed: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; sm?: boolean; lastSay?: number; strikes?: number[]; muteUntil?: number; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
+export interface Env { ROOM: DurableObjectNamespace; VILLAGE_ROOM_SECRET: string; ALLOWED_ORIGINS?: string; VILLAGE_API_URL?: string }
+interface Att { vid: string; authed: boolean; build?: boolean; bad: number; badAt: number; member?: Member; pos?: Mover; sat?: { spotId: string; from: { x: number; y: number } }; presence?: 'available' | 'focusing' | 'away' | 'dnd'; share?: StatusSharing; status?: Status; focus?: { startedAt: number; endsAt: number; pausedAt?: number }; says?: number[]; sm?: boolean; lastSay?: number; strikes?: number[]; muteUntil?: number; emo?: number[]; queue?: { fromUserId: string; name: string; text: string; k?: 'knock' | 'answer' }[] }
 const HELLO_TIMEOUT_MS = 10_000
 const HOUR_MS = 3_600_000, LOG_TTL_MS = CHAT_LOG_TTL_HOURS * HOUR_MS, QUEUE_MAX = 3 // the queue lives in the socket attachment, which is capped at 2 KB
 const ROOM_PATH = /^\/room\/([0-9a-f-]{36})$/
@@ -45,6 +46,10 @@ export default {
 export class VillageRoom extends DurableObject<Env> {
   private pending = new Map<string, { userId: string; x: number; y: number; dir: Dir; seq: number }>()
   private timer: ReturnType<typeof setTimeout> | null = null
+  private map: MapState = newState(BASE) // the template plus this village's placements; replaced (never edited) on every change
+  private mapOk = false; private mapTriedAt = 0 // loaded from the database yet? when we last tried
+  private edits: Promise<unknown> = Promise.resolve() // edits run one at a time, so the version order is the order they arrived
+  private get world() { return this.map.world }
   private knocks = new Map<string, number>() // 'from>to' -> last knock time. ponytail: lives in memory, so a room restart forgets it (a knock may slip through early); persist it if that ever matters
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -55,8 +60,8 @@ export class VillageRoom extends DurableObject<Env> {
 
   private async wake(inMs: number) { const cur = await this.ctx.storage.getAlarm(); if (!cur || cur > Date.now() + inMs) await this.ctx.storage.setAlarm(Date.now() + inMs) }
   private partyOf(att: Att): Party {
-    const p = att.pos!, spot = att.sat ? WORLD.sitSpots.find((q) => q.id === att.sat!.spotId) : undefined
-    return { x: p.x, y: p.y, zone: zoneAt(WORLD, p.x, p.y), table: spot?.table ?? null, focus: !!att.focus }
+    const p = att.pos!, spot = att.sat ? this.world.sitSpots.find((q) => q.id === att.sat!.spotId) : undefined
+    return { x: p.x, y: p.y, zone: zoneAt(this.world, p.x, p.y), table: spot?.table ?? null, focus: !!att.focus }
   }
   /** Has `by` blocked `who`? Blocks live in the room's SQLite (filled from the token on connect, kept current by the API). A blocked person is never told. */
   private blocked(by: string, who: string) { return this.ctx.storage.sql.exec('select 1 from blocks where blocker = ? and blocked = ?', by, who).toArray().length > 0 }
@@ -67,6 +72,65 @@ export class VillageRoom extends DurableObject<Env> {
     if (!att.queue?.length || att.presence === 'dnd') return att // in Do Not Disturb everything is held until it ends
     this.send(ws, { t: 'queued', items: att.queue.map(({ k, ...q }) => ({ kind: k ?? ('mention' as const), ...q })) })
     const next = { ...att, queue: [] }; ws.serializeAttachment(next); return next
+  }
+
+
+  // ---- the map (Phase 2): the database remembers, the room decides ------------------------------------------------
+  private async api(vid: string, init?: { body: object }, query = '') {
+    const t = await signToken({ sub: 'room', vid, role: 'map' }, this.env.VILLAGE_ROOM_SECRET, 60)
+    return fetch(`${this.env.VILLAGE_API_URL}/api/village/room/${vid}${query}`, { method: init ? 'POST' : 'GET', headers: { authorization: `Bearer ${t}`, 'content-type': 'application/json' }, body: init && JSON.stringify(init.body) })
+  }
+  /** Load the placements once per room lifetime. If the API cannot be reached the village still works on the bare template (editing is refused), and we try again at most every 10 s. */
+  private async ensureMap(vid: string) {
+    if (this.mapOk) return true
+    if (!this.env.VILLAGE_API_URL || Date.now() - this.mapTriedAt < 10_000) return false
+    this.mapTriedAt = Date.now()
+    try {
+      const r = await this.api(vid); if (!r.ok) return false
+      const j = await r.json() as { version: number; placements: Placement[] }
+      this.map = newState(BASE, j.placements, j.version); this.mapOk = true
+      return true
+    } catch { return false }
+  }
+  private async persist(vid: string, version: number, ops: MapOp[], actor: string, snapshot = false) {
+    try {
+      const r = await this.api(vid, { body: { version, ops, actor, snapshot } })
+      if (r.status === 409) this.mapOk = false // the database is ahead of us: reload before the next edit
+      return r.ok
+    } catch { return false }
+  }
+  private refuse(ws: WebSocket, reason: string) { this.send(ws, { t: 'mapRefused', reason, version: this.map.version }) }
+  /** Commit ops as the next version: save, then change the room, then tell everyone. Anyone seated on something that just went is stood up. */
+  private async commit(ws: WebSocket, vid: string, ops: MapOp[], actor: string, snapshot = false) {
+    const next = this.map.version + 1
+    if (!(await this.persist(vid, next, ops, actor, snapshot))) return void this.refuse(ws, 'save_failed')
+    this.map = applyOps(this.map, ops, next)
+    this.broadcast({ t: 'mapPatch', version: next, ops })
+    const ids = new Set(this.world.sitSpots.map((q) => q.id))
+    for (const { ws: w, att } of this.authed()) if (att.sat?.spotId.startsWith('d:') && !ids.has(att.sat.spotId)) { // ponytail: stands them at the tile they sat down from; if decor now covers it the next move is corrected
+      const { from } = att.sat
+      w.serializeAttachment({ ...att, sat: undefined, pos: { ...att.pos!, x: from.x, y: from.y } })
+      this.broadcast({ t: 'stood', userId: att.member!.userId }); this.send(w, { t: 'correct', x: from.x, y: from.y })
+    }
+  }
+  private mapMessage(ws: WebSocket, att: Att, msg: Extract<import('@desker/shared').ClientMsg, { t: 'map.edit' | 'map.restore' | 'map.snapshot' }>) {
+    const run = async () => {
+      const me = att.member!, W = this.map.base.w
+      if (!(await this.ensureMap(att.vid))) return this.refuse(ws, 'unavailable')
+      if (msg.t === 'map.edit') {
+        const standing = new Set(this.authed().flatMap((x) => (x.att.pos ? [Math.round(x.att.pos.y) * W + Math.round(x.att.pos.x)] : [])))
+        const r = checkEdit(this.map, msg.edit, { id: me.userId, canBuild: !!att.build }, msg.base, { occupied: (t) => standing.has(t) })
+        return r.ok ? this.commit(ws, att.vid, r.ops, me.userId) : this.refuse(ws, r.reason)
+      }
+      if (me.role !== 'owner') return this.refuse(ws, 'permission')
+      if (msg.t === 'map.snapshot') { if (!(await this.persist(att.vid, this.map.version, [], me.userId, true))) this.refuse(ws, 'save_failed'); return }
+      try { // restore: today's placements become the snapshot's, as one new version (so it can be undone)
+        const r = await this.api(att.vid, undefined, `?snapshot=${msg.version}`); if (!r.ok) return this.refuse(ws, 'gone')
+        const ops = restoreOps(this.map, (await r.json() as { placements: Placement[] }).placements)
+        if (ops.length) await this.commit(ws, att.vid, ops, me.userId)
+      } catch { this.refuse(ws, 'save_failed') }
+    }
+    return (this.edits = this.edits.then(run, run).catch(() => {}))
   }
 
   async fetch(req: Request): Promise<Response> {
@@ -137,22 +201,25 @@ export class VillageRoom extends DurableObject<Env> {
       const me: Member = { userId: h.claims.sub, name: h.claims.n ?? 'Someone', colour: (h.claims.c ?? 'snow') as Colour, role: h.claims.role as Role }
       let pos: Mover | undefined, sat: Att['sat'], old: Att | undefined
       for (const o of this.authed()) if (o.att.member?.userId === me.userId) { pos = o.att.pos; sat = o.att.sat; old = o.att; o.ws.close(4000, 'replaced') } // one connection per person: the newest wins, and keeps the old place
-      const sp = spawnFor(WORLD, me.userId)
+      await this.ensureMap(att.vid)
+      const sp = spawnFor(this.world, me.userId)
       // A member with a claimed desk arrives sitting at it (unless someone is already there), instead of at a spawn point.
-      const desk = !pos && h.claims.d ? WORLD.sitSpots.find((q) => q.id === h.claims.d && q.kind === 'desk') : undefined
+      const desk = !pos && h.claims.d ? this.world.sitSpots.find((q) => q.id === h.claims.d && q.kind === 'desk') : undefined
       const free = desk && !this.authed().some((o) => o.att.sat?.spotId === desk.id)
-      const from = free ? approaches(WORLD, desk)[0] : undefined
+      const from = free ? approaches(this.world, desk)[0] : undefined
       if (free && from) { pos = { ...newMover(desk.x, desk.y, Date.now(), desk.facing) }; sat = { spotId: desk.id, from } }
       this.setBlocks(me.userId, Array.isArray(h.claims.bl) ? h.claims.bl : [])
-      ws.serializeAttachment({ ...att, authed: true, sm: !!h.claims.sm, lastSay: old?.lastSay, strikes: old?.strikes, muteUntil: old?.muteUntil, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat, presence: old?.presence ?? 'available', focus: old?.focus, status: old?.status, share: (['full', 'basic', 'off'] as const).find((x) => x === h.claims.s) ?? 'basic' })
+      ws.serializeAttachment({ ...att, authed: true, build: !!h.claims.bld, sm: !!h.claims.sm, lastSay: old?.lastSay, strikes: old?.strikes, muteUntil: old?.muteUntil, member: me, pos: pos ? { ...pos, tokens: 3, at: Date.now() } : newMover(sp.x, sp.y, Date.now()), sat, presence: old?.presence ?? 'available', focus: old?.focus, status: old?.status, share: (['full', 'basic', 'off'] as const).find((x) => x === h.claims.s) ?? 'basic' })
       const all = this.authed()
       const members = [...new Map(all.map((x) => [x.att.member!.userId, x.att.member!])).values()]
       const positions = Object.fromEntries(all.map((x) => [x.att.member!.userId, { x: x.att.pos!.x, y: x.att.pos!.y, dir: x.att.pos!.dir }]))
-      this.send(ws, { t: 'welcome', self: me, members, positions, presence: Object.fromEntries(all.map((x) => [x.att.member!.userId, x.att.presence ?? 'available'])), statuses: Object.fromEntries(all.flatMap((x) => { const s = this.shown(x.att); return s ? [[x.att.member!.userId, s]] : [] })), focus: Object.fromEntries(all.flatMap((x) => (x.att.focus ? [[x.att.member!.userId, x.att.focus]] : []))), desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: 1 })
+      this.send(ws, { t: 'welcome', self: me, members, positions, presence: Object.fromEntries(all.map((x) => [x.att.member!.userId, x.att.presence ?? 'available'])), statuses: Object.fromEntries(all.flatMap((x) => { const s = this.shown(x.att); return s ? [[x.att.member!.userId, s]] : [] })), focus: Object.fromEntries(all.flatMap((x) => (x.att.focus ? [[x.att.member!.userId, x.att.focus]] : []))), desks: {}, sitting: Object.fromEntries(all.filter((x) => x.att.sat).map((x) => [x.att.member!.userId, x.att.sat!.spotId])), board: [], mapVersion: this.map.version, placements: [...this.map.placements.values()] })
       this.broadcast({ t: 'joined', member: me }, ws)
       return
     }
     if (msg.t === 'ping') return this.send(ws, { t: 'pong', ts: msg.ts })
+    if (msg.t === 'map.edit' || msg.t === 'map.restore' || msg.t === 'map.snapshot') return this.mapMessage(ws, att, msg)
+    if (!this.mapOk) await this.ensureMap(att.vid) // a room that woke from hibernation reloads the decorations before judging moves
     if (msg.t === 'log') {
       const rows = this.ctx.storage.sql.exec('select zone, sid, name, text, at from chat where uid = ? and at > ? order by at asc limit 200', att.member!.userId, Date.now() - LOG_TTL_MS).toArray()
       return this.send(ws, { t: 'log', items: rows.map((r) => ({ zoneId: r.zone as never, userId: String(r.sid), name: String(r.name), text: String(r.text), at: Number(r.at) })) })
@@ -203,7 +270,7 @@ export class VillageRoom extends DurableObject<Env> {
       if (att.focus && msg.presence !== 'focusing' && msg.presence !== 'dnd') return // a running timer is Focusing; stop the timer first
       ws.serializeAttachment({ ...att, presence: msg.presence })
       this.broadcast({ t: 'presenceChanged', userId: me, presence: msg.presence })
-      if (msg.presence === 'available' && !att.focus && zoneAt(WORLD, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, { ...att, presence: 'available' })
+      if (msg.presence === 'available' && !att.focus && zoneAt(this.world, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, { ...att, presence: 'available' })
       return
     }
     if (msg.t === 'status') { // what I am working on; friends get it masked by my sharing choice (SPEC §6.2)
@@ -229,7 +296,7 @@ export class VillageRoom extends DurableObject<Env> {
       this.broadcast({ t: 'focusChanged', userId: me, endsAt: null })
       if (att.presence !== 'dnd') this.broadcast({ t: 'presenceChanged', userId: me, presence: 'available' })
       this.broadcast({ t: 'statusChanged', userId: me, status: null })
-      if (zoneAt(WORLD, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, next)
+      if (zoneAt(this.world, att.pos!.x, att.pos!.y) !== 'library') this.release(ws, next)
       return
     }
     if (msg.t === 'emote') { // silent, so it shows in the Library too; same reach as bubbles (table, then distance); not to people in Do Not Disturb
@@ -258,13 +325,13 @@ export class VillageRoom extends DurableObject<Env> {
       return this.send(ws, { t: 'error', code: 'knock_sent', message: `Knocked ${target!.att.member!.name}${r === 'queue' ? '. They are focusing, so they will see it after.' : '.'}` }) // the knocker's confirmation (shown as a toast)
     }
     if (msg.t === 'claimDesk') { // the API has already recorded it (it is the authority across visits); the room only checks you are really sitting there
-      const spot = att.sat && att.sat.spotId === msg.spotId ? WORLD.sitSpots.find((q) => q.id === msg.spotId) : undefined
+      const spot = att.sat && att.sat.spotId === msg.spotId ? this.world.sitSpots.find((q) => q.id === msg.spotId) : undefined
       if (spot?.kind === 'desk' && can(att.member!.role, 'claimDesk')) this.broadcast({ t: 'deskClaimed', userId: att.member!.userId, spotId: spot.id })
       return
     }
     if (msg.t === 'sit') { // next to a free spot, and not already sitting: the room seats you there
       const taken = new Set(this.authed().flatMap((x) => (x.att.sat ? [x.att.sat.spotId] : [])))
-      const spot = att.sat ? null : canSit(WORLD, att.pos!.x, att.pos!.y, msg.spotId, taken)
+      const spot = att.sat ? null : canSit(this.world, att.pos!.x, att.pos!.y, msg.spotId, taken)
       if (!spot) return this.send(ws, { t: 'correct', x: att.pos!.x, y: att.pos!.y }) // refused: here is where you really are
       ws.serializeAttachment({ ...att, sat: { spotId: spot.id, from: { x: att.pos!.x, y: att.pos!.y } }, pos: { ...att.pos!, x: spot.x, y: spot.y, dir: spot.facing } })
       return this.broadcast({ t: 'sat', userId: att.member!.userId, spotId: spot.id })
@@ -281,8 +348,8 @@ export class VillageRoom extends DurableObject<Env> {
     }
     if (msg.t === 'move') {
       if (att.sat) return // sitting: stand first (the client always does) // validate loosely (SPEC §3.5): reachable within the walking budget, else tell the client where it really is
-      const r = applyMove(WORLD, att.pos!, msg, Date.now())
-      const leaving = r.ok && !att.focus && att.presence !== 'dnd' && att.queue?.length && zoneAt(WORLD, att.pos!.x, att.pos!.y) === 'library' && zoneAt(WORLD, r.mover.x, r.mover.y) !== 'library'
+      const r = applyMove(this.world, att.pos!, msg, Date.now())
+      const leaving = r.ok && !att.focus && att.presence !== 'dnd' && att.queue?.length && zoneAt(this.world, att.pos!.x, att.pos!.y) === 'library' && zoneAt(this.world, r.mover.x, r.mover.y) !== 'library'
       ws.serializeAttachment({ ...att, pos: r.mover, ...(leaving && { queue: [] }) })
       if (leaving) this.send(ws, { t: 'queued', items: att.queue!.map(({ k, ...q }) => ({ kind: k ?? ('mention' as const), ...q })) }) // what you missed while studying (until Focus arrives in Checkpoint 8, leaving the Library ends it)
       if (!r.ok) return this.send(ws, { t: 'correct', x: r.mover.x, y: r.mover.y })

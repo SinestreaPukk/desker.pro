@@ -4,6 +4,8 @@ export const MAX_JOINED_VILLAGES = 20 // counts every village you are in, owned 
 export const MAX_COURSE_TAGS = 12
 export const SLUG = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/ // 3-40 chars, a-z 0-9 and hyphens, no hyphen at either end
 
+/** First path segments the API uses itself; a village with one of these slugs could not be reached. */
+export const RESERVED_SLUGS = ['mine', 'new', 'token', 'push', 'invite', 'cron', 'summary', 'export', 'courses', 'room']
 /** "Med Year 1 Study Den" -> "med-year-1-study-den"; Thai-only names give '' (the owner types one). */
 export const slugSuggest = (name) => String(name).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/, '')
 /** "dtip 122" -> "DTIP122" (how course_tags are stored, as the seed script did). */
@@ -14,7 +16,7 @@ export function cleanCreate(b) {
   const name = typeof b?.name === 'string' ? b.name.trim().replace(/\s+/g, ' ') : ''
   if (name.length < 3 || name.length > 40) return { ok: false, error: 'bad_name' }
   const slug = typeof b.slug === 'string' ? b.slug.trim().toLowerCase() : ''
-  if (!SLUG.test(slug) || slug.includes('--')) return { ok: false, error: 'bad_slug' }
+  if (!SLUG.test(slug) || slug.includes('--') || RESERVED_SLUGS.includes(slug)) return { ok: false, error: 'bad_slug' }
   const raw = Array.isArray(b.courses) ? b.courses : []
   const courses = [...new Set(raw.filter((c) => typeof c === 'string').map(tagOf).filter((c) => /^[A-Z0-9]{2,12}$/.test(c)))].slice(0, MAX_COURSE_TAGS)
   const whoCanInvite = b.whoCanInvite === 'everyone' ? 'everyone' : 'admins'

@@ -14,4 +14,6 @@ new_sqlite_classes = ["VillageRoom"]
 # Browsers allowed to open a socket (checked on the upgrade). Production: set to https://village.desker.dev in the dashboard / deploy command.
 [vars]
 ALLOWED_ORIGINS = "https://village.desker.dev,http://village.desker.test:5174,http://localhost:5174"
+# The Desker API (where the map is stored). Local: put VILLAGE_API_URL=http://desker.test:3000 in realtime/.dev.vars.
+VILLAGE_API_URL = "https://desker.dev"
 # VILLAGE_ROOM_SECRET is a secret: `wrangler secret put VILLAGE_ROOM_SECRET` in production, realtime/.dev.vars locally (gitignored).

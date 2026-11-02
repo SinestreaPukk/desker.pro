@@ -15,11 +15,12 @@ import { inviteRoutes, manage, closeVillage, revoke } from './_manage.js'
 import { qa } from './_qa.js'
 import { board } from './_board.js'
 import { group } from './_group.js'
+import { mapRoom } from './_map.js'
 import { safety, blockedBy } from './_safety.js'
 import { cors, summary, exportMine } from './_desker.js'
 import { dailyJob, pushMany, pushRoutes } from './_push.js'
 import { notify } from './_qa.js'
-import { can } from '../../../../packages/shared/src/permissions.js'
+import { can, canBuild, WHO_CAN_BUILD } from '../../../../packages/shared/src/permissions.js'
 import { signToken } from '../../../../packages/shared/src/token.js'
 import { cleanCreate, tagOf, MAX_COURSE_TAGS, MAX_OWNED_VILLAGES, MAX_JOINED_VILLAGES } from '../../../../packages/shared/src/create.js'
 
@@ -66,6 +67,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true, ...(await dailyJob()) })
   }
   if ((first === 'summary' || first === 'export') && !second && cors(req, res)) return // desker.dev asks these two, with the shared cookie
+  if (first === 'room' && second) return mapRoom({ req, res, vid: second }) // the realtime room only (signed), before any user login check
   const uid = await userOf(req)
   if (!uid) return res.status(401).json({ error: 'Sign in first' })
 
@@ -124,7 +126,7 @@ export default async function handler(req, res) {
     if (!m) return no(res)
     await sql.query('update village_member set last_seen_at = now() where village_id = $1 and user_id = $2', [vid, uid]) // "last seen" in the member list: refreshed every time a connection starts or renews
     const bl = await blockedBy(uid) // the room hides these people from me and drops their knocks and emotes
-    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }), ...(bl.length && { bl }), ...(m.settings?.slow_mode && { sm: 1 }) }, process.env.VILLAGE_ROOM_SECRET, 600)
+    const token = await signToken({ sub: uid, vid, role: m.role, n: String(m.name).slice(0, 60), c: m.colour, s: m.status_sharing, ...(m.desk_spot_id && { d: m.desk_spot_id }), ...(bl.length && { bl }), ...(m.settings?.slow_mode && { sm: 1 }), ...(canBuild(m.role, m.settings?.who_can_build) && { bld: 1 }) }, process.env.VILLAGE_ROOM_SECRET, 600)
     return res.json({ token, expiresInS: 600 })
   }
   if (first === 'push' && !second) return pushRoutes({ req, res, uid })
@@ -229,15 +231,16 @@ export default async function handler(req, res) {
   if (!second && req.method === 'PATCH') { // village settings: owner and admins
     if (!can(v.role, 'changeSettings')) return res.status(403).json({ error: 'forbidden' })
     const b = req.body || {}, patch = {}
-    let slowChanged = false
+    let refresh = false
     if (b.libraryAutoFocus !== undefined) { if (typeof b.libraryAutoFocus !== 'boolean') return res.status(400).json({ error: 'Invalid' }); patch.library_auto_focus = b.libraryAutoFocus }
     if (b.whoCanInvite !== undefined) { if (!['admins', 'everyone'].includes(b.whoCanInvite)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_invite = b.whoCanInvite }
+    if (b.whoCanBuild !== undefined) { if (!WHO_CAN_BUILD.includes(b.whoCanBuild)) return res.status(400).json({ error: 'Invalid' }); patch.who_can_build = b.whoCanBuild; refresh = true } // new tokens carry the new right
     if (b.defaultSharing !== undefined) { if (!['basic', 'full'].includes(b.defaultSharing)) return res.status(400).json({ error: 'Invalid' }); patch.default_status_sharing = b.defaultSharing }
     if (b.slowMode !== undefined) { // slow mode: one bubble per 30 s for everyone. Open connections reconnect (new token) so it takes effect within seconds.
       if (typeof b.slowMode !== 'boolean') return res.status(400).json({ error: 'Invalid' })
       patch.slow_mode = b.slowMode
       await ev(v.id, uid, 'mod_slow_mode', { on: b.slowMode })
-      slowChanged = true
+      refresh = true
     }
     if (b.addCourse !== undefined) { // a new course tag, so its deadlines can be added to the Board
       const tag = tagOf(b.addCourse); if (!/^[A-Z]{2,6}\d{2,5}$/.test(tag)) return res.status(400).json({ error: 'Invalid' })
@@ -246,7 +249,7 @@ export default async function handler(req, res) {
     }
     if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nothing to change' })
     await sql.query('update village set settings = settings || $2::jsonb where id = $1', [v.id, JSON.stringify(patch)])
-    if (slowChanged) await revoke(v.id, '*', 'refresh')
+    if (refresh) await revoke(v.id, '*', 'refresh')
     return res.json({ ok: true })
   }
 
